@@ -1,8 +1,13 @@
 #include <SDL2/SDL.h>
 #include <GL/glew.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <iostream>
 
+
 int main() {
+
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         std::cerr << "SDL_Init failed: " << SDL_GetError() << "\n";
         return -1;
@@ -34,6 +39,16 @@ int main() {
         SDL_Quit();
         return -1;
     }
+
+    glm::vec3 position(1.0f, 2.0f, 3.0f);
+    glm::vec3 direction = glm::normalize(position);
+    glm::mat4 model = glm::translate(glm::mat4(1.0f), position);
+
+    std::cout << "GLM test: normalized direction = ("
+            << direction.x << ", "
+            << direction.y << ", "
+            << direction.z << ")\n";
+
 
     bool running = true;
     SDL_Event event;
