@@ -1,0 +1,5 @@
+// .vscode/settings.json
+{
+  "cmake.generator": "Ninja", // or "MinGW Makefiles", "Unix Makefiles", etc.
+  "cmake.buildDirectory": "${workspaceFolder}/build"
+}
