@@ -1,0 +1,19 @@
+{
+  "configurations": [
+    {
+      "name": "Linux", // or "Win32"
+      "includePath": [
+        "${workspaceFolder}/**",
+        "/usr/include/GL",
+        "/usr/include/SDL2",
+        "/usr/include/glm"
+      ],
+      "defines": [],
+      "compilerPath": "/usr/bin/g++", // update for your platform
+      "cStandard": "c11",
+      "cppStandard": "c++17",
+      "intelliSenseMode": "linux-gcc-x64"
+    }
+  ],
+  "version": 4
+}
