@@ -1,1 +1,1 @@
-# just-a-driving-game
+# simple-horror-game
