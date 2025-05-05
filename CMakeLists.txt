@@ -58,6 +58,8 @@ target_link_libraries(obj_loader PRIVATE
     glm::glm
 )
 
+target_compile_definitions(obj_loader PRIVATE DEBUG_OBJLOADER)
+
 target_include_directories(opengl_app PRIVATE
     ${OPENGL_INCLUDE_DIR}
     ${SDL2_INCLUDE_DIRS}
