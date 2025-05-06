@@ -251,114 +251,101 @@ void ObjectLoader::OBJLoader::read_usemtl(const char *buff, int &current_mat_id)
     current_mat_id = -1;
   }
 }
-void ObjectLoader::OBJLoader::read_mtllib(const char *buff, const std::string &filename) {
-  // grab just the filename (stop at space or comment marker)
+
+void ObjectLoader::OBJLoader::read_mtllib(const char* buff, const std::string& obj_filename) {
   const char* p = buff;
   while (*p && std::isspace(*p)) ++p;
-
   const char* q = p;
-  while (*q && !std::isspace(*q) && *q != '#')
-  ++q;
-
+  while (*q && !std::isspace(*q) && *q != '#') ++q;
   std::string mtl_name{ p, size_t(q - p) };
 
-  auto pos = filename.find_last_of("/\\");
-  std::string dir = (pos == std::string::npos
-                     ? ""
-                     : filename.substr(0, pos+1));
-  std::string fullpath = dir + mtl_name;
+  auto slash = obj_filename.find_last_of("/\\");
+  std::string dir  = (slash == std::string::npos ? "" : obj_filename.substr(0, slash+1));
+  std::string path = dir + mtl_name;
 
-  std::ifstream file{ fullpath, std::ios::binary };
+  std::ifstream file{path, std::ios::binary};
   if (!file) {
-    std::cerr << "Failed to open MTL: " << fullpath << "\n";
-    return;
+      std::cerr << "Failed to open MTL: " << path << "\n";
+      return;
   }
   file.seekg(0, std::ios::end);
-  size_t      size = file.tellg();
-  std::string contents(size, '\0');
+  size_t      sz = file.tellg();
+  std::string contents(sz, '\0');
   file.seekg(0);
-  file.read(contents.data(), size);
+  file.read(contents.data(), sz);
 
   Material current_mat;
-
   auto commit_mat = [&]() {
-    if (!current_mat.name.empty()) {
-      int id = m_materials.size();
-      m_mat_name_to_id[current_mat.name] = id;
-      m_materials.push_back(std::move(current_mat));
-      current_mat = Material{};
-    }
-  };
-
-  auto parse_floats = [&](std::string_view sv, float *out, int count){
-    const char *ptr = sv.data(), *end = ptr + sv.size();
-    for (int i = 0; i < count; ++i) {
-      auto [p, ec] = std::from_chars(ptr, end, out[i]);
-      if (ec != std::errc()) return false;
-      ptr = p;
-      while (ptr < end && std::isspace(*ptr)) ++ptr;
-    }
-    return true;
+      if (!current_mat.name.empty()) {
+          int id = m_materials.size();
+          m_mat_name_to_id[current_mat.name] = id;
+          m_materials.push_back(std::move(current_mat));
+          current_mat = Material{};
+      }
   };
 
   std::string_view view{contents};
-  size_t           line_start = 0;
+  size_t           pos = 0;
+  while (pos < view.size()) {
+      size_t eol = view.find_first_of("\r\n", pos);
+      auto   line = view.substr(pos,
+                        eol == std::string_view::npos
+                          ? view.size()-pos
+                          : eol - pos);
+      pos = (eol == std::string_view::npos
+              ? view.size()
+              : view.find_first_not_of("\r\n", eol));
 
-  while (line_start < view.size()) {
-    size_t eol = view.find_first_of("\r\n", line_start);
-    auto   line = view.substr(line_start,
-                  eol == std::string_view::npos ? view.size()-line_start
-                                                  : eol - line_start);
-    line_start = (eol == std::string_view::npos
-                  ? view.size()
-                  : view.find_first_not_of("\r\n", eol));
+      size_t i = 0;
+      while (i < line.size() && std::isspace(line[i])) ++i;
+      if (i >= line.size() || line[i] == '#') continue;
 
-    size_t i = 0;
-    while (i < line.size() && std::isspace(line[i])) ++i;
-    if (i >= line.size() || line[i] == '#') continue;
+      size_t key_end = i;
+      while (key_end < line.size() && !std::isspace(line[key_end])) ++key_end;
+      std::string_view key  = line.substr(i, key_end - i);
+      size_t           dpos = line.find_first_not_of(" \t", key_end);
+      std::string_view data = dpos == std::string_view::npos
+                              ? std::string_view{}
+                              : line.substr(dpos);
 
-    size_t key_end = i;
-    while (key_end < line.size() && !std::isspace(line[key_end])) ++key_end;
-    std::string_view key  = line.substr(i, key_end - i);
-    size_t           data_start = line.find_first_not_of(" \t", key_end);
-    std::string_view data = data_start == std::string_view::npos
-                            ? std::string_view{}
-                            : line.substr(data_start);
-
-    if (key == "newmtl") {
-      commit_mat();
-      current_mat.name = std::string{data};
-    }
-    else if (key == "Ka") {
-      float f[3];
-      if (parse_floats(data, f, 3)) current_mat.Ka = {f[0],f[1],f[2]};
-    }
-    else if (key == "Kd") {
-      float f[3];
-      if (parse_floats(data, f, 3)) current_mat.Kd = {f[0],f[1],f[2]};
-    }
-    else if (key == "Ks") {
-      float f[3];
-      if (parse_floats(data, f, 3)) current_mat.Ks = {f[0],f[1],f[2]};
-    }
-    else if (key == "Ns") {
-      float f;
-      auto [p, ec] = std::from_chars(data.data(), data.data()+data.size(), f);
-      if (ec == std::errc()) current_mat.Ns = f;
-    }
-    else if (key == "map_Ka") {
-      current_mat.map_Ka = std::string{data};
-    }
-    else if (key == "map_Kd") {
-      current_mat.map_Kd = std::string{data};
-    }
-    else if (key == "map_Ks") {
-      current_mat.map_Ks = std::string{data};
-    }
+      if (key == "newmtl") {
+          commit_mat();
+          current_mat.name = std::string{data};
+      }
+      else if (key == "Ka") {
+          float tmp[3];
+          if (parse_components_sv<3>(data, tmp))
+              current_mat.Ka = { tmp[0], tmp[1], tmp[2] };
+      }
+      else if (key == "Kd") {
+          float tmp[3];
+          if (parse_components_sv<3>(data, tmp))
+              current_mat.Kd = { tmp[0], tmp[1], tmp[2] };
+      }
+      else if (key == "Ks") {
+          float tmp[3];
+          if (parse_components_sv<3>(data, tmp))
+              current_mat.Ks = { tmp[0], tmp[1], tmp[2] };
+      }
+      else if (key == "Ns") {
+          float tmp[1];
+          if (parse_components_sv<1>(data, tmp))
+              current_mat.Ns = tmp[0];
+      }
+      else if (key == "map_Ka") {
+          current_mat.map_Ka = std::string{data};
+      }
+      else if (key == "map_Kd") {
+          current_mat.map_Kd = std::string{data};
+      }
+      else if (key == "map_Ks") {
+          current_mat.map_Ks = std::string{data};
+      }
   }
 
   commit_mat();
 }
+
 void ObjectLoader::OBJLoader::add_new_group(const char *buff, int &current_group_id) {
   const char* p = buff;
   while (*p && std::isspace(*p)) ++p;
