@@ -9,9 +9,11 @@
 #include <stdexcept>
 #include <cctype>
 #include <string>
-//should probably use data structures from the libraries
+#include <unordered_map>
 
+#ifndef DEBUG_OBJLOADER
 #define DEBUG_OBJLOADER
+#endif
 
 
 namespace ObjectLoader{ 
@@ -26,17 +28,40 @@ namespace ObjectLoader{
         glm::ivec4 vertices;
         glm::ivec4 normals;
         glm::ivec4 texcoords;
+        int material_id = -1;
+        int group_id = -1;
     };
 
+    struct Material {
+        std::string name;
+        glm::vec3 Ka, Kd, Ks;
+        float      Ns = 0.0f;
+        std::string map_Ka, map_Kd, map_Ks;
+    };
 
-    enum class LineType{Vertex, Texcoord, Normal, Face, Unknown};
+    enum class LineType{
+        Vertex, 
+        Texcoord, 
+        Normal, 
+        Face, 
+        Mtllib, 
+        Usemtl,
+        Group,
+        Comment,
+        Unknown
+    };
 
     inline LineType classify_line_type(std::string_view kw) {
-    if      (kw == "v")  return LineType::Vertex;
+    if (kw == "v") return LineType::Vertex;
     else if (kw == "vt") return LineType::Texcoord;
     else if (kw == "vn") return LineType::Normal;
-    else if (kw == "f")  return LineType::Face;
-    else                 return LineType::Unknown;
+    else if (kw == "f") return LineType::Face;
+    else if (kw == "usemtl") return LineType::Usemtl;
+    else if (kw == "g") return LineType::Group;
+    else if (kw == "mtllib") return LineType::Mtllib;
+    else if (kw == "#") return LineType::Comment;
+    else if (kw == "o")      return LineType::Unknown;
+    else return LineType::Unknown;
     }
 
 
@@ -66,23 +91,31 @@ namespace ObjectLoader{
     class OBJLoader{
     private: 
 
+
         void read_normal(const char* buff);
         void read_vertex(const char* buff);
         void read_texcoord(const char* buff);
-        void read_faceLimited(const char* buff);
-        void read_usemtl(const char* buff, int &material_id);
+
+        void read_faceLimited(const char* buff, int current_mat_id, int current_group_id);
         void read_mtllib(const char* buff, const std::string& filename);
-        void add_new_group(const char* buff, int &material_id);
+        void read_usemtl(const char* buff, int &current_mat_id);
+        void add_new_group(const char* buff, int &current_group_id);
 
     public:
+        void debug_dump() const;
+
         void read_from_file(const std::string& filename);
 
         std::vector<glm::vec4> m_vertices;
-        std::vector<glm::vec3> m_texture_coords;  
+        std::vector<glm::vec3> m_texture_coords;
         std::vector<glm::vec3> m_vertex_normals;
+        std::vector<Face>      m_faces;
 
+        std::vector<Material>               m_materials;
+        std::unordered_map<std::string,int> m_mat_name_to_id;
 
-        std::vector<Face> m_faces;
+        std::vector<std::string>            m_groups;
+        std::unordered_map<std::string,int> m_group_name_to_id;
 
         void parseFace(const std::string &line);
 
