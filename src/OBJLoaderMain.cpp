@@ -11,6 +11,7 @@ int main(int argc, char** argv) {
 
     ObjectLoader::OBJLoader loader;
     loader.read_from_file(filename);
+    loader.debug_dump();
 
     std::cout << "Finished loading.\n";
     std::cout << "Vertices:        " << loader.m_vertices.size() << "\n";
