@@ -88,6 +88,23 @@ namespace ObjectLoader{
         return true;
     }
 
+    template<int N>
+    bool parse_components_sv(std::string_view sv, float out[N]) {
+        const char* ptr = sv.data();
+        const char* end = ptr + sv.size();
+        for (int i = 0; i < N; ++i) {
+            auto [next, ec] = std::from_chars(ptr, end, out[i]);
+            if (ec != std::errc()) {
+                if (i == 0) return false;
+                for (++i; i < N; ++i) out[i] = 0.f;
+                return true;
+            }
+            ptr = next;
+            while (ptr < end && std::isspace(*ptr)) ++ptr;
+        }
+        return true;
+    }
+
     class OBJLoader{
     private: 
 
