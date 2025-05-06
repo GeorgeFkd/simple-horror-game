@@ -11,7 +11,9 @@ void ObjectLoader::OBJLoader::read_from_file(const std::string &filename) {
   std::cout << "File is open\n";
 
   std::string line;
-  int current_material_id = 0;
+
+  int current_mat_id = -1;
+  int current_group_id = -1;
 
   while(std::getline(in, line)){
 
@@ -60,8 +62,45 @@ void ObjectLoader::OBJLoader::read_from_file(const std::string &filename) {
         std::cout<< "Reading Face..." << std::endl;
       }
       #endif
-      read_faceLimited(p); 
+      read_faceLimited(p, current_mat_id, current_group_id);
       break;
+    case LineType::Mtllib:
+      #ifdef DEBUG_OBJLOADER
+      {
+        std::cout<< "Reading MTL lib..." << std::endl;
+      }
+      #endif
+      read_mtllib(p, filename);
+      break;
+    case LineType::Group:
+      #ifdef DEBUG_OBJLOADER
+      {
+        std::cout<< "Reading Group..." << std::endl;
+      }
+      #endif
+      add_new_group(p, current_group_id);
+      break;
+    case LineType::Usemtl:
+      #ifdef DEBUG_OBJLOADER
+      {
+        std::cout<< "Reading Use MTL..." << std::endl;
+      }
+      #endif
+      read_usemtl(p, current_mat_id);
+      break;
+    case LineType::Comment: 
+      #ifdef DEBUG_OBJLOADER
+      {
+        std::cout<< "Reading Comment..." << std::endl;
+      }
+      #endif
+      break;
+    case LineType::Unknown:
+      #ifdef DEBUG_OBJLOADER
+      {
+        std::cout<< "Reading Unknown..." << std::endl;
+      }
+      #endif
     default: break;
     }
 
@@ -98,7 +137,7 @@ void ObjectLoader::OBJLoader::read_vertex(const char* buff) {
   m_vertices.push_back(v);
 }
 
-void ObjectLoader::OBJLoader::read_faceLimited(const char *buff) {
+void ObjectLoader::OBJLoader::read_faceLimited(const char *buff, int current_mat_id, int current_group_id) {
     // Prepare arrays, defaulting everything to -1
     glm::ivec4 vIdx(-1), tIdx(-1), nIdx(-1);
 
@@ -147,11 +186,13 @@ void ObjectLoader::OBJLoader::read_faceLimited(const char *buff) {
         ++slot;
     }
 
-    // Store into your Face struct
     Face f;
     f.vertices  = vIdx;
     f.texcoords = tIdx;
     f.normals   = nIdx;
+
+    f.material_id = current_mat_id;
+    f.group_id    = current_group_id;
 
     #ifdef DEBUG_OBJLOADER
       std::cout << "Parsed face slot count: " << slot << "\n";
@@ -163,6 +204,176 @@ void ObjectLoader::OBJLoader::read_faceLimited(const char *buff) {
     m_faces.push_back(f);
 }
 
-void ObjectLoader::OBJLoader::read_usemtl(const char *buff, int &material_id) {}
-void ObjectLoader::OBJLoader::read_mtllib(const char *buff, const std::string &filename) {}
-void ObjectLoader::OBJLoader::add_new_group(const char *buff, int &material_id) {}
+void ObjectLoader::OBJLoader::debug_dump() const {
+  std::cout << "=== OBJ Debug Dump ===\n";
+  std::cout << "Materials (" << m_materials.size() << "):\n";
+  for (size_t i = 0; i < m_materials.size(); ++i) {
+    auto const& M = m_materials[i];
+    std::cout << " ["<<i<<"] '"<< M.name << "'  "
+              << "Ka("<< M.Ka.r<<","<<M.Ka.g<<","<<M.Ka.b<<")  "
+              << "Kd("<< M.Kd.r<<","<<M.Kd.g<<","<<M.Kd.b<<")  "
+              << "Ks("<< M.Ks.r<<","<<M.Ks.g<<","<<M.Ks.b<<")  "
+              << "Ns="<< M.Ns;
+    if (!M.map_Kd.empty())
+      std::cout << "  map_Kd='"<<M.map_Kd<<"'";
+    std::cout << "\n";
+  }
+
+  std::cout << "Groups (" << m_groups.size() << "):\n";
+  for (size_t i = 0; i < m_groups.size(); ++i) {
+    std::cout << " ["<<i<<"] '"<< m_groups[i] <<"'\n";
+  }
+
+  std::cout << "Faces (" << m_faces.size() << "):\n";
+  for (size_t i = 0; i < m_faces.size(); ++i) {
+    auto const& F = m_faces[i];
+    std::cout << " ["<<i<<"] mat="<<F.material_id
+              << " grp="<<F.group_id
+              << " verts=("
+                 <<F.vertices.x<<","<<F.vertices.y<<","<<F.vertices.z<<","<<F.vertices.w<<")\n";
+  }
+  std::cout << "======================\n\n";
+}
+
+
+void ObjectLoader::OBJLoader::read_usemtl(const char *buff, int &current_mat_id) {
+  const char* p = buff;
+  while (*p && std::isspace(*p)) ++p;
+
+  const char* q = p;
+  while (*q && !std::isspace(*q) && *q != '#') ++q;
+
+  std::string name{ p, size_t(q - p) };
+  auto it = m_mat_name_to_id.find(name);
+  if (it != m_mat_name_to_id.end()) {
+    current_mat_id = it->second;
+  } else {
+    current_mat_id = -1;
+  }
+}
+void ObjectLoader::OBJLoader::read_mtllib(const char *buff, const std::string &filename) {
+  // grab just the filename (stop at space or comment marker)
+  const char* p = buff;
+  while (*p && std::isspace(*p)) ++p;
+
+  const char* q = p;
+  while (*q && !std::isspace(*q) && *q != '#')
+  ++q;
+
+  std::string mtl_name{ p, size_t(q - p) };
+
+  auto pos = filename.find_last_of("/\\");
+  std::string dir = (pos == std::string::npos
+                     ? ""
+                     : filename.substr(0, pos+1));
+  std::string fullpath = dir + mtl_name;
+
+  std::ifstream file{ fullpath, std::ios::binary };
+  if (!file) {
+    std::cerr << "Failed to open MTL: " << fullpath << "\n";
+    return;
+  }
+  file.seekg(0, std::ios::end);
+  size_t      size = file.tellg();
+  std::string contents(size, '\0');
+  file.seekg(0);
+  file.read(contents.data(), size);
+
+  Material current_mat;
+
+  auto commit_mat = [&]() {
+    if (!current_mat.name.empty()) {
+      int id = m_materials.size();
+      m_mat_name_to_id[current_mat.name] = id;
+      m_materials.push_back(std::move(current_mat));
+      current_mat = Material{};
+    }
+  };
+
+  auto parse_floats = [&](std::string_view sv, float *out, int count){
+    const char *ptr = sv.data(), *end = ptr + sv.size();
+    for (int i = 0; i < count; ++i) {
+      auto [p, ec] = std::from_chars(ptr, end, out[i]);
+      if (ec != std::errc()) return false;
+      ptr = p;
+      while (ptr < end && std::isspace(*ptr)) ++ptr;
+    }
+    return true;
+  };
+
+  std::string_view view{contents};
+  size_t           line_start = 0;
+
+  while (line_start < view.size()) {
+    size_t eol = view.find_first_of("\r\n", line_start);
+    auto   line = view.substr(line_start,
+                  eol == std::string_view::npos ? view.size()-line_start
+                                                  : eol - line_start);
+    line_start = (eol == std::string_view::npos
+                  ? view.size()
+                  : view.find_first_not_of("\r\n", eol));
+
+    size_t i = 0;
+    while (i < line.size() && std::isspace(line[i])) ++i;
+    if (i >= line.size() || line[i] == '#') continue;
+
+    size_t key_end = i;
+    while (key_end < line.size() && !std::isspace(line[key_end])) ++key_end;
+    std::string_view key  = line.substr(i, key_end - i);
+    size_t           data_start = line.find_first_not_of(" \t", key_end);
+    std::string_view data = data_start == std::string_view::npos
+                            ? std::string_view{}
+                            : line.substr(data_start);
+
+    if (key == "newmtl") {
+      commit_mat();
+      current_mat.name = std::string{data};
+    }
+    else if (key == "Ka") {
+      float f[3];
+      if (parse_floats(data, f, 3)) current_mat.Ka = {f[0],f[1],f[2]};
+    }
+    else if (key == "Kd") {
+      float f[3];
+      if (parse_floats(data, f, 3)) current_mat.Kd = {f[0],f[1],f[2]};
+    }
+    else if (key == "Ks") {
+      float f[3];
+      if (parse_floats(data, f, 3)) current_mat.Ks = {f[0],f[1],f[2]};
+    }
+    else if (key == "Ns") {
+      float f;
+      auto [p, ec] = std::from_chars(data.data(), data.data()+data.size(), f);
+      if (ec == std::errc()) current_mat.Ns = f;
+    }
+    else if (key == "map_Ka") {
+      current_mat.map_Ka = std::string{data};
+    }
+    else if (key == "map_Kd") {
+      current_mat.map_Kd = std::string{data};
+    }
+    else if (key == "map_Ks") {
+      current_mat.map_Ks = std::string{data};
+    }
+  }
+
+  commit_mat();
+}
+void ObjectLoader::OBJLoader::add_new_group(const char *buff, int &current_group_id) {
+  const char* p = buff;
+  while (*p && std::isspace(*p)) ++p;
+
+  const char* q = p;
+  while (*q && !std::isspace(*q) && *q != '#') ++q;
+
+  std::string name{ p, size_t(q - p) };
+  auto it = m_group_name_to_id.find(name);
+  if (it == m_group_name_to_id.end()) {
+    int id = m_groups.size();
+    m_groups.push_back(name);
+    m_group_name_to_id[name] = id;
+    current_group_id = id;
+  } else {
+    current_group_id = it->second;
+  }
+}
