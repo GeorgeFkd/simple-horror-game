@@ -100,6 +100,47 @@ void Renderer::RendererObj::load_model(const ObjectLoader::OBJLoader& loader){
     glBindVertexArray(0);
 }
 
+
+std::string Renderer::RendererObj::load_file(const std::string& path){
+    std::ifstream file(path);
+    if (!file) throw std::runtime_error("Failed to open file: " + path);
+
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    return buffer.str();
+}
+
+GLuint Renderer::RendererObj::compile_shader(GLenum type, const std::string& source){
+    // Every symbolic constant you pass to an OpenGL 
+    // function—like GL_ARRAY_BUFFER, GL_TRIANGLES, GL_FLOAT, 
+    // GL_BLEND, etc.—is actually just an integer constant 
+    // of type GLenum.
+    // glBindBuffer((GLenum)0x8892, vbo);
+    GLuint shader = glCreateShader(type);
+    const char* src = source.c_str();
+    glShaderSource(shader, 1, &src, nullptr);
+    glCompileShader(shader);
+
+    GLint success = 0;
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+
+    if(success == GL_FALSE){
+        GLint max_length = 0;
+        glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &max_length);
+
+        // The maxLength includes the NULL character
+        std::vector<GLchar> errorLog(max_length);
+        glGetShaderInfoLog(shader, max_length, &max_length, &errorLog[0]);
+
+        // Provide the infolog in whatever manor you deem best.
+        // Exit with failure.
+        glDeleteShader(shader); // Don't leak the shader.
+        return;
+    }
+
+    return shader;
+}
+
 //void Renderer::RendererObj::render(){
 //
 //}
