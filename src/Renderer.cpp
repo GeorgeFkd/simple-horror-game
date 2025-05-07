@@ -3,53 +3,48 @@
 
 void Renderer::RendererObj::load_model(const ObjectLoader::OBJLoader& loader){
 
-    std::vector<Renderer::Vertex> unique_vertices;
+    std::vector<Vertex> unique_vertices;
     std::vector<GLuint> indices;
 
+    // maps each unique Vertex → its index in unique_vertices
+    std::unordered_map<Vertex, GLuint, VertexHasher> cache;
+    cache.reserve(loader.m_faces.size()*4);
 
-    unique_vertices.reserve(loader.m_faces.size() * 6);
-    indices.reserve(loader.m_faces.size() * 6);
+    // Build triangles...
+    for (auto const& face : loader.m_faces) {
+      int v[4] = { face.vertices[0], face.vertices[1],
+                   face.vertices[2], face.vertices[3] };
+      int t[4] = { face.texcoords[0], face.texcoords[1],
+                   face.texcoords[2], face.texcoords[3] };
+      int n[4] = { face.normals[0], face.normals[1],
+                   face.normals[2], face.normals[3] };
 
+      auto add_vertex = [&](int vi, int ti, int ni){
+        Vertex vert;
+        vert.position = glm::vec3(loader.m_vertices[vi]);
+        vert.texcoord = glm::vec2(loader.m_texture_coords[ti]);
+        vert.normal   = loader.m_vertex_normals[ni];
 
-    for (auto const& face: loader.m_faces){
-
-        int v[4] = {face.vertices[0], face.vertices[1], face.vertices[2], face.vertices[3]};
-        int t[4] = {face.texcoords[0], face.texcoords[1], face.texcoords[2], face.texcoords[3]};
-        int n[4] = {face.normals[0], face.normals[1], face.normals[2], face.normals[3]};
-
-
-        auto add_vertex = [&](int vi, int ti, int ni){
-
-            Vertex vertex;
-
-            // drop 4D coordinates 
-            vertex.position = glm::vec3(loader.m_vertices[vi]);
-            vertex.texcoord = glm::vec2(loader.m_texture_coords[ti]);
-            vertex.normal = loader.m_vertex_normals[ni];
-
-            auto it = std::find(unique_vertices.begin(), unique_vertices.end(), vertex);
-
-            if(it == unique_vertices.end()){
-                unique_vertices.push_back(vertex);
-                indices.push_back(static_cast<GLuint>(unique_vertices.size() - 1));
-            }else{
-                indices.push_back(static_cast<GLuint>(std::distance(unique_vertices.begin(), it)));
-            }
-        };
-
-        // Create the two triangles from the Quad
-        // if its not a Quad
-        // Tri 1: v0, v1, v2
-        add_vertex(v[0], t[0], n[0]);
-        add_vertex(v[1], t[1], n[1]);
-        add_vertex(v[2], t[2], n[2]);
-
-        // Tri 2: v0, v2, v3
-        if (face.vertices[3] != -1) { // quad
-            add_vertex(v[0], t[0], n[0]);
-            add_vertex(v[2], t[2], n[2]);
-            add_vertex(v[3], t[3], n[3]);
+        auto it_and_ins = cache.emplace(vert, (GLuint)unique_vertices.size());
+        if (it_and_ins.second) {
+          // was newly inserted
+          unique_vertices.push_back(vert);
         }
+        // either way, push the (existing or new) index:
+        indices.push_back(it_and_ins.first->second);
+      };
+
+      // first triangle
+      add_vertex(v[0], t[0], n[0]);
+      add_vertex(v[1], t[1], n[1]);
+      add_vertex(v[2], t[2], n[2]);
+
+      // second triangle (if quad)
+      if (v[3] != -1) {
+        add_vertex(v[0], t[0], n[0]);
+        add_vertex(v[2], t[2], n[2]);
+        add_vertex(v[3], t[3], n[3]);
+      }
     }
     // generate VAO/VBO/EBO if needed
     // VAO groups the vertex attribute setup
@@ -135,7 +130,7 @@ GLuint Renderer::RendererObj::compile_shader(GLenum type, const std::string& sou
         // Provide the infolog in whatever manor you deem best.
         // Exit with failure.
         glDeleteShader(shader); // Don't leak the shader.
-        return;
+        return -1;
     }
 
     return shader;
