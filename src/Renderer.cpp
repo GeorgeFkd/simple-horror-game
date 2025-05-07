@@ -100,3 +100,6 @@ void Renderer::RendererObj::load_model(const ObjectLoader::OBJLoader& loader){
     glBindVertexArray(0);
 }
 
+//void Renderer::RendererObj::render(){
+//
+//}
