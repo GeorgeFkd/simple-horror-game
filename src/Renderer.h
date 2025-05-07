@@ -5,6 +5,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <string>
+#include <algorithm>
 #include "OBJLoader.h"
 
 namespace Renderer{
@@ -45,6 +46,7 @@ namespace Renderer{
     private:
         GLuint vao, vbo, ebo;
         GLuint shader_program;
+        GLsizei index_count = 0;
         int screen_width, screen_height;
 
         
