@@ -88,14 +88,29 @@ target_compile_definitions(obj_loader PRIVATE DEBUG_OBJLOADER)
 # ASSETS HERE
 ##############
 
-# Shader files
-file(GLOB SHADERS
-    "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.vert"
-    "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.frag"
-)
+# Set shader source and destination dirs
+set(SHADER_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/assets/shaders")
+set(SHADER_DST_DIR "${CMAKE_CURRENT_BINARY_DIR}/assets/shaders")
 
-# Copy them to build dir (next to executable)
+# Collect all shader files (.vert, .frag, etc.)
+file(GLOB SHADERS "${SHADER_SRC_DIR}/*.*")
+
+# Copy each shader file into build/assets/shaders/
 foreach(SHADER ${SHADERS})
     add_custom_command(TARGET opengl_app POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy ${SHADER} $<TARGET_FILE_DIR:opengl_app>)
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${SHADER_DST_DIR}"
+        COMMAND ${CMAKE_COMMAND} -E copy ${SHADER} "${SHADER_DST_DIR}")
+endforeach()
+
+
+# Copy .obj model files into build/assets/models/
+set(MODEL_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/assets/models")
+set(MODEL_DST_DIR "${CMAKE_CURRENT_BINARY_DIR}/assets/models")
+
+file(GLOB MODEL_FILES "${MODEL_SRC_DIR}/*.obj")
+
+foreach(MODEL_FILE ${MODEL_FILES})
+    add_custom_command(TARGET opengl_app POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${MODEL_DST_DIR}"
+        COMMAND ${CMAKE_COMMAND} -E copy ${MODEL_FILE} "${MODEL_DST_DIR}")
 endforeach()
