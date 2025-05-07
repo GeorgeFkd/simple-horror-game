@@ -41,6 +41,12 @@ namespace Renderer{
     class RendererObj{
     public: 
 
+        // TODO very minimal function to load shaders
+        std::string load_file(const std::string& path);
+        // TODO very minimal function to compile shaders
+        GLuint compile_shader(GLenum type, const std::string& source);
+        void load_model(const ObjectLoader::OBJLoader& loader);
+        void render(const glm::mat4& view_projection);
 
         RendererObj(int width, int height);
         ~RendererObj();
@@ -50,15 +56,6 @@ namespace Renderer{
         GLsizei index_count = 0;
         int screen_width, screen_height;
 
-        
-        // TODO very minimal function to load shaders
-        std::string load_file(const std::string& path);
-
-        // TODO very minimal function to compile shaders
-        GLuint compile_shader(GLenum type, const std::string& source);
-
-        void load_model(const ObjectLoader::OBJLoader& loader);
-        void render(const glm::mat4& view_projection);
     };
 
 }

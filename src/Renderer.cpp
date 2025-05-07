@@ -1,5 +1,58 @@
 #include "Renderer.h"
 
+Renderer::RendererObj::RendererObj(int width, int height)
+  : vao(0)
+  , vbo(0)
+  , ebo(0)
+  , shader_program(0)
+  , index_count(0)
+  , screen_width(width)
+  , screen_height(height)
+{
+    auto vert_src = load_file("assets/shaders/passthrough.vert");
+    auto frag_src = load_file("assets/shaders/passthrough.frag");
+
+    GLuint vert = compile_shader(GL_VERTEX_SHADER,   vert_src);
+    GLuint frag = compile_shader(GL_FRAGMENT_SHADER, frag_src);
+
+    shader_program = glCreateProgram();
+    glAttachShader(shader_program, vert);
+    glAttachShader(shader_program, frag);
+    glLinkProgram(shader_program);
+
+    GLint ok = GL_FALSE;
+    glGetProgramiv(shader_program, GL_LINK_STATUS, &ok);
+    if (ok != GL_TRUE) {
+      GLint len = 0;
+      glGetProgramiv(shader_program, GL_INFO_LOG_LENGTH, &len);
+      std::string log(len, '\0');
+      glGetProgramInfoLog(shader_program, len, &len, &log[0]);
+      throw std::runtime_error("Shader link failed:\n" + log);
+    }
+
+    glDeleteShader(vert);
+    glDeleteShader(frag);
+}
+
+Renderer::RendererObj::~RendererObj() {
+    // Tear down GL objects in reverse order of creation:
+    if (ebo) {
+        glDeleteBuffers(1, &ebo);
+        ebo = 0;
+    }
+    if (vbo) {
+        glDeleteBuffers(1, &vbo);
+        vbo = 0;
+    }
+    if (vao) {
+        glDeleteVertexArrays(1, &vao);
+        vao = 0;
+    }
+    if (shader_program) {
+        glDeleteProgram(shader_program);
+        shader_program = 0;
+    }
+}
 
 void Renderer::RendererObj::load_model(const ObjectLoader::OBJLoader& loader){
 
@@ -136,6 +189,27 @@ GLuint Renderer::RendererObj::compile_shader(GLenum type, const std::string& sou
     return shader;
 }
 
-//void Renderer::RendererObj::render(){
-//
-//}
+void Renderer::RendererObj::render(const glm::mat4& view_projection) {
+    // use the shader program
+    glUseProgram(shader_program);
+
+    // upload the combined view-projection matrix
+    // note the shader needs to have the uViewProj defined
+    GLint loc = glGetUniformLocation(shader_program, "uViewProj");
+    glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(view_projection));
+
+    // bind the VAO (which already has the VBO/EBO & attrib pointers from load_model)
+    glBindVertexArray(vao);
+
+    // draw all indices as triangles
+    glDrawElements(
+        GL_TRIANGLES,       // we're drawing triangles
+        index_count,        // number of indices in the EBO
+        GL_UNSIGNED_INT,    // the type of the indices
+        nullptr             // offset into the EBO (0 here)
+    );
+
+    // unbind to avoid accidental state leakage
+    glBindVertexArray(0);
+    glUseProgram(0);
+}

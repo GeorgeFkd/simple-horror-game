@@ -1,6 +1,7 @@
 #include "OBJLoader.h"
 
 
+
 void ObjectLoader::OBJLoader::read_from_file(const std::string &filename) {
   std::cout << "Reading .obj file from: " << filename << "\n";
 

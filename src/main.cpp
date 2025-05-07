@@ -1,88 +1,78 @@
-#include <SDL2/SDL.h>
+// main.cpp
+#include <SDL.h>
 #include <GL/glew.h>
-#include <iostream>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
-const char* vertex_shader_src = R"(
-#version 330 core
-layout(location = 0) in vec3 coord3d;
-void main() {
-    gl_Position = vec4(coord3d, 1.0);
-}
-)";
+#include "OBJLoader.h"
+#include "Renderer.h"
 
-const char* fragment_shader_src = R"(
-#version 330 core
-out vec4 out_color;
-void main() {
-    out_color = vec4(1.0, 0.5, 0.2, 1.0);
-}
-)";
-
-GLuint createShader(GLenum type, const char* src) {
-    GLuint shader = glCreateShader(type);
-    glShaderSource(shader, 1, &src, nullptr);
-    glCompileShader(shader);
-    return shader;
-}
-
-int main() {
+int main(int /*argc*/, char** /*argv*/){
     SDL_Init(SDL_INIT_VIDEO);
-    SDL_Window* window = SDL_CreateWindow("Triangle", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, SDL_WINDOW_OPENGL);
-    SDL_GLContext context = SDL_GL_CreateContext(window);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
+                        SDL_GL_CONTEXT_PROFILE_CORE);
+    SDL_Window* window = SDL_CreateWindow(
+        "Simple Cube", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+        1280, 720, SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE);
+    SDL_GLContext ctx = SDL_GL_CreateContext(window);
+
     glewInit();
+    glEnable(GL_DEPTH_TEST);
+    glViewport(0,0,1280,720);
 
-    float vertices[] = {
-        0.0f,  0.5f, 0.0f,
-       -0.5f, -0.5f, 0.0f,
-        0.5f, -0.5f, 0.0f
-    };
+    glDisable(GL_CULL_FACE);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-    GLuint vbo, vao;
-    glGenBuffers(1, &vbo);
-    glGenVertexArrays(1, &vao);
 
-    glBindVertexArray(vao);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
+    ObjectLoader::OBJLoader loader;
+    loader.read_from_file("assets/models/test.obj");
+    loader.debug_dump();
 
-    GLuint vs = createShader(GL_VERTEX_SHADER, vertex_shader_src);
-    GLuint fs = createShader(GL_FRAGMENT_SHADER, fragment_shader_src);
-    
-    GLuint shaderProgram = glCreateProgram();
-    glAttachShader(shaderProgram, vs);
-    glAttachShader(shaderProgram, fs);
-    glLinkProgram(shaderProgram);
+    Renderer::RendererObj renderer(1280, 720);
+    renderer.load_model(loader);
+
+    glm::mat4 view = glm::lookAt(
+        glm::vec3(0,0,3),   // eye
+        glm::vec3(0,0,0),   // center
+        glm::vec3(0,1,0));  // up
+
+    glm::mat4 proj = glm::perspective(
+        glm::radians(45.0f),
+        1280.0f / 720.0f,
+        0.1f,
+        100.0f);
 
     bool running = true;
-    SDL_Event event;
-    while (running) {
-        while(SDL_PollEvent(&event)) {
-            if(event.type == SDL_QUIT)
-                running = false;
+    while(running){
+      SDL_Event ev;
+      while(SDL_PollEvent(&ev)){
+        if(ev.type==SDL_QUIT) running = false;
+
+        if(ev.type==SDL_WINDOWEVENT &&
+           ev.window.event==SDL_WINDOWEVENT_SIZE_CHANGED)
+        {
+          int w = ev.window.data1,
+              h = ev.window.data2;
+          glViewport(0,0,w,h);
+          proj = glm::perspective(
+            glm::radians(45.0f),
+            float(w)/float(h),
+            0.1f, 100.0f);
         }
+      }
 
-        glClear(GL_COLOR_BUFFER_BIT);
-        glUseProgram(shaderProgram);
-        glBindVertexArray(vao);
-        glDrawArrays(GL_TRIANGLES, 0, 3);
-        glBindVertexArray(0);
-        glUseProgram(0);
+      glClearColor(0.1f,0.1f,0.1f,1.0f);
+      glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
-        SDL_GL_SwapWindow(window);
+      glm::mat4 vp = proj * view;
+      renderer.render(vp);
+
+      SDL_GL_SwapWindow(window);
     }
 
-    glDeleteProgram(shaderProgram);
-    glDeleteShader(vs);
-    glDeleteShader(fs);
-    glDeleteBuffers(1, &vbo);
-    glDeleteVertexArrays(1, &vao);
-    SDL_GL_DeleteContext(context);
+    SDL_GL_DeleteContext(ctx);
     SDL_DestroyWindow(window);
     SDL_Quit();
     return 0;
