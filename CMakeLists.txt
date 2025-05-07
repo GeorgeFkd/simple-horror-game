@@ -7,7 +7,11 @@ option(BUILD_TESTS "Build Tests(Install Catch2 Dependency)" OFF)
 
 set(CMAKE_CXX_STANDARD 17)
 
-set(SOURCES src/main.cpp) 
+set(SOURCES
+    src/main.cpp
+    src/Renderer.cpp
+    src/OBJLoader.cpp
+)
 
 find_package(OpenGL REQUIRED)
 find_package(SDL2 REQUIRED)
@@ -43,7 +47,27 @@ endif()
 
 
 add_executable(opengl_app ${SOURCES})
+
+target_include_directories(opengl_app PRIVATE
+    ${OPENGL_INCLUDE_DIR}
+    ${SDL2_INCLUDE_DIRS}
+    ${GLEW_INCLUDE_DIRS}
+    /usr/include/glm
+    ${CMAKE_CURRENT_SOURCE_DIR}/src   # So headers like Renderer.h and OBJLoader.h are found
+)
+
+target_link_libraries(opengl_app PRIVATE
+    ${OPENGL_LIBRARIES}
+    ${SDL2_LIBRARIES}
+    GLEW::glew
+    glm::glm
+)
+
+##############
+# TEST FUNCTIONALITY OF OBJECT LOADER
+##############
 add_executable(obj_loader src/OBJLoaderMain.cpp src/OBJLoader.cpp)
+
 target_include_directories(obj_loader PRIVATE
     ${OPENGL_INCLUDE_DIR}
     ${SDL2_INCLUDE_DIRS}
@@ -60,16 +84,18 @@ target_link_libraries(obj_loader PRIVATE
 
 target_compile_definitions(obj_loader PRIVATE DEBUG_OBJLOADER)
 
-target_include_directories(opengl_app PRIVATE
-    ${OPENGL_INCLUDE_DIR}
-    ${SDL2_INCLUDE_DIRS}
-    ${GLEW_INCLUDE_DIRS}
-    /usr/include/glm
+##############
+# ASSETS HERE
+##############
+
+# Shader files
+file(GLOB SHADERS
+    "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.vert"
+    "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.frag"
 )
 
-target_link_libraries(opengl_app PRIVATE
-    ${OPENGL_LIBRARIES}
-    ${SDL2_LIBRARIES}
-    GLEW::glew
-    glm::glm
-)
+# Copy them to build dir (next to executable)
+foreach(SHADER ${SHADERS})
+    add_custom_command(TARGET opengl_app POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy ${SHADER} $<TARGET_FILE_DIR:opengl_app>)
+endforeach()
