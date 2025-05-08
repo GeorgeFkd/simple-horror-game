@@ -28,7 +28,7 @@ namespace Camera{
         world_up(0.0f, 1.0f, 0.0f),
         camera_speed(5.0f),
         mouse_sensitivity(0.1f),
-        yaw(-90.0f),
+        yaw(-90.0f),//import to initialize at -90 to start at 0,0,-1
         pitch(0.0f)
         {
             aspect = float(window_height)/float(window_height);
@@ -60,8 +60,11 @@ namespace Camera{
         void updateCameraVectors() {
             // calculate new front vector
             glm::vec3 f;
+            // contribution on x axis * how much we are rotared on the y
             f.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+            // contribution on y axis
             f.y = sin(glm::radians(pitch));
+            // contribution on z axis * how much we are rotared on the y
             f.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
             front = glm::normalize(f);
 
