@@ -18,6 +18,8 @@ namespace Camera{
         float near_z  = 0.1f;
         float far_z   = 100.0f;
         // euler angles
+        // yaw represents the magnitude of looking left to right
+        // pitch represents how much we are looking up or down 
         float yaw, pitch;
     public: 
         
@@ -25,7 +27,9 @@ namespace Camera{
         position(0.0f, 0.0f, 3.0f),
         world_up(0.0f, 1.0f, 0.0f),
         camera_speed(5.0f),
-        mouse_sensitivity(0.1f)
+        mouse_sensitivity(0.1f),
+        yaw(-90.0f),
+        pitch(0.0f)
         {
             aspect = float(window_height)/float(window_height);
             updateCameraVectors();
