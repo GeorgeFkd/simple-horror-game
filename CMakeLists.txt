@@ -7,6 +7,7 @@ option(BUILD_TESTS "Build Tests(Install Catch2 Dependency)" OFF)
 
 set(CMAKE_CXX_STANDARD 17)
 
+
 set(SOURCES
     src/main.cpp
     src/Renderer.cpp
@@ -47,6 +48,22 @@ endif()
 
 
 add_executable(opengl_app ${SOURCES})
+add_executable(obj_loader src/OBJLoaderMain.cpp src/OBJLoader.cpp)
+target_include_directories(obj_loader PRIVATE
+    ${OPENGL_INCLUDE_DIR}
+    ${SDL2_INCLUDE_DIRS}
+    ${GLEW_INCLUDE_DIRS}
+    /usr/include/glm
+)
+
+target_link_libraries(obj_loader PRIVATE
+    ${OPENGL_LIBRARIES}
+    ${SDL2_LIBRARIES}
+    GLEW::glew
+    glm::glm
+)
+
+target_compile_definitions(obj_loader PRIVATE DEBUG_OBJLOADER)
 
 target_include_directories(opengl_app PRIVATE
     ${OPENGL_INCLUDE_DIR}
