@@ -1,3 +1,5 @@
+
+#pragma once
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
@@ -124,7 +126,7 @@ namespace ObjectLoader{
         void read_from_file(const std::string& filename);
 
         std::vector<glm::vec4> m_vertices;
-        std::vector<glm::vec3> m_texture_coords;
+        std::vector<glm::vec2> m_texture_coords;
         std::vector<glm::vec3> m_vertex_normals;
         std::vector<Face>      m_faces;
 

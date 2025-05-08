@@ -1,6 +1,8 @@
 #include "OBJLoader.h"
 
 
+
+
 void ObjectLoader::OBJLoader::read_from_file(const std::string &filename) {
   std::cout << "Reading .obj file from: " << filename << "\n";
 
@@ -118,9 +120,9 @@ void ObjectLoader::OBJLoader::read_normal(const char* buff) {
 }
 
 void ObjectLoader::OBJLoader::read_texcoord(const char* buff) {
-  float tmp[3];
-  if (!parse_components<3>(buff, tmp)) return;
-  glm::vec3 v{ tmp[0], tmp[1], tmp[2] };
+  float tmp[2];
+  if (!parse_components<2>(buff, tmp)) return;
+  glm::vec2 v{ tmp[0], tmp[1]};
   #ifdef DEBUG_OBJLOADER
     print_glmvec2(glm::vec2{v.x, v.y});
   #endif
