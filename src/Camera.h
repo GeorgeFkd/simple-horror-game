@@ -33,6 +33,7 @@ namespace Camera{
         {
             aspect = float(window_height)/float(window_height);
             updateCameraVectors();
+            // cursor is centered
             SDL_SetRelativeMouseMode(SDL_TRUE);
         }
 
@@ -57,20 +58,6 @@ namespace Camera{
             return glm::perspective(fov, aspect, near_z, far_z);
         }
 
-        void updateCameraVectors() {
-            // calculate new front vector
-            glm::vec3 f;
-            // contribution on x axis * how much we are rotared on the y
-            f.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-            // contribution on y axis
-            f.y = sin(glm::radians(pitch));
-            // contribution on z axis * how much we are rotared on the y
-            f.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-            front = glm::normalize(f);
-
-            // re‐compute right and up
-            right = glm::normalize(glm::cross(front, world_up));
-            up    = glm::normalize(glm::cross(right, front));
-        }
+        void updateCameraVectors();
     };
 }
