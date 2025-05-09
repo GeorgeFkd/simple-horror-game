@@ -58,7 +58,7 @@ void Model::compute_aabb() {
         world_max = glm::max(world_max, w);
     }
 
-    // store into your world‐space fields
+    // store into the world‐space fields
     aabbmin = world_min;
     aabbmax = world_max;
 }
