@@ -29,7 +29,14 @@ private:
     GLuint shader_program; 
     GLsizei index_count;
 
-    glm::vec3 aabbmin, aabbmax;
+    // 1) Object-space AABB (min/max corners in mesh local coords)
+    glm::vec3 localAABBMin;
+    glm::vec3 localAABBMax;
+
+    // 2) World-space AABB (after applying world_transform)
+    glm::vec3 aabbmin;
+    glm::vec3 aabbmax;
+
 
     std::vector<Model*> children; 
 };
