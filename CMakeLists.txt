@@ -10,7 +10,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 set(SOURCES
     src/main.cpp
-    src/Renderer.cpp
+    src/SceneManager.cpp
     src/OBJLoader.cpp
     src/Camera.cpp
     src/Model.cpp
@@ -106,11 +106,12 @@ foreach(SHADER ${SHADERS})
 endforeach()
 
 
-# Copy .obj model files into build/assets/models/
+# Copy .obj/mtl model files into build/assets/models/
 set(MODEL_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/assets/models")
 set(MODEL_DST_DIR "${CMAKE_CURRENT_BINARY_DIR}/assets/models")
 
 file(GLOB MODEL_FILES "${MODEL_SRC_DIR}/*.obj")
+file(GLOB MODEL_FILES "${MODEL_SRC_DIR}/*.mtl")
 
 foreach(MODEL_FILE ${MODEL_FILES})
     add_custom_command(TARGET opengl_app POST_BUILD
