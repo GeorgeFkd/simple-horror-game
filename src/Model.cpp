@@ -1,130 +1,149 @@
 #include "Model.h"
 
-void Model::Model::debug_dump(){
+void Model::Model::debug_dump() const {
+    size_t total_indices   = 0;
+    size_t total_triangles = 0;
+    for (auto const& sm : submeshes) {
+        total_indices   += sm.index_count;
+        total_triangles += sm.index_count / 3;
+    }
+
     std::cout 
-    << "  >>> Model built: "
-    << unique_vertices.size() << " unique vertices, "
-    << (indices.size()/3)       << " triangles, "
-    << indices.size()           << " indices total.\n";
-    std::cout 
-    << "      AABB local min = (" 
-    << localAABBMin.x << ","
-    << localAABBMin.y << ","
-    << localAABBMin.z << ")\n"
-    << "      AABB local max = (" 
-    << localAABBMax.x << ","
-    << localAABBMax.y << ","
-    << localAABBMax.z << ")\n";
-    std::cout
-    << "      SHADER PROGRAM:  "
-    << shader_program
-    << std::endl;
+      << "  >>> Model built: "
+      << unique_vertices.size() << " unique vertices, "
+      << total_triangles         << " triangles, "
+      << total_indices           << " indices total\n"
+      << "      Submeshes: "     << submeshes.size() << "\n"
+      << "      AABB local min = ("
+         << localaabbmin.x << ", "
+         << localaabbmin.y << ", "
+         << localaabbmin.z << ")\n"
+      << "      AABB local max = ("
+         << localaabbmax.x << ", "
+         << localaabbmax.y << ", "
+         << localaabbmax.z << ")\n"
+      << "      Shader program ID: "
+      << shader_program << "\n";
 }
 
 Model::Model::Model(const ObjectLoader::OBJLoader& loader)
-  : local_transform(glm::mat4(1.0f))
-  , world_transform(glm::mat4(1.0f))
-  , vao(0), vbo(0), ebo(0), index_count(0)
-  , localAABBMin(FLT_MAX), localAABBMax(-FLT_MAX)
+  : local_transform(1.0f)
+  , world_transform(1.0f)
+  , localaabbmin(std::numeric_limits<float>::max())
+  , localaabbmax(-std::numeric_limits<float>::max())
 {
-    
-    // maps each unique Vertex → its index in unique_vertices
+    // 1) build unique_vertices & a cache
     std::unordered_map<Vertex, GLuint, VertexHasher> cache;
-    cache.reserve(loader.m_faces.size()*4);
+    cache.reserve(loader.m_faces.size() * 4);
 
-    // Build triangles...
-    for (auto const& face : loader.m_faces) {
-      int v[4] = { face.vertices[0], face.vertices[1],
-                   face.vertices[2], face.vertices[3] };
-      int t[4] = { face.texcoords[0], face.texcoords[1],
-                   face.texcoords[2], face.texcoords[3] };
-      int n[4] = { face.normals[0], face.normals[1],
-                   face.normals[2], face.normals[3] };
+    // 2) bucket indices by material_id
+    std::unordered_map<int, std::vector<GLuint>> buckets;
 
-      auto add_vertex = [&](int vi, int ti, int ni){
+    auto add_vertex = [&](int vi, int ti, int ni) {
         Vertex vert;
         vert.position = glm::vec3(loader.m_vertices[vi]);
         vert.texcoord = glm::vec2(loader.m_texture_coords[ti]);
         vert.normal   = loader.m_vertex_normals[ni];
 
-        auto it_and_ins = cache.emplace(vert, (GLuint)unique_vertices.size());
-        if (it_and_ins.second) {
-          // was newly inserted
+        auto [it, inserted] = cache.emplace(vert, (GLuint)unique_vertices.size());
+        if (inserted) {
           unique_vertices.push_back(vert);
         }
-        // either way, push the (existing or new) index:
-        indices.push_back(it_and_ins.first->second);
-      };
+        return it->second;
+    };
 
-      // first triangle
-      add_vertex(v[0], t[0], n[0]);
-      add_vertex(v[1], t[1], n[1]);
-      add_vertex(v[2], t[2], n[2]);
-
-      // second triangle (if quad)
-      if (v[3] != -1) {
-        add_vertex(v[0], t[0], n[0]);
-        add_vertex(v[2], t[2], n[2]);
-        add_vertex(v[3], t[3], n[3]);
-      }
+    for (auto const& face : loader.m_faces) {
+        int material_id = face.material_id;
+        // unpack up to 4 verts; 3 if w == -1
+        int vertex_count = (face.vertices.w == -1 ? 3 : 4);
+        // first tri
+        buckets[material_id].push_back(
+            add_vertex(face.vertices[0], face.texcoords[0], face.normals[0]));
+        buckets[material_id].push_back(
+            add_vertex(face.vertices[1], face.texcoords[1], face.normals[1]));
+        buckets[material_id].push_back(
+            add_vertex(face.vertices[2], face.texcoords[2], face.normals[2]));
+        // second tri if quad
+        if (vertex_count == 4) {
+            buckets[material_id].push_back(
+                add_vertex(face.vertices[0], face.texcoords[0], face.normals[0]));
+            buckets[material_id].push_back(
+                add_vertex(face.vertices[2], face.texcoords[2], face.normals[2]));
+            buckets[material_id].push_back(
+                add_vertex(face.vertices[3], face.texcoords[3], face.normals[3]));
+        }
     }
 
-    index_count = static_cast<GLsizei>(indices.size());
+    // flatten buckets → one big index array, record submeshes
+    std::vector<GLuint> all_indices;
+    all_indices.reserve(
+      std::accumulate(buckets.begin(), buckets.end(), 0u,
+                      [](auto sum, auto &p){ return sum + p.second.size(); })
+    );
 
-    localAABBMin = glm::vec3(FLT_MAX);
-    localAABBMax = glm::vec3(-FLT_MAX);
-    for (const auto& v : unique_vertices) {
-        localAABBMin = glm::min(localAABBMin, glm::vec3(v.position));
-        localAABBMax = glm::max(localAABBMax, glm::vec3(v.position));
+    for (auto & [material_id, indexes] : buckets) {
+        SubMesh sm;
+        if (material_id>= 0) {
+          sm.mat = loader.m_materials[material_id];  // assumes same Material layout
+        } else {
+          sm.mat = Material{
+            "default",// name
+            glm::vec3(0.2f),// Ka
+            glm::vec3(0.8f),// Kd
+            glm::vec3(1.0f),// Ks
+            32.0f,// Ns
+            "", "", ""// map_Ka, map_Kd, map_Ks
+          };
+        }
+        sm.index_offset = (GLuint)all_indices.size();
+        sm.index_count  = (GLuint)indexes.size();
+
+        all_indices.insert(all_indices.end(), indexes.begin(), indexes.end());
+        submeshes.push_back(sm);
     }
 
-    // generate VAO/VBO/EBO if needed
-    // VAO groups the vertex attribute setup
-    // VBO stores vertex data (positions, texcoords, normals)
-    // EBO stores indices for indexed drawing
-    if (vao == 0) glGenVertexArrays(1, &vao);
-    if (vbo == 0) glGenBuffers(1, &vbo);
-    if (ebo == 0) glGenBuffers(1, &ebo);
+    // 4) create & upload VAO/VBO/EBO
+    glGenVertexArrays(1, &vao);
+    glGenBuffers(1, &vbo);
+    glGenBuffers(1, &ebo);
 
-    // bind & upload
     glBindVertexArray(vao);
 
-    // upload vertex data
+    // VBO
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER,
                  unique_vertices.size() * sizeof(Vertex),
                  unique_vertices.data(),
                  GL_STATIC_DRAW);
 
-    // upload index data
+    // EBO
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                 indices.size() * sizeof(GLuint),
-                 indices.data(),
+                 all_indices.size() * sizeof(GLuint),
+                 all_indices.data(),
                  GL_STATIC_DRAW);
 
-    // attribute setup
-    // position : layout(location = 0) in vec3
+    // attributes (pos, tex, norm) …
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
                           sizeof(Vertex),
                           (void*)offsetof(Vertex, position));
-
-    // texcoord : layout(location = 1) in vec2
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE,
                           sizeof(Vertex),
                           (void*)offsetof(Vertex, texcoord));
-
-    // normal   : layout(location = 2) in vec3
     glEnableVertexAttribArray(2);
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE,
                           sizeof(Vertex),
                           (void*)offsetof(Vertex, normal));
 
-    index_count = static_cast<GLsizei>(indices.size());
-    // unbind VAO (the ELEMENT_ARRAY_BUFFER binding sticks with the VAO)
     glBindVertexArray(0);
+
+    // 5) compute local AABB
+    for (auto const& v : unique_vertices) {
+        localaabbmin = glm::min(localaabbmin, v.position);
+        localaabbmax = glm::max(localaabbmax, v.position);
+    }
 }
 
 void Model::Model::set_shader_program(GLuint shader_program){
@@ -164,31 +183,32 @@ void Model::Model::update_world_transform(const glm::mat4& parent_transform) {
     }
 }
 
-void Model::Model::draw(const glm::mat4& view_projection){
+void Model::Model::draw(const glm::mat4& view_projection) {
 
-    // use the shader program
-    glUseProgram(shader_program);
-
-    // upload the combined view-projection matrix
-    // note the shader needs to have the uViewProj defined
-    GLint loc_view_projection = glGetUniformLocation(shader_program, "uViewProj");
-    glUniformMatrix4fv(loc_view_projection, 1, GL_FALSE, glm::value_ptr(view_projection));
-
-    GLint loc_model = glGetUniformLocation(shader_program, "uModel");
-    glUniformMatrix4fv(loc_model, 1, GL_FALSE, glm::value_ptr(world_transform));
-
-    // bind the VAO (which already has the VBO/EBO & attrib pointers from load_model)
     glBindVertexArray(vao);
 
-    // draw all indices as triangles
-    glDrawElements(
-        GL_TRIANGLES,       // we're drawing triangles
-        index_count,        // number of indices in the EBO
-        GL_UNSIGNED_INT,    // the type of the indices
-        nullptr             // offset into the EBO (0 here)
-    );
+    // upload uViewProj + uModel …
+    GLint locVP    = glGetUniformLocation(shader_program, "uViewProj");
+    GLint locM     = glGetUniformLocation(shader_program, "uModel");
+    glUniformMatrix4fv(locVP, 1, GL_FALSE, glm::value_ptr(view_projection));
+    glUniformMatrix4fv(locM,  1, GL_FALSE, glm::value_ptr(world_transform));
 
-    // unbind to avoid accidental state leakage
+    // now draw each submesh with its material
+    for (auto const& sm : submeshes) {
+        // set material uniforms:
+        glUniform3fv(glGetUniformLocation(shader_program, "material.ambient"),  1, glm::value_ptr(sm.mat.Ka));
+        glUniform3fv(glGetUniformLocation(shader_program, "material.diffuse"),  1, glm::value_ptr(sm.mat.Kd));
+        glUniform3fv(glGetUniformLocation(shader_program, "material.specular"), 1, glm::value_ptr(sm.mat.Ks));
+        glUniform1f (glGetUniformLocation(shader_program, "material.shininess"), sm.mat.Ns);
+
+        // draw that slice of the EBO:
+        void* offsetPtr = (void*)(sm.index_offset * sizeof(GLuint));
+        glDrawElements(GL_TRIANGLES,
+                       sm.index_count,
+                       GL_UNSIGNED_INT,
+                       offsetPtr);
+    }
+
     glBindVertexArray(0);
     glUseProgram(0);
 }
@@ -197,14 +217,14 @@ void Model::Model::draw(const glm::mat4& view_projection){
 void Model::Model::compute_aabb() {
     // build 8 corners from the **object-space** box
     glm::vec3 corners[8] = {
-        {localAABBMin.x, localAABBMin.y, localAABBMin.z},
-        {localAABBMax.x, localAABBMin.y, localAABBMin.z},
-        {localAABBMin.x, localAABBMax.y, localAABBMin.z},
-        {localAABBMax.x, localAABBMax.y, localAABBMin.z},
-        {localAABBMin.x, localAABBMin.y, localAABBMax.z},
-        {localAABBMax.x, localAABBMin.y, localAABBMax.z},
-        {localAABBMin.x, localAABBMax.y, localAABBMax.z},
-        {localAABBMax.x, localAABBMax.y, localAABBMax.z}
+        {localaabbmin.x,localaabbmin.y,localaabbmin.z},
+        {localaabbmax.x,localaabbmin.y,localaabbmin.z},
+        {localaabbmin.x,localaabbmax.y,localaabbmin.z},
+        {localaabbmax.x,localaabbmax.y,localaabbmin.z},
+        {localaabbmin.x,localaabbmin.y,localaabbmax.z},
+        {localaabbmax.x,localaabbmin.y,localaabbmax.z},
+        {localaabbmin.x,localaabbmax.y,localaabbmax.z},
+        {localaabbmax.x,localaabbmax.y,localaabbmax.z}
     };
 
     glm::vec3 world_min( FLT_MAX ), world_max( -FLT_MAX );

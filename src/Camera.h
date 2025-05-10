@@ -61,6 +61,10 @@ namespace Camera{
             return glm::perspective(fov, aspect, near_z, far_z);
         }
 
+        inline glm::vec3 get_direction() const {
+            return front;
+        }
+
         inline glm::vec3 get_position() const {
             return position;
         }

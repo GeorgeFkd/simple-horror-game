@@ -36,6 +36,15 @@ int main() {
 
     SceneManager::SceneManager scene_manager(1280, 720);
 
+    Light flashlight;
+    flashlight.type        = SPOT;
+    flashlight.ambient     = glm::vec3(0.0f);
+    flashlight.diffuse     = glm::vec3(1.0f);
+    flashlight.specular    = glm::vec3(1.0f);
+    flashlight.cutoff      = glm::cos(glm::radians(12.5f));
+    flashlight.outerCutoff = glm::cos(glm::radians(17.5f));
+    scene_manager.add_light(flashlight);
+
     Model::Model cube_model(cube_loader);
     cube_model.set_shader_program(scene_manager.get_shader_program());
     cube_model.debug_dump();
@@ -79,7 +88,6 @@ int main() {
         camera.update(dt);
         // 3.5) collision test
         for (auto* model : scene_manager.get_models()) {
-            // skip non-collidable models if you tag them
             if ( camera.intersectSphereAABB(
                     camera.get_position(),
                     camera.get_radius(),
@@ -96,7 +104,10 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glm::mat4 view = camera.get_view_matrix();
         glm::mat4 proj = camera.get_projection_matrix();
+        glm::vec3 camera_position = camera.get_position();
+        glm::vec3 camera_direction = camera.get_direction();  
         glm::mat4 vp   = proj * view;
+        scene_manager.set_spotlight(0, camera_position, camera_direction);
         scene_manager.render(vp);
         //cube_model.draw(vp);
         SDL_GL_SwapWindow(window);

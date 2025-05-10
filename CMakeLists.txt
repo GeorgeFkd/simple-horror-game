@@ -57,6 +57,7 @@ target_include_directories(opengl_app PRIVATE
     ${GLEW_INCLUDE_DIRS}
     /usr/include/glm
     ${CMAKE_CURRENT_SOURCE_DIR}/src   # So headers like Renderer.h and OBJLoader.h are found
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures 
 )
 
 target_link_libraries(opengl_app PRIVATE
@@ -76,6 +77,7 @@ target_include_directories(obj_loader PRIVATE
     ${SDL2_INCLUDE_DIRS}
     ${GLEW_INCLUDE_DIRS}
     /usr/include/glm
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
 )
 
 target_link_libraries(obj_loader PRIVATE

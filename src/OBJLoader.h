@@ -12,6 +12,7 @@
 #include <cctype>
 #include <string>
 #include <unordered_map>
+#include "Material.h"
 
 #ifndef DEBUG_OBJLOADER
 #define DEBUG_OBJLOADER
@@ -28,12 +29,6 @@ namespace ObjectLoader{
         int group_id = -1;
     };
 
-    struct Material {
-        std::string name;
-        glm::vec3 Ka, Kd, Ks;
-        float      Ns = 0.0f;
-        std::string map_Ka, map_Kd, map_Ks;
-    };
 
     enum class LineType{
         Vertex, 

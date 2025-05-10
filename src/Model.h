@@ -9,8 +9,10 @@
 #include <vector>
 #include <cfloat>
 #include <unordered_map>
+#include <limits>
+#include <numeric>
 #include "OBJLoader.h"
-
+#include "SubMesh.h"
 
 namespace Model{
 
@@ -49,7 +51,7 @@ namespace Model{
         void update_world_transform(const glm::mat4& parent_transform);
         void compute_aabb();
         void add_child(Model* child);
-        void debug_dump();
+        void debug_dump() const;
 
         void set_shader_program(GLuint shader_program);
 
@@ -73,7 +75,7 @@ namespace Model{
         ~Model();
     private: 
         std::vector<Vertex> unique_vertices;
-        std::vector<GLuint> indices;
+        std::vector<SubMesh> submeshes;
         // where the model is located 
         // relative to its parent
         glm::mat4 local_transform; 
@@ -84,11 +86,10 @@ namespace Model{
         GLuint vao, vbo, ebo = 0; 
         GLuint texture_id = 0; 
         GLuint shader_program = 0; 
-        GLsizei index_count = 0;
 
         // 1) Object-space AABB (min/max corners in mesh local coords)
-        glm::vec3 localAABBMin;
-        glm::vec3 localAABBMax;
+        glm::vec3 localaabbmin;
+        glm::vec3 localaabbmax;
 
         // 2) World-space AABB (after applying world_transform)
         glm::vec3 aabbmin;

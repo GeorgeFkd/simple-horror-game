@@ -9,6 +9,7 @@
 #include <algorithm>
 #include "OBJLoader.h"
 #include "Model.h"
+#include "Light.h"
 
 namespace SceneManager{
 
@@ -29,11 +30,22 @@ namespace SceneManager{
             return models;
         }
 
+        void add_light(const Light& L) { lights.push_back(L); }
+
+        void set_spotlight(size_t idx, const glm::vec3& pos, const glm::vec3& dir) {
+            if (idx < lights.size()) {
+            lights[idx].position  = pos;
+            lights[idx].direction = dir;
+            }
+        }
+
         SceneManager(int width, int height);
         ~SceneManager();
     private:
 
         std::vector<Model::Model*> models;
+        std::vector<Light> lights;
+
         GLuint shader_program;
         GLsizei index_count = 0;
         int screen_width, screen_height;
