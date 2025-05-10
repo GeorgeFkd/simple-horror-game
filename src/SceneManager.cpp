@@ -1,4 +1,5 @@
-#include "Renderer.h"
+#include "SceneManager.h"
+#include <iostream>
 
 SceneManager::SceneManager::SceneManager(int width, int height)
 {
@@ -27,21 +28,23 @@ SceneManager::SceneManager::SceneManager(int width, int height)
   glDeleteShader(frag);
 }
 
-void SceneManager::SceneManager::load_model(const ObjectLoader::OBJLoader& loader){
-  models.push_back(Model::Model(*loader));
+void SceneManager::SceneManager::add_model(Model::Model& model){
+  models.push_back(&model);
 }
 
 
-std::string Renderer::RendererObj::load_file(const std::string& path){
-    std::ifstream file(path);
-    if (!file) throw std::runtime_error("Failed to open file: " + path);
+std::string SceneManager::SceneManager::load_file(const std::string& path){
+  std::ifstream file(path);
+  if (!file) throw std::runtime_error("Failed to open file: " + path);
 
-    std::stringstream buffer;
-    buffer << file.rdbuf();
-    return buffer.str();
+  std::stringstream buffer;
+  buffer << file.rdbuf();
+  return buffer.str();
 }
 
-GLuint Renderer::RendererObj::compile_shader(GLenum type, const std::string& source){
+
+
+GLuint SceneManager::SceneManager::compile_shader(GLenum type, const std::string& source){
     // Every symbolic constant you pass to an OpenGL 
     // function—like GL_ARRAY_BUFFER, GL_TRIANGLES, GL_FLOAT, 
     // GL_BLEND, etc.—is actually just an integer constant 
@@ -72,27 +75,8 @@ GLuint Renderer::RendererObj::compile_shader(GLenum type, const std::string& sou
     return shader;
 }
 
-void Renderer::RendererObj::render(const glm::mat4& view_projection) {
-    // use the shader program
-    glUseProgram(shader_program);
-
-    // upload the combined view-projection matrix
-    // note the shader needs to have the uViewProj defined
-    GLint loc = glGetUniformLocation(shader_program, "uViewProj");
-    glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(view_projection));
-
-    // bind the VAO (which already has the VBO/EBO & attrib pointers from load_model)
-    glBindVertexArray(vao);
-
-    // draw all indices as triangles
-    glDrawElements(
-        GL_TRIANGLES,       // we're drawing triangles
-        index_count,        // number of indices in the EBO
-        GL_UNSIGNED_INT,    // the type of the indices
-        nullptr             // offset into the EBO (0 here)
-    );
-
-    // unbind to avoid accidental state leakage
-    glBindVertexArray(0);
-    glUseProgram(0);
+void SceneManager::SceneManager::render(const glm::mat4& view_projection){
+  for (auto const& model: models){
+    model->draw(view_projection);
+  }
 }

@@ -20,11 +20,11 @@ namespace SceneManager{
         std::string load_file(const std::string& path);
         // TODO very minimal function to compile shaders
         GLuint compile_shader(GLenum type, const std::string& source);
-        void load_model(const ObjectLoader::OBJLoader& loader);
+        void add_model(Model::Model& model);
         void render(const glm::mat4& view_projection);
 
         SceneManager(int width, int height);
-        ~SceneManager();
+        ~SceneManager(){};
     private:
 
         std::vector<Model::Model*> models;

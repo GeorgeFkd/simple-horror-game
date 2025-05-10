@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include "OBJLoader.h"
 
+
 namespace Model{
 
     struct Vertex {
@@ -43,11 +44,13 @@ namespace Model{
 
     class Model {
     public:
-        void draw(const glm::mat4& view, const glm::mat4& projection);
+        void draw(const glm::mat4& view_projection);
         void set_local_transform(const glm::mat4& local_transform);
         void update_world_transform(const glm::mat4& parent_transform);
         void compute_aabb();
         void add_child(Model* child);
+
+        void debug_dump();
 
         Model(const ObjectLoader::OBJLoader& loader);
         ~Model();

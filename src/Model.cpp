@@ -1,5 +1,22 @@
 #include "Model.h"
 
+void Model::Model::debug_dump(){
+    std::cout 
+    << "  >>> Model built: "
+    << unique_vertices.size() << " unique vertices, "
+    << (indices.size()/3)       << " triangles, "
+    << indices.size()           << " indices total.\n";
+    std::cout 
+    << "      AABB local min = (" 
+    << localAABBMin.x << ","
+    << localAABBMin.y << ","
+    << localAABBMin.z << ")\n"
+    << "      AABB local max = (" 
+    << localAABBMax.x << ","
+    << localAABBMax.y << ","
+    << localAABBMax.z << ")\n";
+}
+
 Model::Model::Model(const ObjectLoader::OBJLoader& loader){
     
     // maps each unique Vertex → its index in unique_vertices
@@ -132,9 +149,42 @@ void Model::Model::set_local_transform(const glm::mat4& local_transform){
 void Model::Model::update_world_transform(const glm::mat4& parent_transform) {
     world_transform =  parent_transform * local_transform;
 
+    compute_aabb();
     for (Model* child : children) {
         child->update_world_transform(world_transform);
     }
+}
+
+void Model::Model::draw(const glm::mat4& view_projection){
+
+    if (shader_program==0){
+        return;
+    }
+    // use the shader program
+    glUseProgram(shader_program);
+
+    // upload the combined view-projection matrix
+    // note the shader needs to have the uViewProj defined
+    GLint loc_view_projection = glGetUniformLocation(shader_program, "uViewProj");
+    glUniformMatrix4fv(loc_view_projection, 1, GL_FALSE, glm::value_ptr(view_projection));
+
+    GLint loc_model = glGetUniformLocation(shader_program, "uModel");
+    glUniformMatrix4fv(loc_model, 1, GL_FALSE, glm::value_ptr(world_transform));
+
+    // bind the VAO (which already has the VBO/EBO & attrib pointers from load_model)
+    glBindVertexArray(vao);
+
+    // draw all indices as triangles
+    glDrawElements(
+        GL_TRIANGLES,       // we're drawing triangles
+        index_count,        // number of indices in the EBO
+        GL_UNSIGNED_INT,    // the type of the indices
+        nullptr             // offset into the EBO (0 here)
+    );
+
+    // unbind to avoid accidental state leakage
+    glBindVertexArray(0);
+    glUseProgram(0);
 }
 
 

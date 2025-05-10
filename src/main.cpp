@@ -5,7 +5,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "OBJLoader.h"
-#include "Renderer.h"
+#include "SceneManager.h"
 #include "Camera.h"
 
 int main() {
@@ -29,27 +29,29 @@ int main() {
     glViewport(0, 0, 1280, 720);
 
     // ─── Load model & set up renderer ────────────────────────────────────
-    ObjectLoader::OBJLoader loader;
-    loader.read_from_file("assets/models/test.obj");
-    loader.debug_dump();
+    ObjectLoader::OBJLoader cube_loader;
+    cube_loader.read_from_file("assets/models/test.obj");
+    cube_loader.debug_dump();
 
-    Renderer::RendererObj renderer(1280, 720);
-    renderer.load_model(loader);
+    Model::Model cube_model(cube_loader);
+    cube_model.debug_dump();
+
+    SceneManager::SceneManager scene_manager(1280, 720);
+    scene_manager.add_model(cube_model);
 
     // ─── Create camera ───────────────────────────────────────────────────
     Camera::CameraObj camera(1280, 720);
 
+
     // ─── Main loop ───────────────────────────────────────────────────────
     bool   running   = true;
     Uint64 lastTicks = SDL_GetPerformanceCounter();
-
     while (running) {
         // 1) compute Δt
         Uint64 now = SDL_GetPerformanceCounter();
         float  dt  = float(now - lastTicks)
                     / float(SDL_GetPerformanceFrequency());
         lastTicks = now;
-
         // 2) handle all pending SDL events
         SDL_Event ev;
         while (SDL_PollEvent(&ev)) {
@@ -58,7 +60,6 @@ int main() {
             }
             // feed mouse/window events to the camera
             camera.process_input(ev);
-
             // adjust the GL viewport on resize
             if (ev.type == SDL_WINDOWEVENT &&
                 ev.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) 
@@ -68,23 +69,18 @@ int main() {
                 glViewport(0, 0, w, h);
             }
         }
-
         // 3) update camera movement (WASD/etc) once per frame
         camera.update(dt);
-
         // 4) clear and render
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
         glm::mat4 view = camera.getViewMatrix();
         glm::mat4 proj = camera.getProjectionMatrix();
         glm::mat4 vp   = proj * view;
-
-        renderer.render(vp);
-
+        //scene_manager.render(vp);
+        cube_model.draw(vp);
         SDL_GL_SwapWindow(window);
     }
-
     // ─── Cleanup ─────────────────────────────────────────────────────────
     SDL_GL_DeleteContext(glCtx);
     SDL_DestroyWindow(window);
