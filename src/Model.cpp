@@ -15,9 +15,18 @@ void Model::Model::debug_dump(){
     << localAABBMax.x << ","
     << localAABBMax.y << ","
     << localAABBMax.z << ")\n";
+    std::cout
+    << "      SHADER PROGRAM:  "
+    << shader_program
+    << std::endl;
 }
 
-Model::Model::Model(const ObjectLoader::OBJLoader& loader){
+Model::Model::Model(const ObjectLoader::OBJLoader& loader)
+  : local_transform(glm::mat4(1.0f))
+  , world_transform(glm::mat4(1.0f))
+  , vao(0), vbo(0), ebo(0), index_count(0)
+  , localAABBMin(FLT_MAX), localAABBMax(-FLT_MAX)
+{
     
     // maps each unique Vertex → its index in unique_vertices
     std::unordered_map<Vertex, GLuint, VertexHasher> cache;
@@ -118,6 +127,10 @@ Model::Model::Model(const ObjectLoader::OBJLoader& loader){
     glBindVertexArray(0);
 }
 
+void Model::Model::set_shader_program(GLuint shader_program){
+    this->shader_program = shader_program;
+};
+
 Model::Model::~Model(){
     // Tear down GL objects in reverse order of creation:
     if (ebo) {
@@ -131,10 +144,6 @@ Model::Model::~Model(){
     if (vao) {
         glDeleteVertexArrays(1, &vao);
         vao = 0;
-    }
-    if (shader_program) {
-        glDeleteProgram(shader_program);
-        shader_program = 0;
     }
 }
 
@@ -157,9 +166,6 @@ void Model::Model::update_world_transform(const glm::mat4& parent_transform) {
 
 void Model::Model::draw(const glm::mat4& view_projection){
 
-    if (shader_program==0){
-        return;
-    }
     // use the shader program
     glUseProgram(shader_program);
 

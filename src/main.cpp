@@ -33,10 +33,13 @@ int main() {
     cube_loader.read_from_file("assets/models/test.obj");
     cube_loader.debug_dump();
 
-    Model::Model cube_model(cube_loader);
-    cube_model.debug_dump();
 
     SceneManager::SceneManager scene_manager(1280, 720);
+
+    Model::Model cube_model(cube_loader);
+    cube_model.set_shader_program(scene_manager.get_shader_program());
+    cube_model.debug_dump();
+
     scene_manager.add_model(cube_model);
 
     // ─── Create camera ───────────────────────────────────────────────────
@@ -77,8 +80,8 @@ int main() {
         glm::mat4 view = camera.getViewMatrix();
         glm::mat4 proj = camera.getProjectionMatrix();
         glm::mat4 vp   = proj * view;
-        //scene_manager.render(vp);
-        cube_model.draw(vp);
+        scene_manager.render(vp);
+        //cube_model.draw(vp);
         SDL_GL_SwapWindow(window);
     }
     // ─── Cleanup ─────────────────────────────────────────────────────────

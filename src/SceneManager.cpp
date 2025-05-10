@@ -28,6 +28,10 @@ SceneManager::SceneManager::SceneManager(int width, int height)
   glDeleteShader(frag);
 }
 
+GLuint SceneManager::SceneManager::get_shader_program(){
+  return shader_program;
+}
+
 void SceneManager::SceneManager::add_model(Model::Model& model){
   models.push_back(&model);
 }
@@ -77,6 +81,17 @@ GLuint SceneManager::SceneManager::compile_shader(GLenum type, const std::string
 
 void SceneManager::SceneManager::render(const glm::mat4& view_projection){
   for (auto const& model: models){
+    model->update_world_transform(glm::mat4(1.0f));
     model->draw(view_projection);
   }
+}
+
+SceneManager::SceneManager::~SceneManager()
+{
+    if (shader_program != 0) {
+        glDeleteProgram(shader_program);
+        shader_program = 0;
+    }
+    // We don't own the Model pointers in `models`, so we don't delete them here.
+    models.clear();
 }

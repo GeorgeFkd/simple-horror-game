@@ -49,8 +49,9 @@ namespace Model{
         void update_world_transform(const glm::mat4& parent_transform);
         void compute_aabb();
         void add_child(Model* child);
-
         void debug_dump();
+
+        void set_shader_program(GLuint shader_program);
 
         Model(const ObjectLoader::OBJLoader& loader);
         ~Model();
@@ -64,10 +65,10 @@ namespace Model{
         // in the world after applying all parent transforms
         glm::mat4 world_transform;
 
-        GLuint vao, vbo, ebo; 
-        GLuint texture_id; 
-        GLuint shader_program; 
-        GLsizei index_count;
+        GLuint vao, vbo, ebo = 0; 
+        GLuint texture_id = 0; 
+        GLuint shader_program = 0; 
+        GLsizei index_count = 0;
 
         // 1) Object-space AABB (min/max corners in mesh local coords)
         glm::vec3 localAABBMin;

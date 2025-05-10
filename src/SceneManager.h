@@ -23,8 +23,10 @@ namespace SceneManager{
         void add_model(Model::Model& model);
         void render(const glm::mat4& view_projection);
 
+        GLuint get_shader_program();
+
         SceneManager(int width, int height);
-        ~SceneManager(){};
+        ~SceneManager();
     private:
 
         std::vector<Model::Model*> models;
