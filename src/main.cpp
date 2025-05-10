@@ -49,6 +49,7 @@ int main() {
     // ─── Main loop ───────────────────────────────────────────────────────
     bool   running   = true;
     Uint64 lastTicks = SDL_GetPerformanceCounter();
+    glm::vec3 last_camera_position;
     while (running) {
         // 1) compute Δt
         Uint64 now = SDL_GetPerformanceCounter();
@@ -72,13 +73,29 @@ int main() {
                 glViewport(0, 0, w, h);
             }
         }
+
         // 3) update camera movement (WASD/etc) once per frame
+        last_camera_position = camera.get_position();
         camera.update(dt);
+        // 3.5) collision test
+        for (auto* model : scene_manager.get_models()) {
+            // skip non-collidable models if you tag them
+            if ( camera.intersectSphereAABB(
+                    camera.get_position(),
+                    camera.get_radius(),
+                    model->get_aabbmin(),
+                    model->get_aabbmax()) )
+            {
+                // collision! revert to last safe position
+                camera.set_position(last_camera_position);
+                break;
+            }
+        }
         // 4) clear and render
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glm::mat4 view = camera.getViewMatrix();
-        glm::mat4 proj = camera.getProjectionMatrix();
+        glm::mat4 view = camera.get_view_matrix();
+        glm::mat4 proj = camera.get_projection_matrix();
         glm::mat4 vp   = proj * view;
         scene_manager.render(vp);
         //cube_model.draw(vp);

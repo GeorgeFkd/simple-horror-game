@@ -53,6 +53,22 @@ namespace Model{
 
         void set_shader_program(GLuint shader_program);
 
+        inline bool intersectAABB(const glm::vec3& minA, const glm::vec3& maxA, const glm::vec3& minB, const glm::vec3& maxB){
+            // If one box is completely to the “left” of the other, no collision
+            if (maxA.x < minB.x || minA.x > maxB.x) return false;
+            if (maxA.y < minB.y || minA.y > maxB.y) return false;
+            if (maxA.z < minB.z || minA.z > maxB.z) return false;
+            return true;
+        }
+
+        inline glm::vec3 get_aabbmin() const {
+            return aabbmin;
+        }
+
+        inline glm::vec3 get_aabbmax() const{
+            return aabbmax;
+        }
+
         Model(const ObjectLoader::OBJLoader& loader);
         ~Model();
     private: 

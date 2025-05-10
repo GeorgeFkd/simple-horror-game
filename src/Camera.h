@@ -1,6 +1,7 @@
 #pragma once
 #include <SDL.h>
 #include <glm/glm.hpp>
+#include <glm/gtx/norm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
 namespace Camera{
@@ -21,6 +22,8 @@ namespace Camera{
         // yaw represents the magnitude of looking left to right
         // pitch represents how much we are looking up or down 
         float yaw, pitch;
+
+        float collision_radius = 0.3f;    // how “fat” the camera is
     public: 
         
         CameraObj(int window_width, int window_height): 
@@ -50,12 +53,32 @@ namespace Camera{
         //    return glm::cross(getCameraDirection(), getCameraRight());
         //}
         // The below captures all of the above functionality
-        inline glm::mat4 getViewMatrix() const {
+        inline glm::mat4 get_view_matrix() const {
             return glm::lookAt(position, position + front, up);
         }
 
-        inline glm::mat4 getProjectionMatrix() const {
+        inline glm::mat4 get_projection_matrix() const {
             return glm::perspective(fov, aspect, near_z, far_z);
+        }
+
+        inline glm::vec3 get_position() const {
+            return position;
+        }
+
+        inline void set_position(glm::vec3& position){
+            this->position = position;
+        }
+
+        inline float get_radius() const {
+            return collision_radius;
+        }
+
+        bool intersectSphereAABB(const glm::vec3& cen, float r, const glm::vec3& bmin, const glm::vec3& bmax)
+        {
+            // find closest point on box to sphere center
+            glm::vec3 closest = glm::clamp(cen, bmin, bmax);
+            float   dist2   = glm::length2(closest - cen);
+            return dist2 <= r*r;
         }
 
         void updateCameraVectors();

@@ -25,6 +25,10 @@ namespace SceneManager{
 
         GLuint get_shader_program();
 
+        inline const std::vector<Model::Model*> get_models() const{
+            return models;
+        }
+
         SceneManager(int width, int height);
         ~SceneManager();
     private:
