@@ -9,7 +9,7 @@
 #include "Camera.h"
 
 int main() {
-    // ——— Initialize SDL + OpenGL ——————————————————————————————————
+    // ─── Initialize SDL + OpenGL ──────────────────────────────────────────
     SDL_Init(SDL_INIT_VIDEO);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
@@ -28,7 +28,7 @@ int main() {
     glEnable(GL_DEPTH_TEST);
     glViewport(0, 0, 1280, 720);
 
-    // ——— Load your model + renderer ———————————————————————————————
+    // ─── Load model & set up renderer ────────────────────────────────────
     ObjectLoader::OBJLoader loader;
     loader.read_from_file("assets/models/test.obj");
     loader.debug_dump();
@@ -36,32 +36,32 @@ int main() {
     Renderer::RendererObj renderer(1280, 720);
     renderer.load_model(loader);
 
-    // ——— Create the camera ——————————————————————————————————————
+    // ─── Create camera ───────────────────────────────────────────────────
     Camera::CameraObj camera(1280, 720);
 
-    // ——— Main loop —————————————————————————————————————————————
+    // ─── Main loop ───────────────────────────────────────────────────────
     bool   running   = true;
     Uint64 lastTicks = SDL_GetPerformanceCounter();
 
     while (running) {
-        // — compute delta time —
+        // 1) compute Δt
         Uint64 now = SDL_GetPerformanceCounter();
         float  dt  = float(now - lastTicks)
                     / float(SDL_GetPerformanceFrequency());
         lastTicks = now;
 
-        // — pump events —
+        // 2) handle all pending SDL events
         SDL_Event ev;
         while (SDL_PollEvent(&ev)) {
             if (ev.type == SDL_QUIT) {
                 running = false;
             }
-            // feed all events to the camera
+            // feed mouse/window events to the camera
             camera.process_input(ev);
 
-            // update viewport on resize (camera.process_input already updates aspect)
+            // adjust the GL viewport on resize
             if (ev.type == SDL_WINDOWEVENT &&
-                ev.window.event == SDL_WINDOWEVENT_SIZE_CHANGED)
+                ev.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) 
             {
                 int w = ev.window.data1,
                     h = ev.window.data2;
@@ -69,25 +69,23 @@ int main() {
             }
         }
 
-        // — update camera movement from keyboard —
+        // 3) update camera movement (WASD/etc) once per frame
         camera.update(dt);
 
-        // — clear screen —
+        // 4) clear and render
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // — build view/projection —
         glm::mat4 view = camera.getViewMatrix();
         glm::mat4 proj = camera.getProjectionMatrix();
         glm::mat4 vp   = proj * view;
 
-        // — render —
         renderer.render(vp);
 
         SDL_GL_SwapWindow(window);
     }
 
-    // ——— Cleanup ————————————————————————————————————————————————
+    // ─── Cleanup ─────────────────────────────────────────────────────────
     SDL_GL_DeleteContext(glCtx);
     SDL_DestroyWindow(window);
     SDL_Quit();
