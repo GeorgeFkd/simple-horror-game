@@ -2,27 +2,17 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Launch opengl_app (Debug)",
+      "name": "Debug OpenGLApp",
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/build/opengl_app",
-      "args": [],                      // any runtime args
+      "args": [],
       "cwd": "${workspaceFolder}/build",
       "stopAtEntry": false,
       "externalConsole": false,
       "MIMode": "gdb",
       "miDebuggerPath": "/usr/bin/gdb",
       "preLaunchTask": "CMake: build"
-    },
-    {
-      "name": "Attach to opengl_app",
-      "type": "cppdbg",
-      "request": "attach",
-      "program": "${workspaceFolder}/build/opengl_app",
-      "processId": "${command:pickProcess}",
-      "MIMode": "gdb",
-      "miDebuggerPath": "/usr/bin/gdb",
-      "cwd": "${workspaceFolder}/build"
     }
   ]
 }

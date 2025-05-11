@@ -215,7 +215,10 @@ void ObjectLoader::OBJLoader::debug_dump() const {
               << "Ka("<< M.Ka.r<<","<<M.Ka.g<<","<<M.Ka.b<<")  "
               << "Kd("<< M.Kd.r<<","<<M.Kd.g<<","<<M.Kd.b<<")  "
               << "Ks("<< M.Ks.r<<","<<M.Ks.g<<","<<M.Ks.b<<")  "
-              << "Ns="<< M.Ns;
+              << "Ke("<< M.Ke.r<<","<<M.Ke.g<<","<<M.Ke.b<<")  "
+              << "Ni="<< M.Ni << " "
+              << "d="<< M.d << " " 
+              << "illum="<< M.illum << " ";
     if (!M.map_Kd.empty())
       std::cout << "  map_Kd='"<<M.map_Kd<<"'";
     std::cout << "\n";
@@ -333,6 +336,27 @@ void ObjectLoader::OBJLoader::read_mtllib(const char* buff, const std::string& o
           float tmp[1];
           if (parse_components_sv<1>(data, tmp))
               current_mat.Ns = tmp[0];
+      }
+      else if (key == "Ke") {
+        float tmp[3];
+        if (parse_components_sv<3>(data, tmp))
+            current_mat.Ke = { tmp[0], tmp[1], tmp[2] };
+      }
+      else if (key == "Ni") {
+          float tmp[1];
+          if (parse_components_sv<1>(data, tmp))
+              current_mat.Ni = tmp[0];
+      }
+      else if (key == "d") {
+          float tmp[1];
+          if (parse_components_sv<1>(data, tmp))
+              current_mat.d = tmp[0];
+      }
+      else if (key == "illum") {
+          int ival = 0;
+          auto [_, ec] = std::from_chars(data.data(), data.data() + data.size(), ival);
+          if (ec == std::errc())
+              current_mat.illum = ival;
       }
       else if (key == "map_Ka") {
           current_mat.map_Ka = std::string{data};
