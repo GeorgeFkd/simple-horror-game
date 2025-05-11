@@ -30,10 +30,15 @@ int main() {
 
     ObjectLoader::OBJLoader cube_loader;
     cube_loader.read_from_file("assets/models/test.obj");
-    //cube_loader.debug_dump();
-    ObjectLoader::OBJLoader second_loader;
-    second_loader.read_from_file("assets/models/gt_couch.obj");
-    //second_loader.debug_dump();
+    cube_loader.debug_dump();
+
+    ObjectLoader::OBJLoader lederliege;
+    lederliege.read_from_file("assets/models/lederliege.obj");
+    lederliege.debug_dump();
+
+    ObjectLoader::OBJLoader cottage_loader;
+    cottage_loader.read_from_file("assets/models/cottage_obj.obj");
+    cottage_loader.debug_dump();
 
 
     SceneManager::SceneManager scene_manager(1280, 720);
@@ -48,21 +53,25 @@ int main() {
     scene_manager.add_light(flashlight);
 
 
-    Model::Model couch(second_loader);
-    couch.set_shader_program(scene_manager.get_shader_program());
 
-    glm::mat4 M =
-        glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, 0.0f, -5.0f));
-    //* glm::scale    (glm::mat4(1.0f), glm::vec3(0.1f));
-    couch.set_local_transform(M);
+
+    Model::Model couch(lederliege);
+    couch.set_shader_program(scene_manager.get_shader_program());
+    //glm::mat4 M = glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, 0.0f, -5.0f)) * glm::scale(glm::mat4(1.0f), glm::vec3(0.1f));
+    //couch.set_local_transform(M);
     scene_manager.add_model(couch);
-    couch.debug_dump();
+    //couch.debug_dump();
 
     Model::Model cube_model(cube_loader);
     cube_model.set_shader_program(scene_manager.get_shader_program());
-    ////cube_model.debug_dump();
-
+    //cube_model.debug_dump();
     scene_manager.add_model(cube_model);
+
+    //Model::Model cottage_model(cottage_loader);
+    //cottage_model.set_shader_program(scene_manager.get_shader_program());
+    //glm::mat4 M = glm::translate(glm::mat4(1.0f), glm::vec3(100.0f, 0.0f, -5.0f));
+    //cottage_model.set_local_transform(M);
+    //scene_manager.add_model(cottage_model);
 
     // ─── Create camera ───────────────────────────────────────────────────
     Camera::CameraObj camera(1280, 720);
@@ -125,7 +134,7 @@ int main() {
         //cube_model.draw(vp);
         SDL_GL_SwapWindow(window);
     }
-    // ─── Cleanup ─────────────────────────────────────────────────────────
+    //─── Cleanup ─────────────────────────────────────────────────────────
     SDL_GL_DeleteContext(glCtx);
     SDL_DestroyWindow(window);
     SDL_Quit();

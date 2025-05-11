@@ -22,9 +22,9 @@
 namespace ObjectLoader{ 
 
     struct Face {
-        glm::vec4 vertices;
-        glm::vec4 normals;
-        glm::vec4 texcoords;
+        glm::ivec4 vertices;
+        glm::ivec4 normals;
+        glm::ivec4 texcoords;
         int material_id = -1;
         int group_id = -1;
     };

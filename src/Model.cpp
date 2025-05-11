@@ -42,8 +42,17 @@ Model::Model::Model(const ObjectLoader::OBJLoader& loader)
     auto add_vertex = [&](int vi, int ti, int ni) {
         Vertex vert;
         vert.position = glm::vec3(loader.m_vertices[vi]);
-        vert.texcoord = glm::vec2(loader.m_texture_coords[ti]);
-        vert.normal   = loader.m_vertex_normals[ni];
+        if (ti >= 0 && ti < (int)loader.m_texture_coords.size()) {
+            vert.texcoord = loader.m_texture_coords[ti];
+        } else {
+            vert.texcoord = glm::vec2{0.0f, 0.0f};
+        }
+
+        if (ni >= 0 && ni < (int)loader.m_vertex_normals.size()) {
+            vert.normal = loader.m_vertex_normals[ni];
+        } else {
+            vert.normal = glm::vec3{0.0f, 0.0f, 1.0f};
+        }
 
         auto [it, inserted] = cache.emplace(vert, (GLuint)unique_vertices.size());
         if (inserted) {
@@ -86,14 +95,7 @@ Model::Model::Model(const ObjectLoader::OBJLoader& loader)
         if (material_id>= 0) {
           sm.mat = loader.m_materials[material_id];  // assumes same Material layout
         } else {
-          sm.mat = Material{
-            "default",// name
-            glm::vec3(0.2f),// Ka
-            glm::vec3(0.8f),// Kd
-            glm::vec3(1.0f),// Ks
-            32.0f,// Ns
-            "", "", ""// map_Ka, map_Kd, map_Ks
-          };
+          sm.mat = Material{};
         }
         sm.index_offset = (GLuint)all_indices.size();
         sm.index_count  = (GLuint)indexes.size();

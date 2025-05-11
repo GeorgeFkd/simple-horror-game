@@ -4,6 +4,8 @@
 #include <glm/gtx/norm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "Light.h"
+
 namespace Camera{
     class CameraObj{
     private: 
@@ -24,6 +26,8 @@ namespace Camera{
         float yaw, pitch;
 
         float collision_radius = 0.3f;    // how “fat” the camera is
+
+        Light* flashlight; 
     public: 
         
         CameraObj(int window_width, int window_height): 
