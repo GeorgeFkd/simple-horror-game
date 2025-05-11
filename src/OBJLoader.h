@@ -12,34 +12,23 @@
 #include <cctype>
 #include <string>
 #include <unordered_map>
+#include "Material.h"
 
-#ifndef DEBUG_OBJLOADER
-#define DEBUG_OBJLOADER
-#endif
+//#ifndef DEBUG_OBJLOADER
+//#define DEBUG_OBJLOADER
+//#endif
 
 
 namespace ObjectLoader{ 
 
-    struct Vertex {
-        glm::vec3 position; 
-        glm::vec2 texcoord; 
-        glm::vec3 normal;
-    };
-
     struct Face {
-        glm::ivec4 vertices;
-        glm::ivec4 normals;
-        glm::ivec4 texcoords;
+        glm::vec4 vertices;
+        glm::vec4 normals;
+        glm::vec4 texcoords;
         int material_id = -1;
         int group_id = -1;
     };
 
-    struct Material {
-        std::string name;
-        glm::vec3 Ka, Kd, Ks;
-        float      Ns = 0.0f;
-        std::string map_Ka, map_Kd, map_Ks;
-    };
 
     enum class LineType{
         Vertex, 
