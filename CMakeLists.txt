@@ -112,8 +112,10 @@ endforeach()
 set(MODEL_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/assets/models")
 set(MODEL_DST_DIR "${CMAKE_CURRENT_BINARY_DIR}/assets/models")
 
-file(GLOB MODEL_FILES "${MODEL_SRC_DIR}/*.obj")
-file(GLOB MODEL_FILES "${MODEL_SRC_DIR}/*.mtl")
+file(GLOB MODEL_FILES
+    "${MODEL_SRC_DIR}/*.obj"
+    "${MODEL_SRC_DIR}/*.mtl"
+)
 
 foreach(MODEL_FILE ${MODEL_FILES})
     add_custom_command(TARGET opengl_app POST_BUILD

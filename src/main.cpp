@@ -28,10 +28,12 @@ int main() {
     glEnable(GL_DEPTH_TEST);
     glViewport(0, 0, 1280, 720);
 
-    // ─── Load model & set up renderer ────────────────────────────────────
     ObjectLoader::OBJLoader cube_loader;
     cube_loader.read_from_file("assets/models/test.obj");
-    cube_loader.debug_dump();
+    //cube_loader.debug_dump();
+    ObjectLoader::OBJLoader second_loader;
+    second_loader.read_from_file("assets/models/gt_couch.obj");
+    //second_loader.debug_dump();
 
 
     SceneManager::SceneManager scene_manager(1280, 720);
@@ -45,9 +47,20 @@ int main() {
     flashlight.outerCutoff = glm::cos(glm::radians(17.5f));
     scene_manager.add_light(flashlight);
 
+
+    Model::Model couch(second_loader);
+    couch.set_shader_program(scene_manager.get_shader_program());
+
+    glm::mat4 M =
+        glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, 0.0f, -5.0f));
+    //* glm::scale    (glm::mat4(1.0f), glm::vec3(0.1f));
+    couch.set_local_transform(M);
+    scene_manager.add_model(couch);
+    couch.debug_dump();
+
     Model::Model cube_model(cube_loader);
     cube_model.set_shader_program(scene_manager.get_shader_program());
-    cube_model.debug_dump();
+    ////cube_model.debug_dump();
 
     scene_manager.add_model(cube_model);
 

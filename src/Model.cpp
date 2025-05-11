@@ -32,11 +32,11 @@ Model::Model::Model(const ObjectLoader::OBJLoader& loader)
   , localaabbmin(std::numeric_limits<float>::max())
   , localaabbmax(-std::numeric_limits<float>::max())
 {
-    // 1) build unique_vertices & a cache
+    // build unique_vertices & a cache
     std::unordered_map<Vertex, GLuint, VertexHasher> cache;
     cache.reserve(loader.m_faces.size() * 4);
 
-    // 2) bucket indices by material_id
+    // bucket indices by material_id
     std::unordered_map<int, std::vector<GLuint>> buckets;
 
     auto add_vertex = [&](int vi, int ti, int ni) {
@@ -102,7 +102,7 @@ Model::Model::Model(const ObjectLoader::OBJLoader& loader)
         submeshes.push_back(sm);
     }
 
-    // 4) create & upload VAO/VBO/EBO
+    //create & upload VAO/VBO/EBO
     glGenVertexArrays(1, &vao);
     glGenBuffers(1, &vbo);
     glGenBuffers(1, &ebo);
@@ -139,7 +139,7 @@ Model::Model::Model(const ObjectLoader::OBJLoader& loader)
 
     glBindVertexArray(0);
 
-    // 5) compute local AABB
+    // compute local AABB
     for (auto const& v : unique_vertices) {
         localaabbmin = glm::min(localaabbmin, v.position);
         localaabbmax = glm::max(localaabbmax, v.position);
@@ -210,7 +210,7 @@ void Model::Model::draw(const glm::mat4& view_projection) {
     }
 
     glBindVertexArray(0);
-    glUseProgram(0);
+    //glUseProgram(0);
 }
 
 

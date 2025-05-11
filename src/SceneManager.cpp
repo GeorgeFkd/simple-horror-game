@@ -126,6 +126,8 @@ void SceneManager::SceneManager::render(const glm::mat4& view_projection){
     model->update_world_transform(glm::mat4(1.0f));
     model->draw(view_projection);
   }
+
+  glUseProgram(0);
 }
 
 SceneManager::SceneManager::~SceneManager()

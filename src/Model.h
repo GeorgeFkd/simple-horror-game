@@ -70,6 +70,10 @@ namespace Model{
         inline glm::vec3 get_aabbmax() const{
             return aabbmax;
         }
+        
+        inline void set_scale(const glm::vec3& s) {
+            local_transform = glm::scale(glm::mat4(1.0f), s) * local_transform;
+        }
 
         Model(const ObjectLoader::OBJLoader& loader);
         ~Model();
