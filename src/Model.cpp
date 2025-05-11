@@ -201,7 +201,11 @@ void Model::Model::draw(const glm::mat4& view_projection) {
         glUniform3fv(glGetUniformLocation(shader_program, "material.ambient"),  1, glm::value_ptr(sm.mat.Ka));
         glUniform3fv(glGetUniformLocation(shader_program, "material.diffuse"),  1, glm::value_ptr(sm.mat.Kd));
         glUniform3fv(glGetUniformLocation(shader_program, "material.specular"), 1, glm::value_ptr(sm.mat.Ks));
+        glUniform3fv(glGetUniformLocation(shader_program, "material.emissive"),1, glm::value_ptr(sm.mat.Ke));
         glUniform1f (glGetUniformLocation(shader_program, "material.shininess"), sm.mat.Ns);
+        glUniform1f(glGetUniformLocation(shader_program, "material.opacity"),sm.mat.d);
+        glUniform1i(glGetUniformLocation(shader_program, "material.illumModel"),sm.mat.illum);
+        glUniform1f(glGetUniformLocation(shader_program, "material.ior"),sm.mat.Ni);
 
         // draw that slice of the EBO:
         void* offsetPtr = (void*)(sm.index_offset * sizeof(GLuint));

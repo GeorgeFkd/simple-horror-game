@@ -62,10 +62,10 @@ int main() {
     scene_manager.add_model(couch);
     //couch.debug_dump();
 
-    Model::Model cube_model(cube_loader);
-    cube_model.set_shader_program(scene_manager.get_shader_program());
-    //cube_model.debug_dump();
-    scene_manager.add_model(cube_model);
+    //Model::Model cube_model(cube_loader);
+    //cube_model.set_shader_program(scene_manager.get_shader_program());
+    ////cube_model.debug_dump();
+    //scene_manager.add_model(cube_model);
 
     //Model::Model cottage_model(cottage_loader);
     //cottage_model.set_shader_program(scene_manager.get_shader_program());
