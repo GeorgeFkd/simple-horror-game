@@ -185,38 +185,54 @@ void Model::Model::update_world_transform(const glm::mat4& parent_transform) {
     }
 }
 
-void Model::Model::draw(const glm::mat4& view_projection) {
-
+void Model::Model::draw(const glm::mat4& view_projection){
     glBindVertexArray(vao);
 
-    // upload uViewProj + uModel …
-    GLint locVP    = glGetUniformLocation(shader_program, "uViewProj");
-    GLint locM     = glGetUniformLocation(shader_program, "uModel");
+    // upload matrices
+    GLint locVP = glGetUniformLocation(shader_program, "uViewProj");
+    GLint locM  = glGetUniformLocation(shader_program, "uModel");
     glUniformMatrix4fv(locVP, 1, GL_FALSE, glm::value_ptr(view_projection));
     glUniformMatrix4fv(locM,  1, GL_FALSE, glm::value_ptr(world_transform));
 
-    // now draw each submesh with its material
-    for (auto const& sm : submeshes) {
-        // set material uniforms:
-        glUniform3fv(glGetUniformLocation(shader_program, "material.ambient"),  1, glm::value_ptr(sm.mat.Ka));
-        glUniform3fv(glGetUniformLocation(shader_program, "material.diffuse"),  1, glm::value_ptr(sm.mat.Kd));
-        glUniform3fv(glGetUniformLocation(shader_program, "material.specular"), 1, glm::value_ptr(sm.mat.Ks));
-        glUniform3fv(glGetUniformLocation(shader_program, "material.emissive"),1, glm::value_ptr(sm.mat.Ke));
-        glUniform1f (glGetUniformLocation(shader_program, "material.shininess"), sm.mat.Ns);
-        glUniform1f(glGetUniformLocation(shader_program, "material.opacity"),sm.mat.d);
-        glUniform1i(glGetUniformLocation(shader_program, "material.illumModel"),sm.mat.illum);
-        glUniform1f(glGetUniformLocation(shader_program, "material.ior"),sm.mat.Ni);
+    // helper that logs if the uniform isn't active
+    auto checkUniform = [&](const char* name) {
+        GLint loc = glGetUniformLocation(shader_program, name);
+        if (loc < 0) {
+            std::cerr << "Warning: uniform `" << name << "` not found.\n";
+        }        
+        return loc;
+    };
 
-        // draw that slice of the EBO:
+    // *before* submesh loop, look up & check each uniform once:
+    GLint locKa       = checkUniform("material.ambient");
+    GLint locKd       = checkUniform("material.diffuse");
+    GLint locKs       = checkUniform("material.specular");
+    GLint locKe       = checkUniform("material.emissive");
+    GLint locNs       = checkUniform("material.shininess");
+    GLint locOpacity  = checkUniform("material.opacity");
+    GLint locIllum    = checkUniform("material.illumModel");
+    GLint locIor      = checkUniform("material.ior");
+
+    // now draw each submesh, reusing the locations:
+    for (auto const& sm : submeshes) {
+        if (locKa      >= 0) glUniform3fv(locKa,      1, glm::value_ptr(sm.mat.Ka));
+        if (locKd      >= 0) glUniform3fv(locKd,      1, glm::value_ptr(sm.mat.Kd));
+        if (locKs      >= 0) glUniform3fv(locKs,      1, glm::value_ptr(sm.mat.Ks));
+        if (locKe      >= 0) glUniform3fv(locKe,      1, glm::value_ptr(sm.mat.Ke));
+        if (locNs      >= 0) glUniform1f (locNs,       sm.mat.Ns);
+        if (locOpacity >= 0) glUniform1f (locOpacity,  sm.mat.d);
+        if (locIllum   >= 0) glUniform1i (locIllum,    sm.mat.illum);
+        if (locIor     >= 0) glUniform1f (locIor,      sm.mat.Ni);
+
+        // draw elements…
         void* offsetPtr = (void*)(sm.index_offset * sizeof(GLuint));
         glDrawElements(GL_TRIANGLES,
-                       sm.index_count,
-                       GL_UNSIGNED_INT,
-                       offsetPtr);
+                        sm.index_count,
+                        GL_UNSIGNED_INT,
+                        offsetPtr);
     }
 
     glBindVertexArray(0);
-    //glUseProgram(0);
 }
 
 
