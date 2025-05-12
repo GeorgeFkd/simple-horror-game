@@ -49,7 +49,7 @@ int main() {
     flashlight.diffuse     = glm::vec3(1.0f);
     flashlight.specular    = glm::vec3(1.0f);
     flashlight.cutoff      = glm::cos(glm::radians(12.5f));
-    flashlight.outerCutoff = glm::cos(glm::radians(17.5f));
+    flashlight.outer_cutoff = glm::cos(glm::radians(17.5f));
     scene_manager.add_light(flashlight);
 
 

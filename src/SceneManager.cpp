@@ -115,7 +115,7 @@ void SceneManager::SceneManager::render(const glm::mat4& view_projection){
       );
       glUniform1f(
           glGetUniformLocation(shader_program, (base + "outerCutoff").c_str()),
-          L.outerCutoff
+          L.outer_cutoff
       );
       glUniform1i(
           glGetUniformLocation(shader_program, (base + "type").c_str()),
