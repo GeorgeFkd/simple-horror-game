@@ -30,12 +30,12 @@ namespace SceneManager{
             return models;
         }
 
-        void add_light(const Light& L) { lights.push_back(L); }
+        void add_light(Light* L) { lights.push_back(L); }
 
         void set_spotlight(size_t idx, const glm::vec3& pos, const glm::vec3& dir) {
             if (idx < lights.size()) {
-            lights[idx].position  = pos;
-            lights[idx].direction = dir;
+            lights[idx]->position  = pos;
+            lights[idx]->direction = dir;
             }
         }
 
@@ -44,9 +44,11 @@ namespace SceneManager{
     private:
 
         std::vector<Model::Model*> models;
-        std::vector<Light> lights;
+        std::vector<Light*> lights;
 
         GLuint shader_program;
+        GLuint depth_shader_2d;
+        GLuint depth_shader_cube;
         GLsizei index_count = 0;
         int screen_width, screen_height;
 

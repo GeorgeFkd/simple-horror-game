@@ -236,6 +236,19 @@ void Model::Model::draw(const glm::mat4& view_projection){
 }
 
 
+void Model::Model::draw_depth(GLuint depth_shader){
+    glUseProgram(depth_shader);
+    GLint locM = glGetUniformLocation(depth_shader, "uModel");
+    glUniformMatrix4fv(locM, 1, GL_FALSE, glm::value_ptr(world_transform));
+
+    glBindVertexArray(vao);
+    for (auto const& sm : submeshes) {
+        void* offset = (void*)(sm.index_offset * sizeof(GLuint));
+        glDrawElements(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT, offset);
+    }
+    glBindVertexArray(0);
+}
+
 void Model::Model::compute_aabb() {
     // build 8 corners from the **object-space** box
     glm::vec3 corners[8] = {

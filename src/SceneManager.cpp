@@ -26,6 +26,54 @@ SceneManager::SceneManager::SceneManager(int width, int height)
 
   glDeleteShader(vert);
   glDeleteShader(frag);
+
+  vert_src = load_file("assets/shaders/depth2d.vert");
+  frag_src = load_file("assets/shaders/depth2d.frag");
+
+  vert = compile_shader(GL_VERTEX_SHADER,   vert_src);
+  frag = compile_shader(GL_FRAGMENT_SHADER, frag_src);
+
+  depth_shader_2d = glCreateProgram();
+  glAttachShader(depth_shader_2d, vert);
+  glAttachShader(depth_shader_2d, frag);
+  glLinkProgram(depth_shader_2d);
+
+  ok = GL_FALSE;
+  glGetProgramiv(depth_shader_2d, GL_LINK_STATUS, &ok);
+  if (ok != GL_TRUE) {
+    GLint len = 0;
+    glGetProgramiv(depth_shader_2d, GL_INFO_LOG_LENGTH, &len);
+    std::string log(len, '\0');
+    glGetProgramInfoLog(depth_shader_2d, len, &len, &log[0]);
+    throw std::runtime_error("Shader link failed:\n" + log);
+  }
+
+  glDeleteShader(vert);
+  glDeleteShader(frag);
+
+  vert_src = load_file("assets/shaders/depth_cube.vert");
+  frag_src = load_file("assets/shaders/depth_cube.frag");
+
+  vert = compile_shader(GL_VERTEX_SHADER,   vert_src);
+  frag = compile_shader(GL_FRAGMENT_SHADER, frag_src);
+
+  depth_shader_cube = glCreateProgram();
+  glAttachShader(depth_shader_cube, vert);
+  glAttachShader(depth_shader_cube, frag);
+  glLinkProgram(depth_shader_cube);
+
+  ok = GL_FALSE;
+  glGetProgramiv(depth_shader_cube, GL_LINK_STATUS, &ok);
+  if (ok != GL_TRUE) {
+    GLint len = 0;
+    glGetProgramiv(depth_shader_cube, GL_INFO_LOG_LENGTH, &len);
+    std::string log(len, '\0');
+    glGetProgramInfoLog(depth_shader_cube, len, &len, &log[0]);
+    throw std::runtime_error("Shader link failed:\n" + log);
+  }
+
+  glDeleteShader(vert);
+  glDeleteShader(frag);
 }
 
 GLuint SceneManager::SceneManager::get_shader_program(){
@@ -80,46 +128,49 @@ GLuint SceneManager::SceneManager::compile_shader(GLenum type, const std::string
 }
 
 void SceneManager::SceneManager::render(const glm::mat4& view_projection){
+  for (auto& L : lights) {
+    L->render_depth_pass(models);
+  }
   glUseProgram(shader_program);
 
   GLint locNum = glGetUniformLocation(shader_program, "numLights");
   glUniform1i(locNum, (GLint)lights.size());
 
   for (size_t i = 0; i < lights.size(); ++i) {
-      const Light& L = lights[i];
+      const Light* L = lights[i];
       std::string base = "lights[" + std::to_string(i) + "].";
 
       glUniform3fv(
           glGetUniformLocation(shader_program, (base + "position").c_str()),
-          1, glm::value_ptr(L.position)
+          1, glm::value_ptr(L->position)
       );
       glUniform3fv(
           glGetUniformLocation(shader_program, (base + "direction").c_str()),
-          1, glm::value_ptr(L.direction)
+          1, glm::value_ptr(L->direction)
       );
       glUniform3fv(
           glGetUniformLocation(shader_program, (base + "ambient").c_str()),
-          1, glm::value_ptr(L.ambient)
+          1, glm::value_ptr(L->ambient)
       );
       glUniform3fv(
           glGetUniformLocation(shader_program, (base + "diffuse").c_str()),
-          1, glm::value_ptr(L.diffuse)
+          1, glm::value_ptr(L->diffuse)
       );
       glUniform3fv(
           glGetUniformLocation(shader_program, (base + "specular").c_str()),
-          1, glm::value_ptr(L.specular)
+          1, glm::value_ptr(L->specular)
       );
       glUniform1f(
           glGetUniformLocation(shader_program, (base + "cutoff").c_str()),
-          L.cutoff
+          L->cutoff
       );
       glUniform1f(
           glGetUniformLocation(shader_program, (base + "outerCutoff").c_str()),
-          L.outer_cutoff
+          L->outer_cutoff
       );
       glUniform1i(
           glGetUniformLocation(shader_program, (base + "type").c_str()),
-          (int)L.type
+          (int)L->type
       );
   }
   for (auto const& model: models){

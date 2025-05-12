@@ -4,6 +4,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <vector>
+#include "Model.h"
 
 enum LightType { POINT=0, DIRECTIONAL=1, SPOT=2 };
 
@@ -24,6 +25,7 @@ struct Light {
     unsigned int shadow_height = 1024;
 
     //attributes for shadowmaps 
+    GLuint depth_shader;
     //for spotlights and directional
     GLuint shadow_fbo_2d   = 0;
     GLuint shadow_map_2d   = 0;
@@ -77,6 +79,55 @@ struct Light {
         if (shadow_map_2d)   glDeleteTextures    (1, &shadow_map_2d);
         if (shadow_fbo_cube) glDeleteFramebuffers(1, &shadow_map_cube);
         if (shadow_map_cube) glDeleteTextures    (1, &shadow_map_cube);
+    }
+
+    void render_depth_pass(const std::vector<Model::Model*> models){
+        if (!depth_shader) return;
+        glUseProgram(depth_shader);
+
+        if (type == POINT) {
+          auto mats = get_point_light_space_matrices();
+          // render into each cubemap face
+          for (int f = 0; f < 6; ++f) {
+            glBindFramebuffer(GL_FRAMEBUFFER, shadow_fbo_cube);
+            glFramebufferTexture2D(
+              GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+              GL_TEXTURE_CUBE_MAP_POSITIVE_X + f,
+              shadow_map_cube, 0
+            );
+            glViewport(0, 0, shadow_width, shadow_height);
+            glClear(GL_DEPTH_BUFFER_BIT);
+
+            // upload this face’s matrix
+            GLint loc = glGetUniformLocation(
+              depth_shader,
+              ("shadowMatrices[" + std::to_string(f) + "]").c_str()
+            );
+            glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(mats[f]));
+
+            // draw every model
+            for (auto m : models) {
+              m->update_world_transform(glm::mat4(1.0f));
+              m->draw_depth(depth_shader);
+            }
+          }
+        } else {
+          // directional or spot
+          glBindFramebuffer(GL_FRAMEBUFFER, shadow_fbo_2d);
+          glViewport(0, 0, shadow_width, shadow_height);
+          glClear(GL_DEPTH_BUFFER_BIT);
+
+          glm::mat4 ls = get_light_space_matrix();
+          GLint loc = glGetUniformLocation(depth_shader, "lightSpaceMatrix");
+          glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(ls));
+
+          for (auto m : models) {
+            m->update_world_transform(glm::mat4(1.0f));
+            m->draw_depth(depth_shader);
+          }
+        }
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
     // Directional and spot lights use a single light-space matrix
