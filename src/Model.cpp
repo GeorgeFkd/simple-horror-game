@@ -21,9 +21,7 @@ void Model::Model::debug_dump() const {
       << "      AABB local max = ("
          << localaabbmax.x << ", "
          << localaabbmax.y << ", "
-         << localaabbmax.z << ")\n"
-      << "      Shader program ID: "
-      << shader_program << "\n";
+         << localaabbmax.z << ")" << std::endl;
 }
 
 Model::Model::Model(const ObjectLoader::OBJLoader& loader)
@@ -148,10 +146,6 @@ Model::Model::Model(const ObjectLoader::OBJLoader& loader)
     }
 }
 
-void Model::Model::set_shader_program(GLuint shader_program){
-    this->shader_program = shader_program;
-};
-
 Model::Model::~Model(){
     // Tear down GL objects in reverse order of creation:
     if (ebo) {
@@ -185,18 +179,18 @@ void Model::Model::update_world_transform(const glm::mat4& parent_transform) {
     }
 }
 
-void Model::Model::draw(const glm::mat4& view_projection){
+void Model::Model::draw(const glm::mat4& view_projection, GLuint shader_program_id){
     glBindVertexArray(vao);
 
     // upload matrices
-    GLint locVP = glGetUniformLocation(shader_program, "uViewProj");
-    GLint locM  = glGetUniformLocation(shader_program, "uModel");
+    GLint locVP = glGetUniformLocation(shader_program_id, "uViewProj");
+    GLint locM  = glGetUniformLocation(shader_program_id, "uModel");
     glUniformMatrix4fv(locVP, 1, GL_FALSE, glm::value_ptr(view_projection));
     glUniformMatrix4fv(locM,  1, GL_FALSE, glm::value_ptr(world_transform));
 
     // helper that logs if the uniform isn't active
     auto checkUniform = [&](const char* name) {
-        GLint loc = glGetUniformLocation(shader_program, name);
+        GLint loc = glGetUniformLocation(shader_program_id, name);
         if (loc < 0) {
             std::cerr << "Warning: uniform `" << name << "` not found.\n";
         }        

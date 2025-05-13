@@ -21,45 +21,14 @@ void SceneManager::SceneManager::render(const glm::mat4& view_projection){
     glUniform1i(locNum, (GLint)lights.size());
 
     for (size_t i = 0; i < lights.size(); ++i) {
-        Light* L = lights[i];
+        Light* light = lights[i];
         std::string base = "lights[" + std::to_string(i) + "].";
-
-        glUniform3fv(
-            glGetUniformLocation(shader_program_id, (base + "position").c_str()),
-            1, glm::value_ptr(L->position)
-        );
-        glUniform3fv(
-            glGetUniformLocation(shader_program_id, (base + "direction").c_str()),
-            1, glm::value_ptr(L->direction)
-        );
-        glUniform3fv(
-            glGetUniformLocation(shader_program_id, (base + "ambient").c_str()),
-            1, glm::value_ptr(L->ambient)
-        );
-        glUniform3fv(
-            glGetUniformLocation(shader_program_id, (base + "diffuse").c_str()),
-            1, glm::value_ptr(L->diffuse)
-        );
-        glUniform3fv(
-            glGetUniformLocation(shader_program_id, (base + "specular").c_str()),
-            1, glm::value_ptr(L->specular)
-        );
-        glUniform1f(
-            glGetUniformLocation(shader_program_id, (base + "cutoff").c_str()),
-            L->cutoff
-        );
-        glUniform1f(
-            glGetUniformLocation(shader_program_id, (base + "outerCutoff").c_str()),
-            L->outerCutoff
-        );
-        glUniform1i(
-            glGetUniformLocation(shader_program_id, (base + "type").c_str()),
-            (int)L->type
-        );
+        light->draw_lighting(shader_program_id, base);
     }
+
     for (auto const& model: models){
         model->update_world_transform(glm::mat4(1.0f));
-        model->draw(view_projection);
+        model->draw(view_projection, shader_program_id);
     }
 
     glUseProgram(0);
