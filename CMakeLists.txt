@@ -14,6 +14,7 @@ set(SOURCES
     src/OBJLoader.cpp
     src/Camera.cpp
     src/Model.cpp
+    src/Shader.cpp
 )
 
 find_package(OpenGL REQUIRED)
