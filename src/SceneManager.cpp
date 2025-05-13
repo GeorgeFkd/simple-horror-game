@@ -14,21 +14,20 @@ void SceneManager::SceneManager::render(const glm::mat4& view_projection){
 
 
     Shader* shader = get_shader_by_name("blinn-phong");
-    GLuint shader_program_id = shader->get_shader_program_id();
-    glUseProgram(shader_program_id);
+    shader->use();
 
-    GLint locNum = glGetUniformLocation(shader_program_id, "numLights");
+    GLint locNum = shader->get_uniform_location("numLights");
     glUniform1i(locNum, (GLint)lights.size());
 
     for (size_t i = 0; i < lights.size(); ++i) {
-        Light* light = lights[i];
+        const Light* light = lights[i];
         std::string base = "lights[" + std::to_string(i) + "].";
-        light->draw_lighting(shader_program_id, base);
+        light->draw_lighting(shader, base);
     }
 
     for (auto const& model: models){
         model->update_world_transform(glm::mat4(1.0f));
-        model->draw(view_projection, shader_program_id);
+        model->draw(view_projection, shader);
     }
 
     glUseProgram(0);

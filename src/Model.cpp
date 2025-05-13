@@ -179,55 +179,42 @@ void Model::Model::update_world_transform(const glm::mat4& parent_transform) {
     }
 }
 
-void Model::Model::draw(const glm::mat4& view_projection, GLuint shader_program_id){
-    glBindVertexArray(vao);
+void Model::Model::draw(const glm::mat4& view_projection, Shader* shader) {
+    shader->use();
 
     // upload matrices
-    GLint locVP = glGetUniformLocation(shader_program_id, "uViewProj");
-    GLint locM  = glGetUniformLocation(shader_program_id, "uModel");
-    glUniformMatrix4fv(locVP, 1, GL_FALSE, glm::value_ptr(view_projection));
-    glUniformMatrix4fv(locM,  1, GL_FALSE, glm::value_ptr(world_transform));
+    GLint loc_vp = shader->get_uniform_location("uViewProj");
+    GLint loc_m  = shader->get_uniform_location("uModel");
+    glUniformMatrix4fv(loc_vp, 1, GL_FALSE, glm::value_ptr(view_projection));
+    glUniformMatrix4fv(loc_m,  1, GL_FALSE, glm::value_ptr(world_transform));
 
-    // helper that logs if the uniform isn't active
-    auto checkUniform = [&](const char* name) {
-        GLint loc = glGetUniformLocation(shader_program_id, name);
-        if (loc < 0) {
-            std::cerr << "Warning: uniform `" << name << "` not found.\n";
-        }        
-        return loc;
-    };
+    // pre-lookup all material uniforms once
+    GLint loc_ka      = shader->get_uniform_location("material.ambient");
+    GLint loc_kd      = shader->get_uniform_location("material.diffuse");
+    GLint loc_ks      = shader->get_uniform_location("material.specular");
+    GLint loc_ke      = shader->get_uniform_location("material.emissive");
+    GLint loc_ns      = shader->get_uniform_location("material.shininess");
+    GLint loc_opacity = shader->get_uniform_location("material.opacity");
+    GLint loc_illum   = shader->get_uniform_location("material.illumModel");
+    GLint loc_ior     = shader->get_uniform_location("material.ior");
 
-    // *before* submesh loop, look up & check each uniform once:
-    GLint locKa       = checkUniform("material.ambient");
-    GLint locKd       = checkUniform("material.diffuse");
-    GLint locKs       = checkUniform("material.specular");
-    GLint locKe       = checkUniform("material.emissive");
-    GLint locNs       = checkUniform("material.shininess");
-    GLint locOpacity  = checkUniform("material.opacity");
-    GLint locIllum    = checkUniform("material.illumModel");
-    GLint locIor      = checkUniform("material.ior");
-
-    // now draw each submesh, reusing the locations:
+    glBindVertexArray(vao);
     for (auto const& sm : submeshes) {
-        if (locKa      >= 0) glUniform3fv(locKa,      1, glm::value_ptr(sm.mat.Ka));
-        if (locKd      >= 0) glUniform3fv(locKd,      1, glm::value_ptr(sm.mat.Kd));
-        if (locKs      >= 0) glUniform3fv(locKs,      1, glm::value_ptr(sm.mat.Ks));
-        if (locKe      >= 0) glUniform3fv(locKe,      1, glm::value_ptr(sm.mat.Ke));
-        if (locNs      >= 0) glUniform1f (locNs,       sm.mat.Ns);
-        if (locOpacity >= 0) glUniform1f (locOpacity,  sm.mat.d);
-        if (locIllum   >= 0) glUniform1i (locIllum,    sm.mat.illum);
-        if (locIor     >= 0) glUniform1f (locIor,      sm.mat.Ni);
+      if (loc_ka      >= 0) glUniform3fv(loc_ka,      1, glm::value_ptr(sm.mat.Ka));
+      if (loc_kd      >= 0) glUniform3fv(loc_kd,      1, glm::value_ptr(sm.mat.Kd));
+      if (loc_ks      >= 0) glUniform3fv(loc_ks,      1, glm::value_ptr(sm.mat.Ks));
+      if (loc_ke      >= 0) glUniform3fv(loc_ke,      1, glm::value_ptr(sm.mat.Ke));
+      if (loc_ns      >= 0) glUniform1f (loc_ns,       sm.mat.Ns);
+      if (loc_opacity >= 0) glUniform1f (loc_opacity,  sm.mat.d);
+      if (loc_illum   >= 0) glUniform1i (loc_illum,    sm.mat.illum);
+      if (loc_ior     >= 0) glUniform1f (loc_ior,      sm.mat.Ni);
 
-        // draw elements…
-        void* offsetPtr = (void*)(sm.index_offset * sizeof(GLuint));
-        glDrawElements(GL_TRIANGLES,
-                        sm.index_count,
-                        GL_UNSIGNED_INT,
-                        offsetPtr);
+      void* offsetPtr = (void*)(sm.index_offset * sizeof(GLuint));
+      glDrawElements(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT, offsetPtr);
     }
-
     glBindVertexArray(0);
 }
+
 
 
 void Model::Model::compute_aabb() {

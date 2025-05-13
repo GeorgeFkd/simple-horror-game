@@ -13,6 +13,7 @@
 #include <numeric>
 #include "OBJLoader.h"
 #include "SubMesh.h"
+#include "Shader.h"
 
 namespace Model{
 
@@ -46,7 +47,7 @@ namespace Model{
 
     class Model {
     public:
-        void draw(const glm::mat4& view_projection, GLuint shader_program_id);
+        void draw(const glm::mat4& view_projection, Shader* shader);
         void set_local_transform(const glm::mat4& local_transform);
         void update_world_transform(const glm::mat4& parent_transform);
         void compute_aabb();

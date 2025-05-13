@@ -4,6 +4,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <string>
+#include "Shader.h"
 
 enum class LightType { 
     POINT,
@@ -71,7 +72,7 @@ public:
         this->direction = direction;
     }
 
-    void draw_lighting(GLuint shader_program_id, const std::string& base);
+    void draw_lighting(Shader* shader, const std::string& base) const;
 private:
     LightType type;
     glm::vec3 position;
