@@ -9,6 +9,7 @@
 #include "SceneManager.h"
 #include "Camera.h"
 #include "Shader.h"
+#include "Light.h"
 
 int main() {
     // ─── Initialize SDL + OpenGL ──────────────────────────────────────────
@@ -48,15 +49,17 @@ int main() {
     Shader blinnphong = Shader(shader_paths, shader_types, "blinn-phong");
 
     Model::Model couch(lederliege);
-    couch.set_shader_program(blinnphong.get_shader_program_id());
 
-    Light flashlight;
-    flashlight.type        = SPOT;
-    flashlight.ambient     = glm::vec3(0.0f);
-    flashlight.diffuse     = glm::vec3(1.0f);
-    flashlight.specular    = glm::vec3(1.0f);
-    flashlight.cutoff      = glm::cos(glm::radians(12.5f));
-    flashlight.outerCutoff = glm::cos(glm::radians(17.5f));
+    Light flashlight(
+        LightType::SPOT,
+        glm::vec3(0.0f),                    // position
+        glm::vec3(0.0f, 0.0f, -1.0f),       // direction
+        glm::vec3(0.1f),                    // ambient
+        glm::vec3(1.0f),                    // diffuse
+        glm::vec3(1.0f),                    // specular
+        glm::cos(glm::radians(12.5f)),      // cutoff
+        glm::cos(glm::radians(17.5f))       // outer cutoff
+    );
 
     SceneManager::SceneManager scene_manager(1280, 720);
     scene_manager.add_shader(blinnphong);

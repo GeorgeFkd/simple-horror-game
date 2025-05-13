@@ -80,6 +80,17 @@ std::string Shader::load_file(const std::string& path){
   return buffer.str();
 }
 
+GLint Shader::get_uniform_location(const std::string& name) {
+    auto it = uniform_cache.find(name);
+    if (it != uniform_cache.end()) {
+        return it->second;
+    }
+
+    GLint loc = glGetUniformLocation(program_id, name.c_str());
+    uniform_cache[name] = loc;
+    return loc;
+}
+
 
 Shader::~Shader(){
     if (program_id!= 0) {

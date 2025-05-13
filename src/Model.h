@@ -13,6 +13,7 @@
 #include <numeric>
 #include "OBJLoader.h"
 #include "SubMesh.h"
+#include "Shader.h"
 
 namespace Model{
 
@@ -46,14 +47,12 @@ namespace Model{
 
     class Model {
     public:
-        void draw(const glm::mat4& view_projection);
+        void draw(const glm::mat4& view_projection, Shader* shader);
         void set_local_transform(const glm::mat4& local_transform);
         void update_world_transform(const glm::mat4& parent_transform);
         void compute_aabb();
         void add_child(Model* child);
         void debug_dump() const;
-
-        void set_shader_program(GLuint shader_program);
 
         inline bool intersectAABB(const glm::vec3& minA, const glm::vec3& maxA, const glm::vec3& minB, const glm::vec3& maxB){
             // If one box is completely to the “left” of the other, no collision
@@ -89,7 +88,6 @@ namespace Model{
 
         GLuint vao, vbo, ebo = 0; 
         GLuint texture_id = 0; 
-        GLuint shader_program = 0; 
 
         // 1) Object-space AABB (min/max corners in mesh local coords)
         glm::vec3 localaabbmin;
