@@ -3,10 +3,12 @@
 #include <GL/glew.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <vector>
 
 #include "OBJLoader.h"
 #include "SceneManager.h"
 #include "Camera.h"
+#include "Shader.h"
 
 int main() {
     // ─── Initialize SDL + OpenGL ──────────────────────────────────────────
@@ -30,18 +32,23 @@ int main() {
 
     ObjectLoader::OBJLoader cube_loader;
     cube_loader.read_from_file("assets/models/test.obj");
-    cube_loader.debug_dump();
+    //cube_loader.debug_dump();
 
     ObjectLoader::OBJLoader lederliege;
     lederliege.read_from_file("assets/models/lederliege.obj");
-    lederliege.debug_dump();
+    //lederliege.debug_dump();
 
     ObjectLoader::OBJLoader cottage_loader;
     cottage_loader.read_from_file("assets/models/cottage_obj.obj");
-    cottage_loader.debug_dump();
+    //cottage_loader.debug_dump();
 
+    std::vector<std::string> shader_paths = {"assets/shaders/blinnphong.vert", "assets/shaders/blinnphong.frag"};
+    std::vector<GLenum> shader_types = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
 
-    SceneManager::SceneManager scene_manager(1280, 720);
+    Shader blinnphong = Shader(shader_paths, shader_types, "blinn-phong");
+
+    Model::Model couch(lederliege);
+    couch.set_shader_program(blinnphong.get_shader_program_id());
 
     Light flashlight;
     flashlight.type        = SPOT;
@@ -50,28 +57,12 @@ int main() {
     flashlight.specular    = glm::vec3(1.0f);
     flashlight.cutoff      = glm::cos(glm::radians(12.5f));
     flashlight.outerCutoff = glm::cos(glm::radians(17.5f));
+
+    SceneManager::SceneManager scene_manager(1280, 720);
+    scene_manager.add_shader(blinnphong);
+    scene_manager.add_model(couch);
     scene_manager.add_light(flashlight);
 
-
-
-
-    Model::Model couch(lederliege);
-    couch.set_shader_program(scene_manager.get_shader_program());
-    //glm::mat4 M = glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, 0.0f, -5.0f)) * glm::scale(glm::mat4(1.0f), glm::vec3(0.1f));
-    //couch.set_local_transform(M);
-    scene_manager.add_model(couch);
-    //couch.debug_dump();
-
-    //Model::Model cube_model(cube_loader);
-    //cube_model.set_shader_program(scene_manager.get_shader_program());
-    ////cube_model.debug_dump();
-    //scene_manager.add_model(cube_model);
-
-    //Model::Model cottage_model(cottage_loader);
-    //cottage_model.set_shader_program(scene_manager.get_shader_program());
-    //glm::mat4 M = glm::translate(glm::mat4(1.0f), glm::vec3(100.0f, 0.0f, -5.0f));
-    //cottage_model.set_local_transform(M);
-    //scene_manager.add_model(cottage_model);
 
     // ─── Create camera ───────────────────────────────────────────────────
     Camera::CameraObj camera(1280, 720);
