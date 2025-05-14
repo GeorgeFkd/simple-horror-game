@@ -30,8 +30,13 @@ uniform int   numLights;
 
 uniform vec3 viewPos;
 
+<<<<<<< HEAD
 uniform sampler2D diffuseMap; // ✅ New
 uniform bool useTexture;      // ✅ New flag
+=======
+uniform sampler2D diffuseMap; 
+uniform bool useTexture;      
+>>>>>>> 4edac8a (Textures now load properly, light is too strong and whitens them out when looking directly)
 
 
 in  vec3 FragPos;
