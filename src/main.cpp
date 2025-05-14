@@ -11,6 +11,10 @@
 #include "Shader.h"
 #include "Light.h"
 
+#ifndef DEBUG_DEPTH
+//#define DEBUG_DEPTH
+#endif
+
 int main() {
     // ─── Initialize SDL + OpenGL ──────────────────────────────────────────
     SDL_Init(SDL_INIT_VIDEO);
@@ -51,6 +55,12 @@ int main() {
     shader_types = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
     Shader depth_2d = Shader(shader_paths, shader_types, "depth_2d");
 
+    #ifdef DEBUG_DEPTH
+        shader_paths = {"assets/shaders/depth_debug.vert", "assets/shaders/depth_debug.frag"};
+        shader_types = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
+        Shader depth_debug = Shader(shader_paths, shader_types, "depth_debug");
+    #endif
+
     shader_paths = {"assets/shaders/depth_cube.vert", "assets/shaders/depth_cube.geom", "assets/shaders/depth_cube.frag"};
     shader_types = {GL_VERTEX_SHADER, GL_GEOMETRY_SHADER, GL_FRAGMENT_SHADER};
     Shader depth_cube = Shader(shader_paths, shader_types, "depth_cube");
@@ -84,6 +94,30 @@ int main() {
     // ─── Create camera ───────────────────────────────────────────────────
     Camera::CameraObj camera(1280, 720);
 
+
+    #ifdef DEBUG_DEPTH
+        float quadVertices[] = {
+            // positions   // texCoords
+            -1.0f,  1.0f,  0.0f, 1.0f,
+            -1.0f, -1.0f,  0.0f, 0.0f,
+            1.0f, -1.0f,  1.0f, 0.0f,
+
+            -1.0f,  1.0f,  0.0f, 1.0f,
+            1.0f, -1.0f,  1.0f, 0.0f,
+            1.0f,  1.0f,  1.0f, 1.0f
+        };
+
+        GLuint quadVAO, quadVBO;
+        glGenVertexArrays(1, &quadVAO);
+        glGenBuffers(1, &quadVBO);
+        glBindVertexArray(quadVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+    #endif
 
     // ─── Main loop ───────────────────────────────────────────────────────
     bool   running   = true;
@@ -137,8 +171,22 @@ int main() {
         glm::vec3 camera_position = camera.get_position();
         glm::vec3 camera_direction = camera.get_direction();  
         glm::mat4 vp   = proj * view;
-        scene_manager.render_depth_pass();
         scene_manager.set_spotlight(0, camera_position, camera_direction);
+        scene_manager.render_depth_pass();
+        #ifdef DEBUG_DEPTH
+            depth_debug.use();
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, flashlight.get_depth_texture());
+            glUniform1i(depth_debug.get_uniform_location("depthMap"), 0);
+            glUniform1f(depth_debug.get_uniform_location("near_plane"), 1.0f);
+            glUniform1f(depth_debug.get_uniform_location("far_plane"), 100.0f);
+            GLint depthMapLoc = depth_debug.get_uniform_location("depthMap");
+            glUniform1i(depthMapLoc, 0);
+
+            glBindVertexArray(quadVAO);
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+            glBindVertexArray(0);
+        #endif 
         scene_manager.render(vp);
         //cube_model.draw(vp);
         SDL_GL_SwapWindow(window);

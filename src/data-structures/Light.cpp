@@ -108,6 +108,7 @@ void Light::draw_lighting(Shader *shader, const std::string &base) const{
 void Light::draw_depth_pass(Shader* shader) const {
     glViewport(0, 0, shadow_width, shadow_height);
     glBindFramebuffer(GL_FRAMEBUFFER, depth_map_fbo);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depth_map, 0);
     glClear(GL_DEPTH_BUFFER_BIT);
 
     shader->use();

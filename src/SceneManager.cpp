@@ -41,11 +41,13 @@ void SceneManager::SceneManager::render_depth_pass() {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
-    // Optional: reset viewport to screen size
-    glViewport(0, 0, screen_width, screen_height);
 }
 
 void SceneManager::SceneManager::render(const glm::mat4& view_projection){
+
+    // Optional: reset viewport to screen size
+    glViewport(0, 0, screen_width, screen_height);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
     Shader* shader = get_shader_by_name("blinn-phong");

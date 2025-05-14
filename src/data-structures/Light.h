@@ -65,6 +65,10 @@ public:
         return type;
     }
 
+    inline GLuint get_depth_texture() const {
+        return depth_map;
+    }
+
     inline void set_position(glm::vec3& position){
         this->position = position;
     }
@@ -72,6 +76,8 @@ public:
     inline void set_direction(glm::vec3& direction){
         this->direction = direction;
     }
+
+
 
     glm::mat4 get_light_projection() const;
     glm::mat4 get_light_view() const;
