@@ -3,6 +3,7 @@
 #include <GL/glew.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <string>
 #include "Shader.h"
 
@@ -23,17 +24,13 @@ public:
         const glm::vec3& diffuse,
         const glm::vec3& specular,
         float cutoff, // inner cone
-        float outer_cutoff // outer cone
-    )
-    : type(light_type), 
-      position(position), 
-      direction(direction), 
-      ambient(ambient), 
-      diffuse(diffuse), 
-      specular(specular), 
-      cutoff(cutoff), 
-      outer_cutoff(outer_cutoff)
-    {}
+        float outer_cutoff, // outer cone
+        int shadow_width,
+        int shadow_height,
+        float near_plane,
+        float far_plane,
+        float ortho_size
+    );
 
 
     inline glm::vec3 get_position() const{
@@ -64,6 +61,10 @@ public:
         return outer_cutoff;
     }
 
+    inline LightType get_type() const{
+        return type;
+    }
+
     inline void set_position(glm::vec3& position){
         this->position = position;
     }
@@ -72,7 +73,12 @@ public:
         this->direction = direction;
     }
 
+    glm::mat4 get_light_projection() const;
+    glm::mat4 get_light_view() const;
+    std::vector<glm::mat4> get_point_light_views() const;
+
     void draw_lighting(Shader* shader, const std::string& base) const;
+    void draw_depth_pass(Shader* shader) const;
 private:
     LightType type;
     glm::vec3 position;
@@ -82,4 +88,13 @@ private:
     glm::vec3 specular;
     float cutoff;  // inner cone
     float outer_cutoff;  // outer cone
+
+    int shadow_width;
+    int shadow_height;
+    float near_plane; 
+    float far_plane;
+    float ortho_size;
+
+    GLuint   depth_map_fbo;
+    GLuint   depth_map;
 };

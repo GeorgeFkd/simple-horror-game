@@ -42,6 +42,7 @@ namespace SceneManager{
 
         Shader* get_shader_by_name(const std::string& shader_name);
 
+        void render_depth_pass();
         void render(const glm::mat4& view_projection);
 
         SceneManager(int width, int height):screen_height(height), screen_width(width){};

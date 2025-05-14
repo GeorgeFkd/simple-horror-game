@@ -45,8 +45,15 @@ int main() {
 
     std::vector<std::string> shader_paths = {"assets/shaders/blinnphong.vert", "assets/shaders/blinnphong.frag"};
     std::vector<GLenum> shader_types = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
-
     Shader blinnphong = Shader(shader_paths, shader_types, "blinn-phong");
+
+    shader_paths = {"assets/shaders/depth_2d.vert", "assets/shaders/depth_2d.frag"};
+    shader_types = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
+    Shader depth_2d = Shader(shader_paths, shader_types, "depth_2d");
+
+    shader_paths = {"assets/shaders/depth_cube.vert", "assets/shaders/depth_cube.geom", "assets/shaders/depth_cube.frag"};
+    shader_types = {GL_VERTEX_SHADER, GL_GEOMETRY_SHADER, GL_FRAGMENT_SHADER};
+    Shader depth_cube = Shader(shader_paths, shader_types, "depth_cube");
 
     Model::Model couch(lederliege);
 
@@ -58,11 +65,18 @@ int main() {
         glm::vec3(1.0f),                    // diffuse
         glm::vec3(1.0f),                    // specular
         glm::cos(glm::radians(12.5f)),      // cutoff
-        glm::cos(glm::radians(17.5f))       // outer cutoff
+        glm::cos(glm::radians(17.5f)),       // outer cutoff
+        1024,
+        1024,
+        1.0f,
+        100.0f,
+        10.0f
     );
 
     SceneManager::SceneManager scene_manager(1280, 720);
     scene_manager.add_shader(blinnphong);
+    scene_manager.add_shader(depth_2d);
+    scene_manager.add_shader(depth_cube);
     scene_manager.add_model(couch);
     scene_manager.add_light(flashlight);
 
@@ -123,6 +137,7 @@ int main() {
         glm::vec3 camera_position = camera.get_position();
         glm::vec3 camera_direction = camera.get_direction();  
         glm::mat4 vp   = proj * view;
+        scene_manager.render_depth_pass();
         scene_manager.set_spotlight(0, camera_position, camera_direction);
         scene_manager.render(vp);
         //cube_model.draw(vp);

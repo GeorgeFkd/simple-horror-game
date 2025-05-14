@@ -47,7 +47,8 @@ namespace Model{
 
     class Model {
     public:
-        void draw(const glm::mat4& view_projection, Shader* shader);
+        void draw_depth(Shader* shader) const;
+        void draw(const glm::mat4& view_projection, Shader* shader) const;
         void set_local_transform(const glm::mat4& local_transform);
         void update_world_transform(const glm::mat4& parent_transform);
         void compute_aabb();
