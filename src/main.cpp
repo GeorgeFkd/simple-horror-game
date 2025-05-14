@@ -112,7 +112,7 @@ int main() {
 
     auto right_light = model_from_obj_file("assets/models/light_sphere.obj", "Sphere");
     auto overhead_light = model_from_obj_file("assets/models/light_sphere.obj","Overhead light");
-
+    //hi
     Light flashlight(
         LightType::SPOT,
         glm::vec3(0.0f),               // position
