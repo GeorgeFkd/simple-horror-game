@@ -47,6 +47,9 @@ int main() {
     cottage_loader.read_from_file("assets/models/cottage_obj.obj");
     //cottage_loader.debug_dump();
 
+    ObjectLoader::OBJLoader sphere_loader;
+    sphere_loader.read_from_file("assets/models/light_sphere.obj");
+
     std::vector<std::string> shader_paths = {"assets/shaders/blinnphong.vert", "assets/shaders/blinnphong.frag"};
     std::vector<GLenum> shader_types = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
     Shader blinnphong = Shader(shader_paths, shader_types, "blinn-phong");
@@ -66,6 +69,8 @@ int main() {
     Shader depth_cube = Shader(shader_paths, shader_types, "depth_cube");
 
     Model::Model couch(lederliege);
+    Model::Model light_sphere(sphere_loader);
+
 
     Light flashlight(
         LightType::SPOT,
@@ -83,12 +88,30 @@ int main() {
         10.0f
     );
 
+    Light right_spotlight(
+        LightType::SPOT,
+        glm::vec3(5.0f, 1.5f, 0.0f),           // position: to the right
+        glm::vec3(-1.0f, 0.0f, 0.0f),          // direction: pointing left
+        glm::vec3(0.1f),
+        glm::vec3(1.0f),
+        glm::vec3(1.0f),
+        glm::cos(glm::radians(15.0f)),         // inner cone
+        glm::cos(glm::radians(25.0f)),         // outer cone
+        1024, 1024,
+        1.0f, 100.0f,
+        10.0f
+    );
+
+    light_sphere.set_local_transform(glm::translate(glm::mat4(1.0f), right_spotlight.get_position()));
+
     SceneManager::SceneManager scene_manager(1280, 720);
     scene_manager.add_shader(blinnphong);
     scene_manager.add_shader(depth_2d);
     scene_manager.add_shader(depth_cube);
     scene_manager.add_model(couch);
-    scene_manager.add_light(flashlight);
+    scene_manager.add_model(light_sphere);
+    //scene_manager.add_light(flashlight);
+    scene_manager.add_light(right_spotlight);
 
 
     // ─── Create camera ───────────────────────────────────────────────────
@@ -171,7 +194,7 @@ int main() {
         glm::vec3 camera_position = camera.get_position();
         glm::vec3 camera_direction = camera.get_direction();  
         glm::mat4 vp   = proj * view;
-        scene_manager.set_spotlight(0, camera_position, camera_direction);
+        //scene_manager.set_spotlight(0, camera_position, camera_direction);
         scene_manager.render_depth_pass();
         #ifdef DEBUG_DEPTH
             depth_debug.use();
