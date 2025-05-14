@@ -14,9 +14,9 @@
 #include <unordered_map>
 #include "Material.h"
 
-//#ifndef DEBUG_OBJLOADER
+#ifndef DEBUG_OBJLOADER
 //#define DEBUG_OBJLOADER
-//#endif
+#endif
 
 
 namespace ObjectLoader{ 
@@ -99,7 +99,7 @@ namespace ObjectLoader{
     class OBJLoader{
     private: 
 
-
+        void load_textures();
         void read_normal(const char* buff);
         void read_vertex(const char* buff);
         void read_texcoord(const char* buff);

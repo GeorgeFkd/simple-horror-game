@@ -66,6 +66,14 @@ public:
     void set_mat4(const std::string &name, const glm::mat4 &mat){
         glUniformMatrix4fv(get_uniform_location(name), 1, GL_FALSE, &mat[0][0]);
     }
+    void set_texture(const std::string& name, GLuint texture, GLenum unit = GL_TEXTURE0){
+        GLint location = get_uniform_location(name);
+        if (location >= 0) {
+            glActiveTexture(unit);
+            glBindTexture(GL_TEXTURE_2D, texture);
+            glUniform1i(location, unit - GL_TEXTURE0); // Pass texture unit index
+        }
+    }
 
     Shader(const std::vector<std::string>& shader_paths,
            const std::vector<GLenum>& shader_types,

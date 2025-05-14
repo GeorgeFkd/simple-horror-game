@@ -90,11 +90,12 @@ Model::Model::Model(const std::vector<glm::vec3>& positions,
     glBindVertexArray(0);
 }
 
-Model::Model::Model(const ObjectLoader::OBJLoader& loader)
+Model::Model::Model(const ObjectLoader::OBJLoader& loader, const std::string& label)
   : local_transform(1.0f)
   , world_transform(1.0f)
   , localaabbmin(std::numeric_limits<float>::max())
   , localaabbmax(-std::numeric_limits<float>::max())
+, label(label)
 {
     // build unique_vertices & a cache
     std::unordered_map<Vertex, GLuint, VertexHasher> cache;
@@ -250,6 +251,9 @@ void Model::Model::draw(const glm::mat4& view_projection, Shader* shader) const{
     shader->set_mat4("uViewProj", view_projection);
     shader->set_mat4("uModel", world_transform);
 
+    GLint loc_useTex   = shader->get_uniform_location("useTexture");
+    GLint loc_diffuse  = shader->get_uniform_location("diffuseMap");
+
     glBindVertexArray(vao);
     for (auto const& sm : submeshes) {
         shader->set_vec3("material.ambient", sm.mat.Ka);
@@ -261,6 +265,12 @@ void Model::Model::draw(const glm::mat4& view_projection, Shader* shader) const{
         shader->set_int("material.illumModel", sm.mat.illum);
         shader->set_float("material.ior", sm.mat.Ni);
 
+        if (sm.mat.tex_Kd != 0) {
+            shader->set_texture("diffuseMap", sm.mat.tex_Kd, GL_TEXTURE0);
+            shader->set_bool("useTexture", true);
+        } else {
+            shader->set_bool("useTexture", false);
+        }
 
         void* offsetPtr = (void*)(sm.index_offset * sizeof(GLuint));
         glDrawElements(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT, offsetPtr);
