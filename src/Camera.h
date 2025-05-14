@@ -19,7 +19,7 @@ namespace Camera{
         float fov    = glm::radians(45.0f);
         float aspect = 16.0f / 9.0f;
         float near_z  = 0.1f;
-        float far_z   = 100.0f;
+        float far_z   = 500.0f;
         // euler angles
         // yaw represents the magnitude of looking left to right
         // pitch represents how much we are looking up or down 

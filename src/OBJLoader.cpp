@@ -1,5 +1,7 @@
 #include "OBJLoader.h"
-
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+#include <GL/glew.h>
 
 
 
@@ -107,7 +109,78 @@ void ObjectLoader::OBJLoader::read_from_file(const std::string &filename) {
     }
 
   }
+  
+  this->load_textures();
+
+
 }
+static GLuint load_texture_from_file(const std::string& filepath) {
+    int width, height, channels;
+    stbi_set_flip_vertically_on_load(true);
+    unsigned char* data = stbi_load(filepath.c_str(), &width, &height, &channels, 0);
+
+    if (!data) {
+        std::cerr << "Failed to load texture: " << filepath << std::endl;
+        return 0;
+    }
+
+    GLenum format = (channels == 4) ? GL_RGBA : GL_RGB;
+
+    GLuint texture_id;
+    glGenTextures(1, &texture_id);
+    glBindTexture(GL_TEXTURE_2D, texture_id);
+    glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+    stbi_image_free(data);
+
+    return texture_id;
+}
+void ObjectLoader::OBJLoader::load_textures() {
+  #define DEBUG_OBJLOADER
+  std::cout << "Now preparing materials\n";
+  for (auto& material : m_materials) {
+        if (!material.map_Kd.empty()) {
+            GLuint id = load_texture_from_file(material.map_Kd);
+            #ifdef DEBUG_OBJLOADER
+            std::cout << "Loaded map_Kd: " << material.map_Kd << " → ID " << id << std::endl;
+            #endif
+            material.tex_Kd = id; // if you add it
+        }
+
+        if (!material.map_Ka.empty()) {
+            GLuint id = load_texture_from_file(material.map_Ka);
+            #ifdef DEBUG_OBJLOADER
+            std::cout << "Loaded map_Ka: " << material.map_Ka << " → ID " << id << std::endl;
+            #endif
+            material.tex_Ka = id;
+        }
+
+        if (!material.map_Ks.empty()) {
+            GLuint id = load_texture_from_file(material.map_Ks);
+            #ifdef DEBUG_OBJLOADER
+            std::cout << "Loaded map_Ks: " << material.map_Ks << " → ID " << id << std::endl;
+            #endif
+            material.tex_Ks = id;
+        }
+
+        if (!material.map_Bump.empty()) {
+            GLuint id = load_texture_from_file(material.map_Bump);
+            #ifdef DEBUG_OBJLOADER
+            std::cout << "Loaded map_Bump: " << material.map_Bump << " → ID " << id << std::endl;
+            #endif
+            material.tex_Bump = id;
+        }
+    }
+  
+}
+
 
 void ObjectLoader::OBJLoader::read_normal(const char* buff) {
   float tmp[3];
@@ -221,6 +294,8 @@ void ObjectLoader::OBJLoader::debug_dump() const {
               << "illum="<< M.illum << " ";
     if (!M.map_Kd.empty())
       std::cout << "  map_Kd='"<<M.map_Kd<<"'";
+    if (!M.map_Bump.empty()) 
+      std::cout << "  map_Bump='" << M.map_Bump << "'";
     std::cout << "\n";
   }
 
@@ -229,14 +304,14 @@ void ObjectLoader::OBJLoader::debug_dump() const {
     std::cout << " ["<<i<<"] '"<< m_groups[i] <<"'\n";
   }
 
-  std::cout << "Faces (" << m_faces.size() << "):\n";
-  for (size_t i = 0; i < m_faces.size(); ++i) {
-    auto const& F = m_faces[i];
-    std::cout << " ["<<i<<"] mat="<<F.material_id
-              << " grp="<<F.group_id
-              << " verts=("
-                 <<F.vertices.x<<","<<F.vertices.y<<","<<F.vertices.z<<","<<F.vertices.w<<")\n";
-  }
+  // std::cout << "Faces (" << m_faces.size() << "):\n";
+  // for (size_t i = 0; i < m_faces.size(); ++i) {
+  //   auto const& F = m_faces[i];
+  //   std::cout << " ["<<i<<"] mat="<<F.material_id
+  //             << " grp="<<F.group_id
+  //             << " verts=("
+  //                <<F.vertices.x<<","<<F.vertices.y<<","<<F.vertices.z<<","<<F.vertices.w<<")\n";
+  // }
   std::cout << "======================\n\n";
 }
 
@@ -359,14 +434,17 @@ void ObjectLoader::OBJLoader::read_mtllib(const char* buff, const std::string& o
               current_mat.illum = ival;
       }
       else if (key == "map_Ka") {
-          current_mat.map_Ka = std::string{data};
+          current_mat.map_Ka = dir + std::string{data};
       }
       else if (key == "map_Kd") {
-          current_mat.map_Kd = std::string{data};
+          current_mat.map_Kd = dir + std::string{data};
       }
       else if (key == "map_Ks") {
-          current_mat.map_Ks = std::string{data};
+          current_mat.map_Ks = dir + std::string{data};
       }
+      else if (key == "bump" || key == "map_bump") {
+          current_mat.map_Bump = dir + std::string{data};
+    }
   }
 
   commit_mat();

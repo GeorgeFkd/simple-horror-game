@@ -15,8 +15,21 @@
 //#define DEBUG_DEPTH
 #endif
 
-int main()
-{
+
+
+Model::Model model_from_obj_file(const std::string& obj_file,const std::string& label) {
+
+    ObjectLoader::OBJLoader loader;
+    loader.read_from_file(obj_file);
+    std::cout << "For Model " << label << "\n";
+    loader.debug_dump();
+    std::cout << "---------------------------";
+    auto model = Model::Model(loader,label);
+    return model;
+}
+
+
+int main() {
     // ─── Initialize SDL + OpenGL ──────────────────────────────────────────
     SDL_Init(SDL_INIT_VIDEO);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
@@ -40,15 +53,15 @@ int main()
     ObjectLoader::OBJLoader cube_loader;
     cube_loader.read_from_file("assets/models/test.obj");
     cube_loader.debug_dump();
-
+    //
     ObjectLoader::OBJLoader lederliege;
     lederliege.read_from_file("assets/models/lederliege.obj");
-    // lederliege.debug_dump();
-
+    //lederliege.debug_dump();
+    //
     ObjectLoader::OBJLoader cottage_loader;
     cottage_loader.read_from_file("assets/models/cottage_obj.obj");
-    // cottage_loader.debug_dump();
-
+    //cottage_loader.debug_dump();
+    //
     ObjectLoader::OBJLoader sphere_loader;
     sphere_loader.read_from_file("assets/models/light_sphere.obj");
 
@@ -97,6 +110,8 @@ int main()
 
     Model::Model floor(floor_verts, floor_normals, floor_uvs, floor_indices, floor_material);
 
+    auto right_light = model_from_obj_file("assets/models/light_sphere.obj", "Sphere");
+    auto overhead_light = model_from_obj_file("assets/models/light_sphere.obj","Overhead light");
 
     Light flashlight(
         LightType::SPOT,
@@ -146,14 +161,31 @@ int main()
     scene_manager.add_shader(blinnphong);
     scene_manager.add_shader(depth_2d);
     scene_manager.add_shader(depth_cube);
-    scene_manager.add_model(couch);
-    scene_manager.add_model(cube);
-    scene_manager.add_model(right_light);
-    scene_manager.add_model(overhead_light);
-    scene_manager.add_model(floor);
+
+
+    glm::vec3 bed_position = glm::vec3(15.0f, 0.0f, -20.0f);
+    glm::mat4 bed_offset = glm::translate(glm::mat4(1.0f), bed_position);
+
+    auto bed = model_from_obj_file("assets/models/SimpleOldTownAssets/Bed01.obj", "Bed");
+    bed.set_local_transform(bed_offset);
+    scene_manager.add_model(bed);
+
+    glm::mat4 chair1_offset = glm::translate(glm::mat4(1.0f), bed_position + glm::vec3(2.0f, 0.0f, -1.5f));
+    auto chair1 = model_from_obj_file("assets/models/SimpleOldTownAssets/ChairCafeWhite01.obj", "Chair 1");
+    chair1.set_local_transform(chair1_offset);
+    scene_manager.add_model(chair1);
+
+    glm::mat4 chair2_offset = glm::translate(glm::mat4(1.0f), bed_position + glm::vec3(-2.0f, 0.0f, -1.5f));
+    auto chair2 = model_from_obj_file("assets/models/SimpleOldTownAssets/ChairCafeWhite01.obj", "Chair 2");
+    chair2.set_local_transform(chair2_offset);
+    scene_manager.add_model(chair2);
+
+    glm::mat4 bookcase_offset = glm::translate(glm::mat4(1.0f), bed_position + glm::vec3(0.0f, 0.0f, -6.0f));
+    auto bookcase = model_from_obj_file("assets/models/SimpleOldTownAssets/BookCase01.obj", "Bookcase");
+    bookcase.set_local_transform(bookcase_offset);
+    scene_manager.add_model(bookcase);
     scene_manager.add_light(flashlight);
-    scene_manager.add_light(right_spotlight);
-    scene_manager.add_light(overhead_spot);
+
 
     // ─── Create camera ───────────────────────────────────────────────────
     Camera::CameraObj camera(1280, 720);
@@ -186,6 +218,7 @@ int main()
     // ─── Main loop ───────────────────────────────────────────────────────
     bool running = true;
     Uint64 lastTicks = SDL_GetPerformanceCounter();
+
     glm::vec3 last_camera_position;
     while (running)
     {
@@ -225,6 +258,8 @@ int main()
                     model->get_aabbmin(),
                     model->get_aabbmax()) )
             {
+                std::cout << "Collision with: " << model->name() << "\n";
+                // problem is we start from inside the object
                 // collision! revert to last safe position
                 camera.set_position(last_camera_position);
                 break;

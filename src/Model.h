@@ -80,11 +80,20 @@ namespace Model{
             const std::vector<glm::vec2>& texcoords,
             const std::vector<GLuint>& indices,
             const Material& mat = Material());
+
         Model(const ObjectLoader::OBJLoader& loader);
+
+        Model(const ObjectLoader::OBJLoader& loader,const std::string& label);
+
+        inline std::string_view name() {
+            return label;        
+        }
+
         ~Model();
     private: 
         std::vector<Vertex> unique_vertices;
         std::vector<SubMesh> submeshes;
+        std::string_view label;
         // where the model is located 
         // relative to its parent
         glm::mat4 local_transform; 
