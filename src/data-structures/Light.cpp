@@ -88,21 +88,21 @@ Light::Light(
 }
 
 void Light::draw_lighting(Shader *shader, const std::string &base) const{
-    // use the cached location API instead of raw glGetUniformLocation
-    glUniform3fv(shader->get_uniform_location(base + "position"), 1, glm::value_ptr(position));
+    shader->set_vec3(base + "position", position);
     // only send direction for non-point lights
-    if (type != LightType::POINT)
-        glUniform3fv(shader->get_uniform_location(base + "direction"), 1, glm::value_ptr(direction));
-    glUniform3fv(shader->get_uniform_location(base + "ambient"), 1, glm::value_ptr(ambient));
-    glUniform3fv(shader->get_uniform_location(base + "diffuse"), 1, glm::value_ptr(diffuse));
-    glUniform3fv(shader->get_uniform_location(base + "specular"), 1, glm::value_ptr(specular));
+    if (type != LightType::POINT){
+        shader->set_vec3(base + "direction", direction);
+    }
+    shader->set_vec3(base + "ambient", ambient);
+    shader->set_vec3(base + "diffuse", diffuse);
+    shader->set_vec3(base + "specular", specular);
     if (type == LightType::SPOT)
     {
-        glUniform1f(shader->get_uniform_location(base + "cutoff"), cutoff);
-        glUniform1f(shader->get_uniform_location(base + "outerCutoff"), outer_cutoff);
+        shader->set_float(base + "cutoff", cutoff);
+        shader->set_float(base + "outerCutoff", outer_cutoff);
     }
 
-    glUniform1i(shader->get_uniform_location(base + "type"), (int)type);
+    shader->set_int(base + "type", int(type));
 }
 
 void Light::draw_depth_pass(Shader* shader) const {
@@ -117,18 +117,13 @@ void Light::draw_depth_pass(Shader* shader) const {
         glm::mat4 proj = get_light_projection();
         auto views = get_point_light_views();
         for (int i = 0; i < 6; ++i) {
-            shader->get_uniform_location("shadowMatrices[" + std::to_string(i) + "]");
-            glUniformMatrix4fv(
-                shader->get_uniform_location("shadowMatrices[" + std::to_string(i) + "]"),
-                1, GL_FALSE, glm::value_ptr(proj * views[i])
-            );
+            shader->set_mat4("shadowMatrices[" + std::to_string(i) + "]", proj*views[i]);
         }
-        glUniform1f(shader->get_uniform_location("far_plane"), far_plane);
-        glUniform3fv(shader->get_uniform_location("lightPos"), 1, glm::value_ptr(position));
+        shader->set_float("far_plane", far_plane);
+        shader->set_vec3("light_pos", position);
     } else {
         glm::mat4 light_space = get_light_projection() * get_light_view();
-        glUniformMatrix4fv(shader->get_uniform_location("uLightSpaceMatrix"),
-                           1, GL_FALSE, glm::value_ptr(light_space));
+        shader->set_mat4("uLightSpaceMatrix", light_space);
     }
 }
 

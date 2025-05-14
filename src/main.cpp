@@ -87,7 +87,15 @@ int main()
     };
     std::vector<GLuint> floor_indices = { 0, 1, 2, 0, 2, 3 };
 
-    Model::Model floor(floor_verts, floor_normals, floor_uvs, floor_indices);
+    Material floor_material;
+    floor_material.Ka = glm::vec3(0.15f, 0.07f, 0.02f);         // dark ambient
+    floor_material.Kd = glm::vec3(0.59f, 0.29f, 0.00f);         // brown diffuse
+    floor_material.Ks = glm::vec3(0.05f, 0.04f, 0.03f);         // small specular
+    floor_material.Ns = 16.0f;                                 // shininess
+    floor_material.d  = 1.0f;                                  // opacity
+    floor_material.illum = 2;                                  // standard Phong
+
+    Model::Model floor(floor_verts, floor_normals, floor_uvs, floor_indices, floor_material);
 
 
     Light flashlight(
