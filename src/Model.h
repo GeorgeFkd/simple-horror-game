@@ -74,12 +74,15 @@ namespace Model{
         inline void set_scale(const glm::vec3& s) {
             local_transform = glm::scale(glm::mat4(1.0f), s) * local_transform;
         }
-
-        Model(const ObjectLoader::OBJLoader& loader);
+        inline std::string_view name() {
+            return label;        
+    }
+        Model(const ObjectLoader::OBJLoader& loader,const std::string& label);
         ~Model();
     private: 
         std::vector<Vertex> unique_vertices;
         std::vector<SubMesh> submeshes;
+        std::string_view label;
         // where the model is located 
         // relative to its parent
         glm::mat4 local_transform; 

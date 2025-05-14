@@ -99,7 +99,7 @@ namespace ObjectLoader{
     class OBJLoader{
     private: 
 
-
+        void load_textures();
         void read_normal(const char* buff);
         void read_vertex(const char* buff);
         void read_texcoord(const char* buff);

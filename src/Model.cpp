@@ -24,11 +24,12 @@ void Model::Model::debug_dump() const {
          << localaabbmax.z << ")" << std::endl;
 }
 
-Model::Model::Model(const ObjectLoader::OBJLoader& loader)
+Model::Model::Model(const ObjectLoader::OBJLoader& loader,const std::string& label)
   : local_transform(1.0f)
   , world_transform(1.0f)
   , localaabbmin(std::numeric_limits<float>::max())
   , localaabbmax(-std::numeric_limits<float>::max())
+, label(label)
 {
     // build unique_vertices & a cache
     std::unordered_map<Vertex, GLuint, VertexHasher> cache;

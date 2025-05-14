@@ -114,13 +114,27 @@ endforeach()
 set(MODEL_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/assets/models")
 set(MODEL_DST_DIR "${CMAKE_CURRENT_BINARY_DIR}/assets/models")
 
-file(GLOB MODEL_FILES
+file(GLOB_RECURSE ALL_MODEL_FILES
     "${MODEL_SRC_DIR}/*.obj"
     "${MODEL_SRC_DIR}/*.mtl"
 )
 
-foreach(MODEL_FILE ${MODEL_FILES})
-    add_custom_command(TARGET opengl_app POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E make_directory "${MODEL_DST_DIR}"
-        COMMAND ${CMAKE_COMMAND} -E copy ${MODEL_FILE} "${MODEL_DST_DIR}")
-endforeach()
+add_custom_target(copy_models ALL
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${MODEL_DST_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${MODEL_SRC_DIR}" "${MODEL_DST_DIR}"
+    COMMENT "Copying model files..."
+)
+
+add_dependencies(opengl_app copy_models)
+# file(GLOB MODEL_FILES
+#     "${MODEL_SRC_DIR}/*.obj"
+#     "${MODEL_SRC_DIR}/*.mtl"
+#     "${MODEL_SRC_DIR}/SimpleOldTownAssets/*.obj"
+#     "${MODEL_SRC_DIR}/SimpleOldTownAssets/*.mtl"
+# )
+
+# foreach(MODEL_FILE ${MODEL_FILES})
+#     add_custom_command(TARGET opengl_app POST_BUILD
+#         COMMAND ${CMAKE_COMMAND} -E make_directory "${MODEL_DST_DIR}"
+#         COMMAND ${CMAKE_COMMAND} -E copy ${MODEL_FILE} "${MODEL_DST_DIR}")
+# endforeach()
