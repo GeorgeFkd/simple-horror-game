@@ -69,7 +69,8 @@ int main() {
     Shader depth_cube = Shader(shader_paths, shader_types, "depth_cube");
 
     Model::Model couch(lederliege);
-    Model::Model light_sphere(sphere_loader);
+    Model::Model right_light(sphere_loader);
+    Model::Model overhead_light(sphere_loader);
 
 
     Light flashlight(
@@ -102,16 +103,34 @@ int main() {
         10.0f
     );
 
-    light_sphere.set_local_transform(glm::translate(glm::mat4(1.0f), right_spotlight.get_position()));
+    Light overhead_spot(
+        LightType::POINT,
+        glm::vec3(0.0f, 5.0f, 0.0f),           // above the object
+        glm::vec3(0.0f, -1.0f, 0.0f),          // pointing straight down
+        glm::vec3(0.1f),
+        glm::vec3(1.0f),
+        glm::vec3(1.0f),
+        glm::cos(glm::radians(15.0f)),         // inner cone
+        glm::cos(glm::radians(25.0f)),         // outer cone
+        1024, 1024,
+        1.0f, 100.0f,
+        10.0f
+    );
+
+    right_light.set_local_transform(glm::translate(glm::mat4(1.0f), right_spotlight.get_position()));
+    overhead_light.set_local_transform(glm::translate(glm::mat4(1.0f), overhead_spot.get_position()));
+
 
     SceneManager::SceneManager scene_manager(1280, 720);
     scene_manager.add_shader(blinnphong);
     scene_manager.add_shader(depth_2d);
     scene_manager.add_shader(depth_cube);
     scene_manager.add_model(couch);
-    scene_manager.add_model(light_sphere);
+    //scene_manager.add_model(right_light);
+    scene_manager.add_model(overhead_light);
     //scene_manager.add_light(flashlight);
-    scene_manager.add_light(right_spotlight);
+    //scene_manager.add_light(right_spotlight);
+    scene_manager.add_light(overhead_spot);
 
 
     // ─── Create camera ───────────────────────────────────────────────────
