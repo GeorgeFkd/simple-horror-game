@@ -30,13 +30,8 @@ uniform int   numLights;
 
 uniform vec3 viewPos;
 
-<<<<<<< HEAD
-uniform sampler2D diffuseMap; // ✅ New
-uniform bool useTexture;      // ✅ New flag
-=======
 uniform sampler2D diffuseMap; 
 uniform bool useTexture;      
->>>>>>> 4edac8a (Textures now load properly, light is too strong and whitens them out when looking directly)
 
 
 in  vec3 FragPos;
@@ -53,7 +48,7 @@ void main() {
     }
 
     // compute per-light diffuse & specular
-    vec3 norm    = normalize(Normal) * 0.5 + 0.5;
+    vec3 norm    = normalize(Normal);
     vec3 viewDir = normalize(viewPos - FragPos);
     vec3 diffAccum = vec3(0.0);
     vec3 specAccum = vec3(0.0);
