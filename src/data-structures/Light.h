@@ -69,11 +69,19 @@ public:
         return depth_map;
     }
 
-    inline void set_position(glm::vec3& position){
+    inline float get_far_plane() const{
+        return far_plane;
+    }
+
+    inline float get_near_plane() const{
+        return near_plane;
+    }
+
+    inline void set_position(const glm::vec3& position){
         this->position = position;
     }
 
-    inline void set_direction(glm::vec3& direction){
+    inline void set_direction(const glm::vec3& direction){
         this->direction = direction;
     }
 

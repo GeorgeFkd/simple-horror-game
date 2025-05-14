@@ -15,7 +15,8 @@
 //#define DEBUG_DEPTH
 #endif
 
-int main() {
+int main()
+{
     // ─── Initialize SDL + OpenGL ──────────────────────────────────────────
     SDL_Init(SDL_INIT_VIDEO);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
@@ -23,12 +24,11 @@ int main() {
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
                         SDL_GL_CONTEXT_PROFILE_CORE);
 
-    SDL_Window* window = SDL_CreateWindow(
+    SDL_Window *window = SDL_CreateWindow(
         "Simple Cube",
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
         1280, 720,
-        SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE
-    );
+        SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
     SDL_GLContext glCtx = SDL_GL_CreateContext(window);
 
     glewInit();
@@ -43,11 +43,11 @@ int main() {
 
     ObjectLoader::OBJLoader lederliege;
     lederliege.read_from_file("assets/models/lederliege.obj");
-    //lederliege.debug_dump();
+    // lederliege.debug_dump();
 
     ObjectLoader::OBJLoader cottage_loader;
     cottage_loader.read_from_file("assets/models/cottage_obj.obj");
-    //cottage_loader.debug_dump();
+    // cottage_loader.debug_dump();
 
     ObjectLoader::OBJLoader sphere_loader;
     sphere_loader.read_from_file("assets/models/light_sphere.obj");
@@ -61,9 +61,9 @@ int main() {
     Shader depth_2d = Shader(shader_paths, shader_types, "depth_2d");
 
     #ifdef DEBUG_DEPTH
-        shader_paths = {"assets/shaders/depth_debug.vert", "assets/shaders/depth_debug.frag"};
-        shader_types = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
-        Shader depth_debug = Shader(shader_paths, shader_types, "depth_debug");
+    shader_paths = {"assets/shaders/depth_debug.vert", "assets/shaders/depth_debug.frag"};
+    shader_types = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
+    Shader depth_debug = Shader(shader_paths, shader_types, "depth_debug");
     #endif
 
     shader_paths = {"assets/shaders/depth_cube.vert", "assets/shaders/depth_cube.geom", "assets/shaders/depth_cube.frag"};
@@ -75,54 +75,64 @@ int main() {
     Model::Model right_light(sphere_loader);
     Model::Model overhead_light(sphere_loader);
 
+    std::vector<glm::vec3> floor_verts = {
+        {-10.0f, 0.0f, -10.0f},
+        {-10.0f, 0.0f,  10.0f},
+        { 10.0f, 0.0f,  10.0f},
+        { 10.0f, 0.0f, -10.0f}
+    };
+    std::vector<glm::vec3> floor_normals(4, glm::vec3(0, 1, 0));
+    std::vector<glm::vec2> floor_uvs = {
+        {0, 0}, {0, 1}, {1, 1}, {1, 0}
+    };
+    std::vector<GLuint> floor_indices = { 0, 1, 2, 0, 2, 3 };
+
+    Model::Model floor(floor_verts, floor_normals, floor_uvs, floor_indices);
+
 
     Light flashlight(
         LightType::SPOT,
-        glm::vec3(0.0f),                    // position
-        glm::vec3(0.0f, 0.0f, -1.0f),       // direction
-        glm::vec3(0.1f),                    // ambient
-        glm::vec3(1.0f),                    // diffuse
-        glm::vec3(1.0f),                    // specular
-        glm::cos(glm::radians(12.5f)),      // cutoff
-        glm::cos(glm::radians(17.5f)),       // outer cutoff
+        glm::vec3(0.0f),               // position
+        glm::vec3(0.0f, 0.0f, -1.0f),  // direction
+        glm::vec3(0.1f),               // ambient
+        glm::vec3(1.0f),               // diffuse
+        glm::vec3(1.0f),               // specular
+        glm::cos(glm::radians(12.5f)), // cutoff
+        glm::cos(glm::radians(17.5f)), // outer cutoff
         1024,
         1024,
         1.0f,
         100.0f,
-        10.0f
-    );
+        10.0f);
 
     Light right_spotlight(
         LightType::SPOT,
-        glm::vec3(5.0f, 1.5f, 0.0f),           // position: to the right
-        glm::vec3(-1.0f, 0.0f, 0.0f),          // direction: pointing left
+        glm::vec3(5.0f, 1.5f, 0.0f),  // position: to the right
+        glm::vec3(-1.0f, 0.0f, 0.0f), // direction: pointing left
         glm::vec3(0.1f),
         glm::vec3(1.0f),
         glm::vec3(1.0f),
-        glm::cos(glm::radians(15.0f)),         // inner cone
-        glm::cos(glm::radians(25.0f)),         // outer cone
+        glm::cos(glm::radians(15.0f)), // inner cone
+        glm::cos(glm::radians(25.0f)), // outer cone
         1024, 1024,
         1.0f, 100.0f,
-        10.0f
-    );
+        10.0f);
 
     Light overhead_spot(
         LightType::SPOT,
-        glm::vec3(0.0f, 5.0f, 0.0f),           // above the object
-        glm::vec3(0.0f, -1.0f, 0.0f),          // pointing straight down
+        glm::vec3(0.0f, 5.0f, 0.0f),  // above the object
+        glm::vec3(0.0f, -1.0f, 0.0f), // pointing straight down
         glm::vec3(0.1f),
         glm::vec3(1.0f),
         glm::vec3(1.0f),
-        glm::cos(glm::radians(15.0f)),         // inner cone
-        glm::cos(glm::radians(25.0f)),         // outer cone
+        glm::cos(glm::radians(15.0f)), // inner cone
+        glm::cos(glm::radians(25.0f)), // outer cone
         1024, 1024,
         1.0f, 100.0f,
-        10.0f
-    );
+        10.0f);
 
     right_light.set_local_transform(glm::translate(glm::mat4(1.0f), right_spotlight.get_position()));
     overhead_light.set_local_transform(glm::translate(glm::mat4(1.0f), overhead_spot.get_position()));
-
 
     SceneManager::SceneManager scene_manager(1280, 720);
     scene_manager.add_shader(blinnphong);
@@ -130,62 +140,64 @@ int main() {
     scene_manager.add_shader(depth_cube);
     scene_manager.add_model(couch);
     scene_manager.add_model(cube);
-    //scene_manager.add_model(right_light);
-    //scene_manager.add_model(overhead_light);
+    scene_manager.add_model(right_light);
+    scene_manager.add_model(overhead_light);
+    scene_manager.add_model(floor);
     scene_manager.add_light(flashlight);
-    //scene_manager.add_light(right_spotlight);
-    //scene_manager.add_light(overhead_spot);
-
+    scene_manager.add_light(right_spotlight);
+    scene_manager.add_light(overhead_spot);
 
     // ─── Create camera ───────────────────────────────────────────────────
     Camera::CameraObj camera(1280, 720);
+    camera.set_position(glm::vec3{0.0f, 1.0f, 10.0f});
+    //camera.set_direction(overhead_spot.get_direction());
 
+#ifdef DEBUG_DEPTH
+    float quadVertices[] = {
+        // positions   // texCoords
+        -1.0f, 1.0f, 0.0f, 1.0f,
+        -1.0f, -1.0f, 0.0f, 0.0f,
+        1.0f, -1.0f, 1.0f, 0.0f,
 
-    #ifdef DEBUG_DEPTH
-        float quadVertices[] = {
-            // positions   // texCoords
-            -1.0f,  1.0f,  0.0f, 1.0f,
-            -1.0f, -1.0f,  0.0f, 0.0f,
-            1.0f, -1.0f,  1.0f, 0.0f,
+        -1.0f, 1.0f, 0.0f, 1.0f,
+        1.0f, -1.0f, 1.0f, 0.0f,
+        1.0f, 1.0f, 1.0f, 1.0f};
 
-            -1.0f,  1.0f,  0.0f, 1.0f,
-            1.0f, -1.0f,  1.0f, 0.0f,
-            1.0f,  1.0f,  1.0f, 1.0f
-        };
-
-        GLuint quadVAO, quadVBO;
-        glGenVertexArrays(1, &quadVAO);
-        glGenBuffers(1, &quadVBO);
-        glBindVertexArray(quadVAO);
-        glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-        glEnableVertexAttribArray(1);
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-    #endif
+    GLuint quadVAO, quadVBO;
+    glGenVertexArrays(1, &quadVAO);
+    glGenBuffers(1, &quadVBO);
+    glBindVertexArray(quadVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)(2 * sizeof(float)));
+#endif
 
     // ─── Main loop ───────────────────────────────────────────────────────
-    bool   running   = true;
+    bool running = true;
     Uint64 lastTicks = SDL_GetPerformanceCounter();
     glm::vec3 last_camera_position;
-    while (running) {
+    while (running)
+    {
         // 1) compute Δt
         Uint64 now = SDL_GetPerformanceCounter();
-        float  dt  = float(now - lastTicks)
-                    / float(SDL_GetPerformanceFrequency());
+        float dt = float(now - lastTicks) / float(SDL_GetPerformanceFrequency());
         lastTicks = now;
         // 2) handle all pending SDL events
         SDL_Event ev;
-        while (SDL_PollEvent(&ev)) {
-            if (ev.type == SDL_QUIT) {
+        while (SDL_PollEvent(&ev))
+        {
+            if (ev.type == SDL_QUIT)
+            {
                 running = false;
             }
             // feed mouse/window events to the camera
             camera.process_input(ev);
             // adjust the GL viewport on resize
             if (ev.type == SDL_WINDOWEVENT &&
-                ev.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) 
+                ev.window.event == SDL_WINDOWEVENT_SIZE_CHANGED)
             {
                 int w = ev.window.data1,
                     h = ev.window.data2;
@@ -197,6 +209,7 @@ int main() {
         last_camera_position = camera.get_position();
         camera.update(dt);
         // 3.5) collision test
+        #ifndef DEBUG_DEPTH
         for (auto* model : scene_manager.get_models()) {
             if ( camera.intersectSphereAABB(
                     camera.get_position(),
@@ -209,35 +222,32 @@ int main() {
                 break;
             }
         }
+        #endif
         // 4) clear and render
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glm::mat4 view = camera.get_view_matrix();
         glm::mat4 proj = camera.get_projection_matrix();
-        glm::vec3 camera_position = camera.get_position();
-        glm::vec3 camera_direction = camera.get_direction();  
-        glm::mat4 vp   = proj * view;
-        scene_manager.set_spotlight(0, camera_position, camera_direction);
+        glm::mat4 vp = proj * view;
+        scene_manager.set_spotlight(0, camera.get_position(), camera.get_direction());
+        //scene_manager.set_spotlight(2, camera.get_position(), camera.get_direction());
         scene_manager.render_depth_pass();
-        #ifdef DEBUG_DEPTH
-            depth_debug.use();
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, flashlight.get_depth_texture());
-            glUniform1i(depth_debug.get_uniform_location("depthMap"), 0);
-            glUniform1f(depth_debug.get_uniform_location("near_plane"), 1.0f);
-            glUniform1f(depth_debug.get_uniform_location("far_plane"), 100.0f);
-            GLint depthMapLoc = depth_debug.get_uniform_location("depthMap");
-            glUniform1i(depthMapLoc, 0);
-
-            glBindVertexArray(quadVAO);
-            glDrawArrays(GL_TRIANGLES, 0, 6);
-            glBindVertexArray(0);
-        #endif 
+    #ifdef DEBUG_DEPTH
+        depth_debug.use();
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, flashlight.get_depth_texture());
+        glUniform1i(depth_debug.get_uniform_location("depthMap"), 0);
+        glUniform1f(depth_debug.get_uniform_location("near_plane"), 1.0f);
+        glUniform1f(depth_debug.get_uniform_location("far_plane"), 100.0f);
+        glBindVertexArray(quadVAO);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glBindVertexArray(0);
+    #endif
         scene_manager.render(vp);
-        //cube_model.draw(vp);
+        // cube_model.draw(vp);
         SDL_GL_SwapWindow(window);
     }
-    //─── Cleanup ─────────────────────────────────────────────────────────
+    // ─── Cleanup ─────────────────────────────────────────────────────────
     SDL_GL_DeleteContext(glCtx);
     SDL_DestroyWindow(window);
     SDL_Quit();

@@ -73,8 +73,16 @@ namespace Camera{
             return position;
         }
 
-        inline void set_position(glm::vec3& position){
+        inline void set_position(const glm::vec3& position){
             this->position = position;
+        }
+
+        inline void set_direction(const glm::vec3& direction){
+            this->front = direction;
+        }
+
+        inline void set_pitch(float pitch){
+            this->pitch = pitch;
         }
 
         inline float get_radius() const {

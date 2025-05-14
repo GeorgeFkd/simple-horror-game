@@ -75,6 +75,11 @@ namespace Model{
             local_transform = glm::scale(glm::mat4(1.0f), s) * local_transform;
         }
 
+        Model(const std::vector<glm::vec3>& positions,
+            const std::vector<glm::vec3>& normals,
+            const std::vector<glm::vec2>& texcoords,
+            const std::vector<GLuint>& indices,
+            const Material& mat = Material());
         Model(const ObjectLoader::OBJLoader& loader);
         ~Model();
     private: 
