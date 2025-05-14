@@ -24,6 +24,72 @@ void Model::Model::debug_dump() const {
          << localaabbmax.z << ")" << std::endl;
 }
 
+
+Model::Model::Model(const std::vector<glm::vec3>& positions,
+                    const std::vector<glm::vec3>& normals,
+                    const std::vector<glm::vec2>& texcoords,
+                    const std::vector<GLuint>& indices,
+                    const Material& mat)
+    : local_transform(1.0f),
+      world_transform(1.0f),
+      localaabbmin(std::numeric_limits<float>::max()),
+      localaabbmax(-std::numeric_limits<float>::lowest())
+{
+    // Build unique vertex array
+    for (size_t i = 0; i < positions.size(); ++i) {
+        Vertex vert;
+        vert.position = positions[i];
+        vert.normal   = (i < normals.size())   ? normals[i]   : glm::vec3(0, 1, 0);
+        vert.texcoord = (i < texcoords.size()) ? texcoords[i] : glm::vec2(0, 0);
+        unique_vertices.push_back(vert);
+
+        // Update local AABB
+        localaabbmin = glm::min(localaabbmin, vert.position);
+        localaabbmax = glm::max(localaabbmax, vert.position);
+    }
+
+    // Single submesh
+    SubMesh sm;
+    sm.mat = mat;
+    sm.index_offset = 0;
+    sm.index_count  = static_cast<GLuint>(indices.size());
+    submeshes.push_back(sm);
+
+    // Create & upload GL buffers
+    glGenVertexArrays(1, &vao);
+    glGenBuffers(1, &vbo);
+    glGenBuffers(1, &ebo);
+
+    glBindVertexArray(vao);
+
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER,
+                 unique_vertices.size() * sizeof(Vertex),
+                 unique_vertices.data(),
+                 GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+                 indices.size() * sizeof(GLuint),
+                 indices.data(),
+                 GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
+                          sizeof(Vertex),
+                          (void*)offsetof(Vertex, position));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE,
+                          sizeof(Vertex),
+                          (void*)offsetof(Vertex, texcoord));
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE,
+                          sizeof(Vertex),
+                          (void*)offsetof(Vertex, normal));
+
+    glBindVertexArray(0);
+}
+
 Model::Model::Model(const ObjectLoader::OBJLoader& loader)
   : local_transform(1.0f)
   , world_transform(1.0f)
@@ -200,17 +266,17 @@ void Model::Model::draw(const glm::mat4& view_projection, Shader* shader) const{
 
     glBindVertexArray(vao);
     for (auto const& sm : submeshes) {
-      if (loc_ka      >= 0) glUniform3fv(loc_ka,      1, glm::value_ptr(sm.mat.Ka));
-      if (loc_kd      >= 0) glUniform3fv(loc_kd,      1, glm::value_ptr(sm.mat.Kd));
-      if (loc_ks      >= 0) glUniform3fv(loc_ks,      1, glm::value_ptr(sm.mat.Ks));
-      if (loc_ke      >= 0) glUniform3fv(loc_ke,      1, glm::value_ptr(sm.mat.Ke));
-      if (loc_ns      >= 0) glUniform1f (loc_ns,       sm.mat.Ns);
-      if (loc_opacity >= 0) glUniform1f (loc_opacity,  sm.mat.d);
-      if (loc_illum   >= 0) glUniform1i (loc_illum,    sm.mat.illum);
-      if (loc_ior     >= 0) glUniform1f (loc_ior,      sm.mat.Ni);
+        if (loc_ka      >= 0) glUniform3fv(loc_ka,      1, glm::value_ptr(sm.mat.Ka));
+        if (loc_kd      >= 0) glUniform3fv(loc_kd,      1, glm::value_ptr(sm.mat.Kd));
+        if (loc_ks      >= 0) glUniform3fv(loc_ks,      1, glm::value_ptr(sm.mat.Ks));
+        if (loc_ke      >= 0) glUniform3fv(loc_ke,      1, glm::value_ptr(sm.mat.Ke));
+        if (loc_ns      >= 0) glUniform1f (loc_ns,       sm.mat.Ns);
+        if (loc_opacity >= 0) glUniform1f (loc_opacity,  sm.mat.d);
+        if (loc_illum   >= 0) glUniform1i (loc_illum,    sm.mat.illum);
+        if (loc_ior     >= 0) glUniform1f (loc_ior,      sm.mat.Ni);
 
-      void* offsetPtr = (void*)(sm.index_offset * sizeof(GLuint));
-      glDrawElements(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT, offsetPtr);
+        void* offsetPtr = (void*)(sm.index_offset * sizeof(GLuint));
+        glDrawElements(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT, offsetPtr);
     }
     glBindVertexArray(0);
 }
@@ -234,27 +300,27 @@ void Model::Model::draw_depth(Shader* shader) const {
 }
 
 void Model::Model::compute_aabb() {
-    // build 8 corners from the **object-space** box
-    glm::vec3 corners[8] = {
-        {localaabbmin.x,localaabbmin.y,localaabbmin.z},
-        {localaabbmax.x,localaabbmin.y,localaabbmin.z},
-        {localaabbmin.x,localaabbmax.y,localaabbmin.z},
-        {localaabbmax.x,localaabbmax.y,localaabbmin.z},
-        {localaabbmin.x,localaabbmin.y,localaabbmax.z},
-        {localaabbmax.x,localaabbmin.y,localaabbmax.z},
-        {localaabbmin.x,localaabbmax.y,localaabbmax.z},
-        {localaabbmax.x,localaabbmax.y,localaabbmax.z}
-    };
+    // 1) Initialize to extreme opposites
+    glm::vec3 world_min(  FLT_MAX );
+    glm::vec3 world_max( -FLT_MAX );
 
-    glm::vec3 world_min( FLT_MAX ), world_max( -FLT_MAX );
-    for (int i = 0; i < 8; ++i) {
-        glm::vec4 wc = world_transform * glm::vec4(corners[i], 1.0f);
+    // 2) Transform each unique-vertex into world space and accumulate
+    for (auto const& v : unique_vertices) {
+        glm::vec4 wc = world_transform * glm::vec4(v.position, 1.0f);
         glm::vec3 w  = glm::vec3(wc);
         world_min = glm::min(world_min, w);
         world_max = glm::max(world_max, w);
     }
 
-    // store into the world‐space fields
+    // 3) If truly planar (min == max in Y), pad by a tiny ε so your sphere
+    //    test doesn’t see it as a zero-thickness plane.
+    const float eps = 0.001f;
+    if (glm::epsilonEqual(world_min.y, world_max.y, glm::epsilon<float>())) {
+        world_min.y -= eps;
+        world_max.y += eps;
+    }
+
+    // 4) Store
     aabbmin = world_min;
     aabbmax = world_max;
 }

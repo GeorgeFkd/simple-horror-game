@@ -33,7 +33,7 @@ namespace SceneManager{
             return models;
         }
 
-        inline void set_spotlight(size_t idx, glm::vec3& pos, glm::vec3& dir) {
+        inline void set_spotlight(size_t idx, const glm::vec3& pos, const glm::vec3& dir) {
             if (idx < lights.size()) {
                 lights[idx]->set_position(pos);
                 lights[idx]->set_direction(dir);
