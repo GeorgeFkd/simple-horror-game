@@ -30,6 +30,10 @@ uniform int   numLights;
 
 uniform vec3 viewPos;
 
+uniform sampler2D diffuseMap; // ✅ New
+uniform bool useTexture;      // ✅ New flag
+
+
 in  vec3 FragPos;
 in  vec3 Normal;
 in  vec2 TexCoord;
@@ -39,8 +43,12 @@ void main() {
     // start with emissive term
     vec3 result = material.emissive;
 
+    if(useTexture) {
+        result = texture(diffuseMap,TexCoord).rgb;
+    }
+
     // compute per-light diffuse & specular
-    vec3 norm    = normalize(Normal);
+    vec3 norm    = normalize(Normal) * 0.5 + 0.5;
     vec3 viewDir = normalize(viewPos - FragPos);
     vec3 diffAccum = vec3(0.0);
     vec3 specAccum = vec3(0.0);

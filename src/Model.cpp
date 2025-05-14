@@ -198,7 +198,8 @@ void Model::Model::draw(const glm::mat4& view_projection, Shader* shader) const{
     GLint loc_opacity = shader->get_uniform_location("material.opacity");
     GLint loc_illum   = shader->get_uniform_location("material.illumModel");
     GLint loc_ior     = shader->get_uniform_location("material.ior");
-
+    GLint loc_useTex   = shader->get_uniform_location("useTexture");
+    GLint loc_diffuse  = shader->get_uniform_location("diffuseMap");
     glBindVertexArray(vao);
     for (auto const& sm : submeshes) {
       if (loc_ka      >= 0) glUniform3fv(loc_ka,      1, glm::value_ptr(sm.mat.Ka));
@@ -209,6 +210,15 @@ void Model::Model::draw(const glm::mat4& view_projection, Shader* shader) const{
       if (loc_opacity >= 0) glUniform1f (loc_opacity,  sm.mat.d);
       if (loc_illum   >= 0) glUniform1i (loc_illum,    sm.mat.illum);
       if (loc_ior     >= 0) glUniform1f (loc_ior,      sm.mat.Ni);
+      // Texture binding
+      if (sm.mat.tex_Kd != 0 && loc_diffuse >= 0 && loc_useTex >= 0) {
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, sm.mat.tex_Kd);
+        glUniform1i(loc_diffuse, 0);
+        glUniform1i(loc_useTex, 1);
+      } else if (loc_useTex >= 0) {
+        glUniform1i(loc_useTex, 0);
+      }
 
       void* offsetPtr = (void*)(sm.index_offset * sizeof(GLuint));
       glDrawElements(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT, offsetPtr);
