@@ -179,7 +179,7 @@ void Model::Model::update_world_transform(const glm::mat4& parent_transform) {
     }
 }
 
-void Model::Model::draw(const glm::mat4& view_projection, Shader* shader) {
+void Model::Model::draw(const glm::mat4& view_projection, Shader* shader) const{
     shader->use();
 
     // upload matrices
@@ -215,7 +215,23 @@ void Model::Model::draw(const glm::mat4& view_projection, Shader* shader) {
     glBindVertexArray(0);
 }
 
+void Model::Model::draw_depth(Shader* shader) const {
 
+    GLint loc_model = shader->get_uniform_location("uModel");
+    glUniformMatrix4fv(loc_model, 1, GL_FALSE, glm::value_ptr(world_transform));
+
+    glBindVertexArray(vao);
+    for (auto const& sm : submeshes) {
+        void* offset_ptr = (void*)(sm.index_offset * sizeof(GLuint));
+        glDrawElements(
+            GL_TRIANGLES,
+            sm.index_count,
+            GL_UNSIGNED_INT,
+            offset_ptr
+        );
+    }
+    glBindVertexArray(0);
+}
 
 void Model::Model::compute_aabb() {
     // build 8 corners from the **object-space** box

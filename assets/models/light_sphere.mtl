@@ -1,0 +1,9 @@
+# Emissive white material for light sphere
+newmtl GlowMaterial
+Ka 0.0 0.0 0.0        # Ambient (off)
+Kd 0.0 0.0 0.0        # Diffuse (off)
+Ks 0.0 0.0 0.0        # Specular (off)
+Ke 5.0 5.0 5.0        # Emissive white (strong glow)
+Ns 0.0               # Shininess
+d 1.0                # Fully opaque
+illum 2              # Use illumination model with emission
