@@ -34,10 +34,12 @@ int main() {
     glewInit();
     glEnable(GL_DEPTH_TEST);
     glViewport(0, 0, 1280, 720);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     ObjectLoader::OBJLoader cube_loader;
     cube_loader.read_from_file("assets/models/test.obj");
-    //cube_loader.debug_dump();
+    cube_loader.debug_dump();
 
     ObjectLoader::OBJLoader lederliege;
     lederliege.read_from_file("assets/models/lederliege.obj");
@@ -68,6 +70,7 @@ int main() {
     shader_types = {GL_VERTEX_SHADER, GL_GEOMETRY_SHADER, GL_FRAGMENT_SHADER};
     Shader depth_cube = Shader(shader_paths, shader_types, "depth_cube");
 
+    Model::Model cube(cube_loader);
     Model::Model couch(lederliege);
     Model::Model right_light(sphere_loader);
     Model::Model overhead_light(sphere_loader);
@@ -104,7 +107,7 @@ int main() {
     );
 
     Light overhead_spot(
-        LightType::POINT,
+        LightType::SPOT,
         glm::vec3(0.0f, 5.0f, 0.0f),           // above the object
         glm::vec3(0.0f, -1.0f, 0.0f),          // pointing straight down
         glm::vec3(0.1f),
@@ -126,11 +129,12 @@ int main() {
     scene_manager.add_shader(depth_2d);
     scene_manager.add_shader(depth_cube);
     scene_manager.add_model(couch);
+    scene_manager.add_model(cube);
     //scene_manager.add_model(right_light);
-    scene_manager.add_model(overhead_light);
-    //scene_manager.add_light(flashlight);
+    //scene_manager.add_model(overhead_light);
+    scene_manager.add_light(flashlight);
     //scene_manager.add_light(right_spotlight);
-    scene_manager.add_light(overhead_spot);
+    //scene_manager.add_light(overhead_spot);
 
 
     // ─── Create camera ───────────────────────────────────────────────────
@@ -213,7 +217,7 @@ int main() {
         glm::vec3 camera_position = camera.get_position();
         glm::vec3 camera_direction = camera.get_direction();  
         glm::mat4 vp   = proj * view;
-        //scene_manager.set_spotlight(0, camera_position, camera_direction);
+        scene_manager.set_spotlight(0, camera_position, camera_direction);
         scene_manager.render_depth_pass();
         #ifdef DEBUG_DEPTH
             depth_debug.use();

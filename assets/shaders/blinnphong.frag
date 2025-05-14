@@ -74,23 +74,11 @@ void main() {
     vec3 amb = material.ambient * lights[0].ambient;  
     // if there are multiple light ambients you can sum them too
 
-    // combine based on illumModel
-    if (material.illumModel == 0) {
-        // ambient only
-        result += amb;
-    }
-    else if (material.illumModel == 1) {
-        // ambient + diffuse
-        result += amb + diffAccum;
-    }
-    else {
-        // full Blinn–Phong
-        result += amb + diffAccum + specAccum;
-    }
+    result += amb + diffAccum + specAccum;
 
     // (optionally can use material.ior here for a simple Fresnel:)
     // float fresnel = pow(1.0 - max(dot(viewDir, norm), 0.0), material.ior);
     // result = mix(result, specAccum, fresnel);
-
+    // result = clamp(result, amb, 1.0);
     FragColor = vec4(result, material.opacity);
 }
