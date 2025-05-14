@@ -246,34 +246,21 @@ void Model::Model::update_world_transform(const glm::mat4& parent_transform) {
 }
 
 void Model::Model::draw(const glm::mat4& view_projection, Shader* shader) const{
-    shader->use();
-
     // upload matrices
-    GLint loc_vp = shader->get_uniform_location("uViewProj");
-    GLint loc_m  = shader->get_uniform_location("uModel");
-    glUniformMatrix4fv(loc_vp, 1, GL_FALSE, glm::value_ptr(view_projection));
-    glUniformMatrix4fv(loc_m,  1, GL_FALSE, glm::value_ptr(world_transform));
-
-    // pre-lookup all material uniforms once
-    GLint loc_ka      = shader->get_uniform_location("material.ambient");
-    GLint loc_kd      = shader->get_uniform_location("material.diffuse");
-    GLint loc_ks      = shader->get_uniform_location("material.specular");
-    GLint loc_ke      = shader->get_uniform_location("material.emissive");
-    GLint loc_ns      = shader->get_uniform_location("material.shininess");
-    GLint loc_opacity = shader->get_uniform_location("material.opacity");
-    GLint loc_illum   = shader->get_uniform_location("material.illumModel");
-    GLint loc_ior     = shader->get_uniform_location("material.ior");
+    shader->set_mat4("uViewProj", view_projection);
+    shader->set_mat4("uModel", world_transform);
 
     glBindVertexArray(vao);
     for (auto const& sm : submeshes) {
-        if (loc_ka      >= 0) glUniform3fv(loc_ka,      1, glm::value_ptr(sm.mat.Ka));
-        if (loc_kd      >= 0) glUniform3fv(loc_kd,      1, glm::value_ptr(sm.mat.Kd));
-        if (loc_ks      >= 0) glUniform3fv(loc_ks,      1, glm::value_ptr(sm.mat.Ks));
-        if (loc_ke      >= 0) glUniform3fv(loc_ke,      1, glm::value_ptr(sm.mat.Ke));
-        if (loc_ns      >= 0) glUniform1f (loc_ns,       sm.mat.Ns);
-        if (loc_opacity >= 0) glUniform1f (loc_opacity,  sm.mat.d);
-        if (loc_illum   >= 0) glUniform1i (loc_illum,    sm.mat.illum);
-        if (loc_ior     >= 0) glUniform1f (loc_ior,      sm.mat.Ni);
+        shader->set_vec3("material.ambient", sm.mat.Ka);
+        shader->set_vec3("material.diffuse", sm.mat.Kd);
+        shader->set_vec3("material.specular", sm.mat.Ks);
+        shader->set_vec3("material.emissive", sm.mat.Ke);
+        shader->set_float("material.shininess", sm.mat.Ns);
+        shader->set_float("material.opacity", sm.mat.d);
+        shader->set_int("material.illumModel", sm.mat.illum);
+        shader->set_float("material.ior", sm.mat.Ni);
+
 
         void* offsetPtr = (void*)(sm.index_offset * sizeof(GLuint));
         glDrawElements(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT, offsetPtr);
@@ -283,9 +270,7 @@ void Model::Model::draw(const glm::mat4& view_projection, Shader* shader) const{
 
 void Model::Model::draw_depth(Shader* shader) const {
 
-    GLint loc_model = shader->get_uniform_location("uModel");
-    glUniformMatrix4fv(loc_model, 1, GL_FALSE, glm::value_ptr(world_transform));
-
+    shader->set_mat4("uModel", world_transform);
     glBindVertexArray(vao);
     for (auto const& sm : submeshes) {
         void* offset_ptr = (void*)(sm.index_offset * sizeof(GLuint));

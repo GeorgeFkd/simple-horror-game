@@ -54,10 +54,9 @@ void SceneManager::SceneManager::render(const glm::mat4& view_projection){
     if(!shader){
         throw std::runtime_error("Could not find shader blinn-phong\n");
     }
-    shader->use();
 
-    GLint locNum = shader->get_uniform_location("numLights");
-    glUniform1i(locNum, (GLint)lights.size());
+    shader->use();
+    shader->set_int("numLights", (GLint)lights.size());
 
     for (size_t i = 0; i < lights.size(); ++i) {
         const Light* light = lights[i];
