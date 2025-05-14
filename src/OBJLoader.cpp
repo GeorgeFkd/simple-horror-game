@@ -142,8 +142,8 @@ static GLuint load_texture_from_file(const std::string& filepath) {
 
     return texture_id;
 }
+
 void ObjectLoader::OBJLoader::load_textures() {
-  #define DEBUG_OBJLOADER
   std::cout << "Now preparing materials\n";
   for (auto& material : m_materials) {
         if (!material.map_Kd.empty()) {

@@ -22,7 +22,7 @@ Model::Model model_from_obj_file(const std::string& obj_file,const std::string& 
     ObjectLoader::OBJLoader loader;
     loader.read_from_file(obj_file);
     std::cout << "For Model " << label << "\n";
-    loader.debug_dump();
+    //loader.debug_dump();
     std::cout << "---------------------------";
     auto model = Model::Model(loader,label);
     return model;
@@ -52,7 +52,7 @@ int main() {
 
     ObjectLoader::OBJLoader cube_loader;
     cube_loader.read_from_file("assets/models/test.obj");
-    cube_loader.debug_dump();
+    //cube_loader.debug_dump();
     //
     ObjectLoader::OBJLoader lederliege;
     lederliege.read_from_file("assets/models/lederliege.obj");
@@ -83,10 +83,10 @@ int main() {
     shader_types = {GL_VERTEX_SHADER, GL_GEOMETRY_SHADER, GL_FRAGMENT_SHADER};
     Shader depth_cube = Shader(shader_paths, shader_types, "depth_cube");
 
-    Model::Model cube(cube_loader);
-    Model::Model couch(lederliege);
-    Model::Model right_light(sphere_loader);
-    Model::Model overhead_light(sphere_loader);
+    //Model::Model cube(cube_loader);
+    //Model::Model couch(lederliege);
+    //Model::Model right_light(sphere_loader);
+    //Model::Model overhead_light(sphere_loader);
 
     std::vector<glm::vec3> floor_verts = {
         {-10.0f, 0.0f, -10.0f},
@@ -258,7 +258,7 @@ int main() {
                     model->get_aabbmin(),
                     model->get_aabbmax()) )
             {
-                std::cout << "Collision with: " << model->name() << "\n";
+                // std::cout << "Collision with: " << model->name() << "\n";
                 // problem is we start from inside the object
                 // collision! revert to last safe position
                 camera.set_position(last_camera_position);

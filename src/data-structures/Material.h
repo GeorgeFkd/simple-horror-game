@@ -13,7 +13,7 @@ struct Material {
     float     d {1.f};     // opacity (default 1.0 = opaque)
     int       illum{0};    // illumination model
     std::string map_Ka, map_Kd, map_Ks,map_Bump;
-    // 🆕 OpenGL texture handles
+
     GLuint tex_Ka = 0;
     GLuint tex_Kd = 0;
     GLuint tex_Ks = 0;

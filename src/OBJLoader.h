@@ -14,9 +14,9 @@
 #include <unordered_map>
 #include "Material.h"
 
-//#ifndef DEBUG_OBJLOADER
+#ifndef DEBUG_OBJLOADER
 //#define DEBUG_OBJLOADER
-//#endif
+#endif
 
 
 namespace ObjectLoader{ 
