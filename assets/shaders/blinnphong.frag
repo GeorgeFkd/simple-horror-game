@@ -3,17 +3,13 @@
 #define MAX_LIGHTS 8
 
 struct Material {
-    vec3 ambient;      // Ka
+    vec3 ambient;      // Ka (fallback)
     vec3 diffuse;      // Kd
     vec3 specular;     // Ks
     vec3 emissive;     // Ke
     float shininess;   // Ns
     float opacity;     // d
-    int   illumModel;  // illum
-    float ior;         // Ni
 };
-
-uniform Material material;
 
 struct Light {
     vec3 position;
@@ -21,72 +17,90 @@ struct Light {
     vec3 ambient;
     vec3 diffuse;
     vec3 specular;
-    float cutoff;       // inner cone cosine
-    float outerCutoff;  // outer cone cosine
-    int   type;         // 0=point,1=dir,2=spot
+    float cutoff;      // inner cone cosine (spot only)
+    float outerCutoff; // outer cone cosine (spot only)
+    int   type;        // 0=point,1=directional,2=spot
 };
-uniform Light lights[MAX_LIGHTS];
-uniform int   numLights;
 
-uniform vec3 viewPos;
+uniform Material  material;
+uniform Light     lights[MAX_LIGHTS];
+uniform int       numLights;
+uniform vec3      viewPos;
 
-uniform sampler2D diffuseMap; 
-uniform bool useTexture;      
+// material maps + toggles
+uniform sampler2D ambientMap;
+uniform bool      useAmbientMap;
+uniform sampler2D diffuseMap;
+uniform bool      useDiffuseMap;
+uniform sampler2D specularMap;
+uniform bool      useSpecularMap;
 
-
-in  vec3 FragPos;
-in  vec3 Normal;
-in  vec2 TexCoord;
+in  vec3  FragPos;
+in  vec3  Normal;
+in  vec2  TexCoord;
 out vec4 FragColor;
 
-void main() {
-    // start with emissive term
-    vec3 result = material.emissive;
+void main()
+{
+    // 1) sample or fallback
+    vec3 Ka = useAmbientMap  ? texture(ambientMap,  TexCoord).rgb : material.ambient;
+    vec3 Kd = useDiffuseMap  ? texture(diffuseMap,  TexCoord).rgb : material.diffuse;
+    vec3 Ks = useSpecularMap ? texture(specularMap, TexCoord).rgb : material.specular;
 
-    if(useTexture) {
-        result = texture(diffuseMap,TexCoord).rgb;
-    }
+    // 2) prepare
+    vec3 N = normalize(Normal);
+    vec3 V = normalize(viewPos - FragPos);
 
-    // compute per-light diffuse & specular
-    vec3 norm    = normalize(Normal);
-    vec3 viewDir = normalize(viewPos - FragPos);
-    vec3 diffAccum = vec3(0.0);
-    vec3 specAccum = vec3(0.0);
+    vec3 ambientAccum = vec3(0.0);
+    vec3 diffuseAccum = vec3(0.0);
+    vec3 specAccum    = vec3(0.0);
 
-    for (int i = 0; i < numLights; ++i) {
+    // 3) light loop
+    for(int i = 0; i < numLights; ++i) {
         Light L = lights[i];
+
+        // compute light direction
         vec3 Ldir;
         if (L.type == 1) {
+            // directional
             Ldir = normalize(-L.direction);
         } else {
+            // point or spot
             Ldir = normalize(L.position - FragPos);
         }
 
-        float diff  = max(dot(norm, Ldir), 0.0);
-        vec3 halfway = normalize(Ldir + viewDir);
-        float spec  = pow(max(dot(norm, halfway), 0.0), material.shininess);
-
-        // spotlight cone:
-        float intensity = 1.0;
+        // compute spotlight factor
+        float spotFactor = 1.0;
         if (L.type == 2) {
-            float theta   = dot(Ldir, normalize(-L.direction));
+            float theta = dot(Ldir, normalize(-L.direction));
             float epsilon = L.cutoff - L.outerCutoff;
-            intensity = clamp((theta - L.outerCutoff) / epsilon, 0.0, 1.0);
+            spotFactor = clamp((theta - L.outerCutoff) / epsilon, 0.0, 1.0);
         }
 
-        diffAccum += intensity * diff * L.diffuse  * material.diffuse;
-        specAccum += intensity * spec * L.specular * material.specular;
+        float intensity = 1.0f;
+        if (L.type != 1){
+            float distance = length(L.position - FragPos);
+            intensity = intensity * 1 / (0.3f * distance);
+            intensity = intensity * 0.8f;
+        }
+        // ambient term
+        ambientAccum += intensity * spotFactor * L.ambient * Ka;
+
+        // diffuse term
+        float diff = max(dot(N, Ldir), 0.0);
+        diffuseAccum += intensity * spotFactor * L.diffuse * Kd * diff;
+
+        // specular term (Blinn-Phong)
+        vec3 H = normalize(Ldir + V);
+        float spec = pow(max(dot(N, H), 0.0), material.shininess);
+        specAccum += intensity * spotFactor * L.specular * Ks * spec;
     }
 
-    // ambient is always applied (depending on illumModel)
-    vec3 amb = material.ambient * lights[0].ambient;  
-    // if there are multiple light ambients you can sum them too
+    // 4) combine
+    vec3 color = material.emissive
+               + ambientAccum * 0.4f
+               + diffuseAccum * 0.8f
+               + specAccum * 0.1f;
 
-    result += amb + diffAccum + specAccum;
-
-    // (optionally can use material.ior here for a simple Fresnel:)
-    // float fresnel = pow(1.0 - max(dot(viewDir, norm), 0.0), material.ior);
-    // result = mix(result, specAccum, fresnel);
-    // result = clamp(result, amb, 1.0);
-    FragColor = vec4(result, material.opacity);
+    FragColor = vec4(color, material.opacity);
 }

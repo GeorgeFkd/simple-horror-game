@@ -8,9 +8,9 @@
 #include "Shader.h"
 
 enum class LightType { 
-    POINT,
-    DIRECTIONAL, 
-    SPOT
+    POINT = 0,
+    DIRECTIONAL = 1, 
+    SPOT = 2
 };
 
 class Light {
@@ -29,7 +29,12 @@ public:
         int shadow_height,
         float near_plane,
         float far_plane,
-        float ortho_size
+        float ortho_size,
+        float attenuation_constant  = 1.0f,
+        float attenuation_linear    = 0.35f,
+        float attenuation_quadratic = 0.44f,
+        float attenuation_power     = 1.0f,
+        float light_intensity       = 1.0f
     );
 
 
@@ -108,6 +113,12 @@ private:
     float near_plane; 
     float far_plane;
     float ortho_size;
+
+    float attenuation_constant;
+    float attenuation_linear;
+    float attenuation_quadratic;
+    float attenuation_power;
+    float light_intensity;
 
     GLuint   depth_map_fbo;
     GLuint   depth_map;
