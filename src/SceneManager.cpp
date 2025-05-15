@@ -1,192 +1,80 @@
 #include "SceneManager.h"
 #include <iostream>
 
-SceneManager::SceneManager::SceneManager(int width, int height)
-{
-  auto vert_src = load_file("assets/shaders/blinnphong.vert");
-  auto frag_src = load_file("assets/shaders/blinnphong.frag");
 
-  GLuint vert = compile_shader(GL_VERTEX_SHADER,   vert_src);
-  GLuint frag = compile_shader(GL_FRAGMENT_SHADER, frag_src);
-
-  shader_program = glCreateProgram();
-  glAttachShader(shader_program, vert);
-  glAttachShader(shader_program, frag);
-  glLinkProgram(shader_program);
-
-  GLint ok = GL_FALSE;
-  glGetProgramiv(shader_program, GL_LINK_STATUS, &ok);
-  if (ok != GL_TRUE) {
-    GLint len = 0;
-    glGetProgramiv(shader_program, GL_INFO_LOG_LENGTH, &len);
-    std::string log(len, '\0');
-    glGetProgramInfoLog(shader_program, len, &len, &log[0]);
-    throw std::runtime_error("Shader link failed:\n" + log);
-  }
-
-  glDeleteShader(vert);
-  glDeleteShader(frag);
-
-  vert_src = load_file("assets/shaders/depth2d.vert");
-  frag_src = load_file("assets/shaders/depth2d.frag");
-
-  vert = compile_shader(GL_VERTEX_SHADER,   vert_src);
-  frag = compile_shader(GL_FRAGMENT_SHADER, frag_src);
-
-  depth_shader_2d = glCreateProgram();
-  glAttachShader(depth_shader_2d, vert);
-  glAttachShader(depth_shader_2d, frag);
-  glLinkProgram(depth_shader_2d);
-
-  ok = GL_FALSE;
-  glGetProgramiv(depth_shader_2d, GL_LINK_STATUS, &ok);
-  if (ok != GL_TRUE) {
-    GLint len = 0;
-    glGetProgramiv(depth_shader_2d, GL_INFO_LOG_LENGTH, &len);
-    std::string log(len, '\0');
-    glGetProgramInfoLog(depth_shader_2d, len, &len, &log[0]);
-    throw std::runtime_error("Shader link failed:\n" + log);
-  }
-
-  glDeleteShader(vert);
-  glDeleteShader(frag);
-
-  vert_src = load_file("assets/shaders/depth_cube.vert");
-  frag_src = load_file("assets/shaders/depth_cube.frag");
-
-  vert = compile_shader(GL_VERTEX_SHADER,   vert_src);
-  frag = compile_shader(GL_FRAGMENT_SHADER, frag_src);
-
-  depth_shader_cube = glCreateProgram();
-  glAttachShader(depth_shader_cube, vert);
-  glAttachShader(depth_shader_cube, frag);
-  glLinkProgram(depth_shader_cube);
-
-  ok = GL_FALSE;
-  glGetProgramiv(depth_shader_cube, GL_LINK_STATUS, &ok);
-  if (ok != GL_TRUE) {
-    GLint len = 0;
-    glGetProgramiv(depth_shader_cube, GL_INFO_LOG_LENGTH, &len);
-    std::string log(len, '\0');
-    glGetProgramInfoLog(depth_shader_cube, len, &len, &log[0]);
-    throw std::runtime_error("Shader link failed:\n" + log);
-  }
-
-  glDeleteShader(vert);
-  glDeleteShader(frag);
-}
-
-GLuint SceneManager::SceneManager::get_shader_program(){
-  return shader_program;
-}
-
-void SceneManager::SceneManager::add_model(Model::Model& model){
-  models.push_back(&model);
-}
-
-
-std::string SceneManager::SceneManager::load_file(const std::string& path){
-  std::ifstream file(path);
-  if (!file) throw std::runtime_error("Failed to open file: " + path);
-
-  std::stringstream buffer;
-  buffer << file.rdbuf();
-  return buffer.str();
-}
-
-
-
-GLuint SceneManager::SceneManager::compile_shader(GLenum type, const std::string& source){
-    // Every symbolic constant you pass to an OpenGL 
-    // function—like GL_ARRAY_BUFFER, GL_TRIANGLES, GL_FLOAT, 
-    // GL_BLEND, etc.—is actually just an integer constant 
-    // of type GLenum.
-    // glBindBuffer((GLenum)0x8892, vbo);
-    GLuint shader = glCreateShader(type);
-    const char* src = source.c_str();
-    glShaderSource(shader, 1, &src, nullptr);
-    glCompileShader(shader);
-
-    GLint success = 0;
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-
-    if(success == GL_FALSE){
-        GLint max_length = 0;
-        glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &max_length);
-
-        // The maxLength includes the NULL character
-        std::vector<GLchar> errorLog(max_length);
-        glGetShaderInfoLog(shader, max_length, &max_length, &errorLog[0]);
-
-        // Provide the infolog in whatever manor you deem best.
-        // Exit with failure.
-        glDeleteShader(shader); // Don't leak the shader.
-        return -1;
+Shader* SceneManager::SceneManager::get_shader_by_name(const std::string& shader_name){
+    for(auto shader: shaders){
+        if(shader->get_shader_name() == shader_name){
+            return shader;
+        }
     }
 
-    return shader;
+    return nullptr;
+}
+
+void SceneManager::SceneManager::render_depth_pass() {
+    Shader* depth_shader_2d = get_shader_by_name("depth_2d");
+    if(!depth_shader_2d){
+        throw std::runtime_error("Could not find depth shader 2D\n");
+    }
+    Shader* depth_shader_cube = get_shader_by_name("depth_cube");
+    if(!depth_shader_cube){
+        throw std::runtime_error("Could not find depth shader cube\n");
+    }
+    for (Light* light : lights) {
+        if(light->get_type() == LightType::POINT){
+            light->draw_depth_pass(depth_shader_cube);
+            for (Model::Model* model : models) {
+                // ensure transforms are up to date
+                model->update_world_transform(glm::mat4(1.0f));
+                model->draw_depth(depth_shader_cube);
+            }
+        }else{
+            light->draw_depth_pass(depth_shader_2d);
+            for (Model::Model* model : models) {
+                // ensure transforms are up to date
+                model->update_world_transform(glm::mat4(1.0f));
+                model->draw_depth(depth_shader_2d);
+            }
+        }
+        // unbind after each light's pass
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+
 }
 
 void SceneManager::SceneManager::render(const glm::mat4& view_projection){
-  for (auto& L : lights) {
-    L->render_depth_pass(models);
-  }
-  glUseProgram(shader_program);
 
-  GLint locNum = glGetUniformLocation(shader_program, "numLights");
-  glUniform1i(locNum, (GLint)lights.size());
+    // Optional: reset viewport to screen size
+    glViewport(0, 0, screen_width, screen_height);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  for (size_t i = 0; i < lights.size(); ++i) {
-      const Light* L = lights[i];
-      std::string base = "lights[" + std::to_string(i) + "].";
 
-      glUniform3fv(
-          glGetUniformLocation(shader_program, (base + "position").c_str()),
-          1, glm::value_ptr(L->position)
-      );
-      glUniform3fv(
-          glGetUniformLocation(shader_program, (base + "direction").c_str()),
-          1, glm::value_ptr(L->direction)
-      );
-      glUniform3fv(
-          glGetUniformLocation(shader_program, (base + "ambient").c_str()),
-          1, glm::value_ptr(L->ambient)
-      );
-      glUniform3fv(
-          glGetUniformLocation(shader_program, (base + "diffuse").c_str()),
-          1, glm::value_ptr(L->diffuse)
-      );
-      glUniform3fv(
-          glGetUniformLocation(shader_program, (base + "specular").c_str()),
-          1, glm::value_ptr(L->specular)
-      );
-      glUniform1f(
-          glGetUniformLocation(shader_program, (base + "cutoff").c_str()),
-          L->cutoff
-      );
-      glUniform1f(
-          glGetUniformLocation(shader_program, (base + "outerCutoff").c_str()),
-          L->outer_cutoff
-      );
-      glUniform1i(
-          glGetUniformLocation(shader_program, (base + "type").c_str()),
-          (int)L->type
-      );
-  }
-  for (auto const& model: models){
-    model->update_world_transform(glm::mat4(1.0f));
-    model->draw(view_projection);
-  }
+    Shader* shader = get_shader_by_name("blinn-phong");
+    if(!shader){
+        throw std::runtime_error("Could not find shader blinn-phong\n");
+    }
 
-  glUseProgram(0);
+    shader->use();
+    shader->set_int("numLights", (GLint)lights.size());
+
+    for (size_t i = 0; i < lights.size(); ++i) {
+        const Light* light = lights[i];
+        std::string base = "lights[" + std::to_string(i) + "].";
+        light->draw_lighting(shader, base, i);
+    }
+
+    for (auto const& model: models){
+        model->update_world_transform(glm::mat4(1.0f));
+        model->draw(view_projection, shader);
+    }
+
+    glUseProgram(0);
 }
 
 SceneManager::SceneManager::~SceneManager()
 {
-    if (shader_program != 0) {
-        glDeleteProgram(shader_program);
-        shader_program = 0;
-    }
-    // We don't own the Model pointers in `models`, so we don't delete them here.
     models.clear();
+    shaders.clear();
+    lights.clear();
 }

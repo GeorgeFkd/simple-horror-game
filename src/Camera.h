@@ -19,7 +19,7 @@ namespace Camera{
         float fov    = glm::radians(45.0f);
         float aspect = 16.0f / 9.0f;
         float near_z  = 0.1f;
-        float far_z   = 100.0f;
+        float far_z   = 500.0f;
         // euler angles
         // yaw represents the magnitude of looking left to right
         // pitch represents how much we are looking up or down 
@@ -73,8 +73,16 @@ namespace Camera{
             return position;
         }
 
-        inline void set_position(glm::vec3& position){
+        inline void set_position(const glm::vec3& position){
             this->position = position;
+        }
+
+        inline void set_direction(const glm::vec3& direction){
+            this->front = direction;
+        }
+
+        inline void set_pitch(float pitch){
+            this->pitch = pitch;
         }
 
         inline float get_radius() const {
@@ -83,10 +91,11 @@ namespace Camera{
 
         bool intersectSphereAABB(const glm::vec3& cen, float r, const glm::vec3& bmin, const glm::vec3& bmax)
         {
-            // find closest point on box to sphere center
-            glm::vec3 closest = glm::clamp(cen, bmin, bmax);
-            float   dist2   = glm::length2(closest - cen);
-            return dist2 <= r*r;
+            // Raise the center to make the "sphere" collision behave taller
+            glm::vec3 offset_cen = cen + glm::vec3(0.0f, -0.6f, 0.0f);
+            glm::vec3 closest = glm::clamp(offset_cen, bmin, bmax);
+            float dist2 = glm::length2(closest - offset_cen);
+            return dist2 <= r * r;
         }
 
         void updateCameraVectors();

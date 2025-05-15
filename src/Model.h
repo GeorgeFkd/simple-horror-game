@@ -13,6 +13,7 @@
 #include <numeric>
 #include "OBJLoader.h"
 #include "SubMesh.h"
+#include "Shader.h"
 
 namespace Model{
 
@@ -46,15 +47,13 @@ namespace Model{
 
     class Model {
     public:
-        void draw(const glm::mat4& view_projection);
-        void draw_depth(GLuint depth_shader);
+        void draw_depth(Shader* shader) const;
+        void draw(const glm::mat4& view_projection, Shader* shader) const;
         void set_local_transform(const glm::mat4& local_transform);
         void update_world_transform(const glm::mat4& parent_transform);
         void compute_aabb();
         void add_child(Model* child);
         void debug_dump() const;
-
-        void set_shader_program(GLuint shader_program);
 
         inline bool intersectAABB(const glm::vec3& minA, const glm::vec3& maxA, const glm::vec3& minB, const glm::vec3& maxB){
             // If one box is completely to the “left” of the other, no collision
@@ -76,11 +75,25 @@ namespace Model{
             local_transform = glm::scale(glm::mat4(1.0f), s) * local_transform;
         }
 
+        Model(const std::vector<glm::vec3>& positions,
+            const std::vector<glm::vec3>& normals,
+            const std::vector<glm::vec2>& texcoords,
+            const std::vector<GLuint>& indices,
+            const Material& mat = Material());
+
         Model(const ObjectLoader::OBJLoader& loader);
+
+        Model(const ObjectLoader::OBJLoader& loader,const std::string& label);
+
+        inline std::string_view name() {
+            return label;        
+        }
+
         ~Model();
     private: 
         std::vector<Vertex> unique_vertices;
         std::vector<SubMesh> submeshes;
+        std::string_view label;
         // where the model is located 
         // relative to its parent
         glm::mat4 local_transform; 
@@ -90,7 +103,6 @@ namespace Model{
 
         GLuint vao, vbo, ebo = 0; 
         GLuint texture_id = 0; 
-        GLuint shader_program = 0; 
 
         // 1) Object-space AABB (min/max corners in mesh local coords)
         glm::vec3 localaabbmin;

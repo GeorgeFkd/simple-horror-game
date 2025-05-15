@@ -1,0 +1,50 @@
+# 3ds Max Wavefront OBJ Exporter v0.99 - (c)2007 guruware
+# File Created: 12.05.2025 22:21:15
+
+newmtl RoofTiles1_Beige
+	Ns 14.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 1.0000 1.0000 1.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.1260 0.1260 0.1260
+	Ke 0.0000 0.0000 0.0000
+	map_Ka RoofTiles2_t.jpg
+	map_Kd RoofTiles2_t.jpg
+	map_bump RoofTiles1_b.jpg
+	bump RoofTiles1_b.jpg
+
+newmtl RoofTilesFront1_Beige
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 1.0000 1.0000 1.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.1080 0.1080 0.1080
+	Ke 0.0000 0.0000 0.0000
+	map_Ka RoofTilesFront2_t.jpg
+	map_Kd RoofTilesFront2_t.jpg
+	map_bump RoofTilesFront1_b.jpg
+	bump RoofTilesFront1_b.jpg
+
+newmtl RoofPlanks
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 1.0000 1.0000 1.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.0990 0.0990 0.0990
+	Ke 0.0000 0.0000 0.0000
+	map_Ka boards2.jpg
+	map_Kd boards2.jpg
+	map_bump boards2.jpg
+	bump boards2.jpg

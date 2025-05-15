@@ -21,16 +21,81 @@ void Model::Model::debug_dump() const {
       << "      AABB local max = ("
          << localaabbmax.x << ", "
          << localaabbmax.y << ", "
-         << localaabbmax.z << ")\n"
-      << "      Shader program ID: "
-      << shader_program << "\n";
+         << localaabbmax.z << ")" << std::endl;
 }
 
-Model::Model::Model(const ObjectLoader::OBJLoader& loader)
+
+Model::Model::Model(const std::vector<glm::vec3>& positions,
+                    const std::vector<glm::vec3>& normals,
+                    const std::vector<glm::vec2>& texcoords,
+                    const std::vector<GLuint>& indices,
+                    const Material& mat)
+    : local_transform(1.0f),
+      world_transform(1.0f),
+      localaabbmin(std::numeric_limits<float>::max()),
+      localaabbmax(-std::numeric_limits<float>::lowest())
+{
+    // Build unique vertex array
+    for (size_t i = 0; i < positions.size(); ++i) {
+        Vertex vert;
+        vert.position = positions[i];
+        vert.normal   = (i < normals.size())   ? normals[i]   : glm::vec3(0, 1, 0);
+        vert.texcoord = (i < texcoords.size()) ? texcoords[i] : glm::vec2(0, 0);
+        unique_vertices.push_back(vert);
+
+        // Update local AABB
+        localaabbmin = glm::min(localaabbmin, vert.position);
+        localaabbmax = glm::max(localaabbmax, vert.position);
+    }
+
+    // Single submesh
+    SubMesh sm;
+    sm.mat = mat;
+    sm.index_offset = 0;
+    sm.index_count  = static_cast<GLuint>(indices.size());
+    submeshes.push_back(sm);
+
+    // Create & upload GL buffers
+    glGenVertexArrays(1, &vao);
+    glGenBuffers(1, &vbo);
+    glGenBuffers(1, &ebo);
+
+    glBindVertexArray(vao);
+
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER,
+                 unique_vertices.size() * sizeof(Vertex),
+                 unique_vertices.data(),
+                 GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+                 indices.size() * sizeof(GLuint),
+                 indices.data(),
+                 GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
+                          sizeof(Vertex),
+                          (void*)offsetof(Vertex, position));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE,
+                          sizeof(Vertex),
+                          (void*)offsetof(Vertex, texcoord));
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE,
+                          sizeof(Vertex),
+                          (void*)offsetof(Vertex, normal));
+
+    glBindVertexArray(0);
+}
+
+Model::Model::Model(const ObjectLoader::OBJLoader& loader, const std::string& label)
   : local_transform(1.0f)
   , world_transform(1.0f)
   , localaabbmin(std::numeric_limits<float>::max())
   , localaabbmax(-std::numeric_limits<float>::max())
+, label(label)
 {
     // build unique_vertices & a cache
     std::unordered_map<Vertex, GLuint, VertexHasher> cache;
@@ -148,10 +213,6 @@ Model::Model::Model(const ObjectLoader::OBJLoader& loader)
     }
 }
 
-void Model::Model::set_shader_program(GLuint shader_program){
-    this->shader_program = shader_program;
-};
-
 Model::Model::~Model(){
     // Tear down GL objects in reverse order of creation:
     if (ebo) {
@@ -185,56 +246,72 @@ void Model::Model::update_world_transform(const glm::mat4& parent_transform) {
     }
 }
 
-void Model::Model::draw(const glm::mat4& view_projection){
-    glBindVertexArray(vao);
-
+void Model::Model::draw(const glm::mat4& view_projection, Shader* shader) const{
     // upload matrices
-    GLint locVP = glGetUniformLocation(shader_program, "uViewProj");
-    GLint locM  = glGetUniformLocation(shader_program, "uModel");
-    glUniformMatrix4fv(locVP, 1, GL_FALSE, glm::value_ptr(view_projection));
-    glUniformMatrix4fv(locM,  1, GL_FALSE, glm::value_ptr(world_transform));
+    shader->set_mat4("uViewProj", view_projection);
+    shader->set_mat4("uModel", world_transform);
 
-    // helper that logs if the uniform isn't active
-    auto checkUniform = [&](const char* name) {
-        GLint loc = glGetUniformLocation(shader_program, name);
-        if (loc < 0) {
-            std::cerr << "Warning: uniform `" << name << "` not found.\n";
-        }        
-        return loc;
-    };
-
-    // *before* submesh loop, look up & check each uniform once:
-    GLint locKa       = checkUniform("material.ambient");
-    GLint locKd       = checkUniform("material.diffuse");
-    GLint locKs       = checkUniform("material.specular");
-    GLint locKe       = checkUniform("material.emissive");
-    GLint locNs       = checkUniform("material.shininess");
-    GLint locOpacity  = checkUniform("material.opacity");
-    GLint locIllum    = checkUniform("material.illumModel");
-    GLint locIor      = checkUniform("material.ior");
-
-    // now draw each submesh, reusing the locations:
+    glBindVertexArray(vao);
     for (auto const& sm : submeshes) {
-        if (locKa      >= 0) glUniform3fv(locKa,      1, glm::value_ptr(sm.mat.Ka));
-        if (locKd      >= 0) glUniform3fv(locKd,      1, glm::value_ptr(sm.mat.Kd));
-        if (locKs      >= 0) glUniform3fv(locKs,      1, glm::value_ptr(sm.mat.Ks));
-        if (locKe      >= 0) glUniform3fv(locKe,      1, glm::value_ptr(sm.mat.Ke));
-        if (locNs      >= 0) glUniform1f (locNs,       sm.mat.Ns);
-        if (locOpacity >= 0) glUniform1f (locOpacity,  sm.mat.d);
-        if (locIllum   >= 0) glUniform1i (locIllum,    sm.mat.illum);
-        if (locIor     >= 0) glUniform1f (locIor,      sm.mat.Ni);
+        shader->set_vec3("material.ambient", sm.mat.Ka);
+        shader->set_vec3("material.diffuse", sm.mat.Kd);
+        shader->set_vec3("material.specular", sm.mat.Ks);
+        shader->set_vec3("material.emissive", sm.mat.Ke);
+        shader->set_float("material.shininess", sm.mat.Ns);
+        shader->set_float("material.opacity", sm.mat.d);
+        shader->set_int("material.illumModel", sm.mat.illum);
+        shader->set_float("material.ior", sm.mat.Ni);
 
-        // draw elements…
+        if(sm.mat.tex_Ka) {
+            shader->set_texture("ambientMap", sm.mat.tex_Ka, GL_TEXTURE1);
+            shader->set_bool   ("useAmbientMap", true);
+        } else {
+            shader->set_bool("useAmbientMap", false);
+        }
+
+        if(sm.mat.tex_Kd) {
+            shader->set_texture("diffuseMap", sm.mat.tex_Kd, GL_TEXTURE0);
+            shader->set_bool   ("useDiffuseMap", true);
+        } else {
+            shader->set_bool("useDiffuseMap", false);
+        }
+
+        if(sm.mat.tex_Ks) {
+            shader->set_texture("specularMap", sm.mat.tex_Ks, GL_TEXTURE2);
+            shader->set_bool   ("useSpecularMap", true);
+        } else {
+            shader->set_bool("useSpecularMap", false);
+        }
+
+        // normal map
+        //if(sm.mat.tex_Bump) {
+        //    shader->set_texture("normalMap", sm.mat.tex_Bump, GL_TEXTURE3);
+        //    shader->set_bool   ("useNormalMap", true);
+        //} else {
+        //    shader->set_bool("useNormalMap", false);
+        //}
+
         void* offsetPtr = (void*)(sm.index_offset * sizeof(GLuint));
-        glDrawElements(GL_TRIANGLES,
-                        sm.index_count,
-                        GL_UNSIGNED_INT,
-                        offsetPtr);
+        glDrawElements(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT, offsetPtr);
     }
-
     glBindVertexArray(0);
 }
 
+void Model::Model::draw_depth(Shader* shader) const {
+
+    shader->set_mat4("uModel", world_transform);
+    glBindVertexArray(vao);
+    for (auto const& sm : submeshes) {
+        void* offset_ptr = (void*)(sm.index_offset * sizeof(GLuint));
+        glDrawElements(
+            GL_TRIANGLES,
+            sm.index_count,
+            GL_UNSIGNED_INT,
+            offset_ptr
+        );
+    }
+    glBindVertexArray(0);
+}
 
 void Model::Model::draw_depth(GLuint depth_shader){
     glUseProgram(depth_shader);
@@ -250,27 +327,27 @@ void Model::Model::draw_depth(GLuint depth_shader){
 }
 
 void Model::Model::compute_aabb() {
-    // build 8 corners from the **object-space** box
-    glm::vec3 corners[8] = {
-        {localaabbmin.x,localaabbmin.y,localaabbmin.z},
-        {localaabbmax.x,localaabbmin.y,localaabbmin.z},
-        {localaabbmin.x,localaabbmax.y,localaabbmin.z},
-        {localaabbmax.x,localaabbmax.y,localaabbmin.z},
-        {localaabbmin.x,localaabbmin.y,localaabbmax.z},
-        {localaabbmax.x,localaabbmin.y,localaabbmax.z},
-        {localaabbmin.x,localaabbmax.y,localaabbmax.z},
-        {localaabbmax.x,localaabbmax.y,localaabbmax.z}
-    };
+    // 1) Initialize to extreme opposites
+    glm::vec3 world_min(  FLT_MAX );
+    glm::vec3 world_max( -FLT_MAX );
 
-    glm::vec3 world_min( FLT_MAX ), world_max( -FLT_MAX );
-    for (int i = 0; i < 8; ++i) {
-        glm::vec4 wc = world_transform * glm::vec4(corners[i], 1.0f);
+    // 2) Transform each unique-vertex into world space and accumulate
+    for (auto const& v : unique_vertices) {
+        glm::vec4 wc = world_transform * glm::vec4(v.position, 1.0f);
         glm::vec3 w  = glm::vec3(wc);
         world_min = glm::min(world_min, w);
         world_max = glm::max(world_max, w);
     }
 
-    // store into the world‐space fields
+    // 3) If truly planar (min == max in Y), pad by a tiny ε so your sphere
+    //    test doesn’t see it as a zero-thickness plane.
+    const float eps = 0.001f;
+    if (glm::epsilonEqual(world_min.y, world_max.y, glm::epsilon<float>())) {
+        world_min.y -= eps;
+        world_max.y += eps;
+    }
+
+    // 4) Store
     aabbmin = world_min;
     aabbmax = world_max;
 }

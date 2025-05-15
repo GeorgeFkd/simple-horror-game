@@ -3,14 +3,12 @@
 #define MAX_LIGHTS 8
 
 struct Material {
-    vec3 ambient;      // Ka
+    vec3 ambient;      // Ka (fallback)
     vec3 diffuse;      // Kd
     vec3 specular;     // Ks
     vec3 emissive;     // Ke
     float shininess;   // Ns
     float opacity;     // d
-    int   illumModel;  // illum
-    float ior;         // Ni
 };
 
 struct Light {
@@ -19,117 +17,112 @@ struct Light {
     vec3 ambient;
     vec3 diffuse;
     vec3 specular;
-    float cutoff;       // inner cone cosine
-    float outerCutoff;  // outer cone cosine
-    int   type;         // 0=point,1=dir,2=spot
+    float cutoff;      // inner cone cosine (spot only)
+    float outerCutoff; // outer cone cosine (spot only)
+    int   type;        // 0=point,1=directional,2=spot
+    mat4  lightSpaceMatrix;
 };
 
-uniform Material material;
-uniform Light lights[MAX_LIGHTS];
-uniform int   numLights;
-uniform vec3  viewPos;
+uniform Material  material;
+uniform Light     lights[MAX_LIGHTS];
+uniform sampler2D  shadowMap2D[MAX_LIGHTS];
+uniform samplerCube shadowMapCube[MAX_LIGHTS];
+uniform int       numLights;
+uniform vec3      viewPos;
 
-// shadow map samplers
-uniform sampler2D  shadowMap[MAX_LIGHTS];
-uniform samplerCube shadowCube[MAX_LIGHTS];
-// light-space matrices for dir/spot lights
-uniform mat4       lightSpace[MAX_LIGHTS];
+vec2 poissonDisk[16] = vec2[](
+vec2(-0.94201624, -0.39906216),
+vec2(0.94558609, -0.76890725),
+vec2(-0.094184101, -0.92938870),
+vec2(0.34495938, 0.29387760),
+vec2(-0.91588581, 0.45771432),
+vec2(-0.81544232, -0.87912464),
+vec2(-0.38277543, 0.27676845),
+vec2(0.97484398, 0.75648379),
+vec2(0.44323325, -0.97511554),
+vec2(0.53742981, -0.47373420),
+vec2(-0.26496911, -0.41893023),
+vec2(0.79197514, 0.19090188),
+vec2(-0.24188840, 0.99706507),
+vec2(-0.81409955, 0.91437590),
+vec2(0.19984126, 0.78641367),
+vec2(0.14383161, -0.14100790)
+);
 
-in  vec3 FragPos;
-in  vec3 Normal;
-in  vec2 TexCoord;
+// material maps + toggles
+uniform sampler2D ambientMap;
+uniform bool      useAmbientMap;
+uniform sampler2D diffuseMap;
+uniform bool      useDiffuseMap;
+uniform sampler2D specularMap;
+uniform bool      useSpecularMap;
+
+in  vec3  FragPos;
+in  vec3  Normal;
+in  vec2  TexCoord;
 out vec4 FragColor;
 
-// helper: compute whether this fragment is in shadow for light i
-float calcShadow(int i) {
-    if (lights[i].type == 0) {
-        // point light: compare radial distance against cube map
-        float dist    = length(FragPos - lights[i].position);
-        float closest = texture(shadowCube[i], FragPos - lights[i].position).r;
-        float bias    = 0.05;
-        return (dist - bias > closest) ? 1.0 : 0.0;
-    } else {
-        // directional or spot light
-        vec4 projCoords = lightSpace[i] * vec4(FragPos, 1.0);
-        // perform perspective divide and transform to [0,1]
-        vec3 coords = projCoords.xyz / projCoords.w * 0.5 + 0.5;
-        // if outside the shadow map, consider lit
-        if (coords.x < 0.0 || coords.x > 1.0 ||
-            coords.y < 0.0 || coords.y > 1.0 ||
-            coords.z < 0.0 || coords.z > 1.0) {
-            return 0.0;
-        }
-        float closest = texture(shadowMap[i], coords.xy).r;
-        float current = coords.z;
-        float bias    = 0.005;
-        return (current - bias > closest) ? 1.0 : 0.0;
-    }
-}
+void main()
+{
+    // 1) sample or fallback
+    vec3 Ka = useAmbientMap  ? texture(ambientMap,  TexCoord).rgb : material.ambient;
+    vec3 Kd = useDiffuseMap  ? texture(diffuseMap,  TexCoord).rgb : material.diffuse;
+    vec3 Ks = useSpecularMap ? texture(specularMap, TexCoord).rgb : material.specular;
 
-void main() {
-    // start with emissive term
-    vec3 result = material.emissive;
+    // 2) prepare
+    vec3 N = normalize(Normal);
+    vec3 V = normalize(viewPos - FragPos);
 
-    vec3 norm    = normalize(Normal);
-    vec3 viewDir = normalize(viewPos - FragPos);
+    vec3 ambientAccum = vec3(0.0);
+    vec3 diffuseAccum = vec3(0.0);
+    vec3 specAccum    = vec3(0.0);
 
-    vec3 ambAccum  = vec3(0.0);
-    vec3 diffAccum = vec3(0.0);
-    vec3 specAccum = vec3(0.0);
-
-    // accumulate lighting from each light
-    for (int i = 0; i < numLights; ++i) {
+    // 3) light loop
+    for(int i = 0; i < numLights; ++i) {
         Light L = lights[i];
-
-        // ambient
-        ambAccum += L.ambient * material.ambient;
 
         // compute light direction
         vec3 Ldir;
         if (L.type == 1) {
-            // directional light: direction is from light into scene
+            // directional
             Ldir = normalize(-L.direction);
         } else {
-            // point or spot: from fragment toward light position
+            // point or spot
             Ldir = normalize(L.position - FragPos);
         }
 
-        // diffuse (Lambert)
-        float diff = max(dot(norm, Ldir), 0.0);
-
-        // specular (Blinn–Phong)
-        vec3 halfway = normalize(Ldir + viewDir);
-        float spec   = pow(max(dot(norm, halfway), 0.0), material.shininess);
-
-        // spotlight cone attenuation
-        float intensity = 1.0;
+        // compute spotlight factor
+        float spotFactor = 1.0;
         if (L.type == 2) {
-            float theta   = dot(Ldir, normalize(-L.direction));
+            float theta = dot(Ldir, normalize(-L.direction));
             float epsilon = L.cutoff - L.outerCutoff;
-            intensity = clamp((theta - L.outerCutoff) / epsilon, 0.0, 1.0);
+            spotFactor = clamp((theta - L.outerCutoff) / epsilon, 0.0, 1.0);
         }
 
-        // shadow factor (0 = fully lit, 1 = fully in shadow)
-        float shadow = calcShadow(i);
+        float intensity = 1.0f;
+        if (L.type != 1){
+            float distance = length(L.position - FragPos);
+            intensity = intensity * 1 / (0.3f * distance);
+            intensity = intensity * 0.8f;
+        }
+        // ambient term
+        ambientAccum += intensity * spotFactor * L.ambient * Ka;
 
-        // accumulate, modulated by shadow and intensity
-        diffAccum += (1.0 - shadow) * intensity * diff * L.diffuse  * material.diffuse;
-        specAccum += (1.0 - shadow) * intensity * spec * L.specular * material.specular;
-    }
+        // diffuse term
+        float diff = max(dot(N, Ldir), 0.0);
+        diffuseAccum += intensity * spotFactor * L.diffuse * Kd * diff;
 
-    // combine based on illumModel
-    if (material.illumModel == 0) {
-        // ambient only
-        result += ambAccum;
-    }
-    else if (material.illumModel == 1) {
-        // ambient + diffuse
-        result += ambAccum + diffAccum;
-    }
-    else {
-        // full Blinn–Phong
-        result += ambAccum + diffAccum + specAccum;
+        // specular term (Blinn-Phong)
+        vec3 H = normalize(Ldir + V);
+        float spec = pow(max(dot(N, H), 0.0), material.shininess);
+        specAccum += intensity * spotFactor * L.specular * Ks * spec;
     }
 
-    FragColor = vec4(result, material.opacity);
+    // 4) combine
+    vec3 color = material.emissive
+               + ambientAccum * 0.4f
+               + diffuseAccum * 0.8f
+               + specAccum * 0.1f;
+
+    FragColor = vec4(color, material.opacity);
 }

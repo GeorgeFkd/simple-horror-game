@@ -14,6 +14,8 @@ set(SOURCES
     src/OBJLoader.cpp
     src/Camera.cpp
     src/Model.cpp
+    src/Shader.cpp
+    src/data-structures/Light.cpp
 )
 
 find_package(OpenGL REQUIRED)
@@ -101,24 +103,40 @@ set(SHADER_DST_DIR "${CMAKE_CURRENT_BINARY_DIR}/assets/shaders")
 file(GLOB SHADERS "${SHADER_SRC_DIR}/*.*")
 
 # Copy each shader file into build/assets/shaders/
-foreach(SHADER ${SHADERS})
-    add_custom_command(TARGET opengl_app POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E make_directory "${SHADER_DST_DIR}"
-        COMMAND ${CMAKE_COMMAND} -E copy ${SHADER} "${SHADER_DST_DIR}")
-endforeach()
 
+add_custom_target(copy_shaders ALL
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${SHADER_DST_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${SHADER_SRC_DIR}" "${SHADER_DST_DIR}"
+    COMMENT "Copying shader files..."
+)
+
+add_dependencies(opengl_app copy_shaders)
 
 # Copy .obj/mtl model files into build/assets/models/
 set(MODEL_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/assets/models")
 set(MODEL_DST_DIR "${CMAKE_CURRENT_BINARY_DIR}/assets/models")
 
-file(GLOB MODEL_FILES
+file(GLOB_RECURSE ALL_MODEL_FILES
     "${MODEL_SRC_DIR}/*.obj"
     "${MODEL_SRC_DIR}/*.mtl"
 )
 
-foreach(MODEL_FILE ${MODEL_FILES})
-    add_custom_command(TARGET opengl_app POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E make_directory "${MODEL_DST_DIR}"
-        COMMAND ${CMAKE_COMMAND} -E copy ${MODEL_FILE} "${MODEL_DST_DIR}")
-endforeach()
+add_custom_target(copy_models ALL
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${MODEL_DST_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${MODEL_SRC_DIR}" "${MODEL_DST_DIR}"
+    COMMENT "Copying model files..."
+)
+
+add_dependencies(opengl_app copy_models)
+# file(GLOB MODEL_FILES
+#     "${MODEL_SRC_DIR}/*.obj"
+#     "${MODEL_SRC_DIR}/*.mtl"
+#     "${MODEL_SRC_DIR}/SimpleOldTownAssets/*.obj"
+#     "${MODEL_SRC_DIR}/SimpleOldTownAssets/*.mtl"
+# )
+
+# foreach(MODEL_FILE ${MODEL_FILES})
+#     add_custom_command(TARGET opengl_app POST_BUILD
+#         COMMAND ${CMAKE_COMMAND} -E make_directory "${MODEL_DST_DIR}"
+#         COMMAND ${CMAKE_COMMAND} -E copy ${MODEL_FILE} "${MODEL_DST_DIR}")
+# endforeach()
