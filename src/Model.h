@@ -79,7 +79,8 @@ namespace Model{
             const std::vector<glm::vec3>& normals,
             const std::vector<glm::vec2>& texcoords,
             const std::vector<GLuint>& indices,
-            const Material& mat = Material());
+            const Material& mat = Material(),
+              const std::string& label="");
 
         Model(const ObjectLoader::OBJLoader& loader);
 

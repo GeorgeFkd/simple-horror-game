@@ -127,16 +127,20 @@ add_custom_target(copy_models ALL
     COMMENT "Copying model files..."
 )
 
-add_dependencies(opengl_app copy_models)
-# file(GLOB MODEL_FILES
-#     "${MODEL_SRC_DIR}/*.obj"
-#     "${MODEL_SRC_DIR}/*.mtl"
-#     "${MODEL_SRC_DIR}/SimpleOldTownAssets/*.obj"
-#     "${MODEL_SRC_DIR}/SimpleOldTownAssets/*.mtl"
-# )
+set(TEXTURES_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/assets/textures")
+set(TEXTURES_DST_DIR "${CMAKE_CURRENT_BINARY_DIR}/assets/textures")
 
-# foreach(MODEL_FILE ${MODEL_FILES})
-#     add_custom_command(TARGET opengl_app POST_BUILD
-#         COMMAND ${CMAKE_COMMAND} -E make_directory "${MODEL_DST_DIR}"
-#         COMMAND ${CMAKE_COMMAND} -E copy ${MODEL_FILE} "${MODEL_DST_DIR}")
-# endforeach()
+file(GLOB_RECURSE ALL_TEXTURE_FILES
+    "${TEXTURES_SRC_DIR}/*.jpg"
+)
+
+add_custom_target(copy_textures ALL
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${TEXTURES_DST_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${TEXTURES_SRC_DIR}" "${TEXTURES_DST_DIR}"
+    COMMENT "Copying texture files..."
+
+)
+
+add_dependencies(opengl_app copy_models)
+add_dependencies(opengl_app copy_textures)
+
