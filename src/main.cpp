@@ -36,11 +36,11 @@ enum class SurfaceType {
 };
 Model::Model repeating_tile(SurfaceType surface, float offset,
                             const Material &material) {
-  const int TILE_WIDTH = 500;
-  const int TILE_HEIGHT = 500;
+  const int TILE_WIDTH = 100;
+  const int TILE_HEIGHT = 100;
   const float half_width = TILE_WIDTH / 2.0f;
   const float half_height = TILE_HEIGHT / 2.0f;
-  const float repeat = 100.0f;
+  const float repeat = 5.0f;
 
   std::vector<glm::vec3> verts;
   std::vector<glm::vec2> uvs;
@@ -110,104 +110,8 @@ Model::Model repeating_tile(SurfaceType surface, float offset,
 
   return Model::Model(verts, normals, uvs, indices, material, label);
 }
-// Model::Model repeating_tile(SurfaceType surface, float offset) {
-//     const int TILE_WIDTH = 512;
-//     const int TILE_HEIGHT = 512;
-//     const float half_width = TILE_WIDTH / 2.0f;
-//     const float half_height = TILE_HEIGHT / 2.0f;
-//     const float repeat = 50.0f;
-//
-//     std::vector<glm::vec3> verts;
-//     std::vector<glm::vec2> uvs;
-//     glm::vec3 normal;
-//     std::string label;
-//
-//     switch (surface) {
-//         case SurfaceType::Floor:
-//             verts = {
-//                 {-half_width, offset, -half_height},
-//                 {-half_width, offset,  half_height},
-//                 { half_width, offset,  half_height},
-//                 { half_width, offset, -half_height}
-//             };
-//             label = "floor";
-//             normal = glm::vec3(0, 1, 0);
-//             break;
-//
-//         case SurfaceType::Ceiling:
-//             verts = {
-//                 {-half_width, offset, -half_height},
-//                 {-half_width, offset,  half_height},
-//                 { half_width, offset,  half_height},
-//                 { half_width, offset, -half_height}
-//             };
-//             label = "ceiling";
-//             normal = glm::vec3(0, -1, 0);
-//             break;
-//
-//         case SurfaceType::WallFront:
-//             verts = {
-//                 {-half_width, -half_height, offset},
-//                 {-half_width,  half_height, offset},
-//                 { half_width,  half_height, offset},
-//                 { half_width, -half_height, offset}
-//             };
-//             label = "wallfront";
-//             normal = glm::vec3(0, 0, 1);
-//             break;
-//
-//         case SurfaceType::WallBack:
-//             verts = {
-//                 { half_width, -half_height, offset},
-//                 {-half_width, -half_height, offset},
-//                 {-half_width,  half_height, offset},
-//                 { half_width,  half_height, offset}
-//             };
-//             label = "wallback";
-//             normal = glm::vec3(0, 0, -1);
-//             break;
-//
-//         case SurfaceType::WallLeft:
-//             verts = {
-//                 {offset, -half_height,  half_width},
-//                 {offset,  half_height,  half_width},
-//                 {offset,  half_height, -half_width},
-//                 {offset, -half_height, -half_width}
-//             };
-//             label = "wallleft";
-//             normal = glm::vec3(-1, 0, 0);
-//             break;
-//
-//         case SurfaceType::WallRight:
-//             verts = {
-//                 {offset, -half_height, -half_width},
-//                 {offset,  half_height, -half_width},
-//                 {offset,  half_height,  half_width},
-//                 {offset, -half_height,  half_width}
-//             };
-//             label = "wallright";
-//             normal = glm::vec3(1, 0, 0);
-//             break;
-//     }
-//
-//     uvs = {
-//         {0, 0}, {0, repeat}, {repeat, repeat}, {repeat, 0}
-//     };
-//
-//     std::vector<glm::vec3> normals(4, normal);
-//     std::vector<GLuint> indices = {0, 1, 2, 0, 2, 3};
-//
-//     Material material;
-//     material.Ka = glm::vec3(0.15f, 0.07f, 0.02f);
-//     material.Kd = glm::vec3(0.59f, 0.29f, 0.00f);
-//     material.Ks = glm::vec3(0.05f, 0.04f, 0.03f);
-//     material.Ns = 16.0f;
-//     material.d  = 1.0f;
-//     material.illum = 2;
-//
-//     return Model::Model(verts, normals, uvs, indices, material,
-//     std::move(label));
-// }
+
+
 int main() {
   // ─── Initialize SDL + OpenGL ──────────────────────────────────────────
   SDL_Init(SDL_INIT_VIDEO);
@@ -232,8 +136,8 @@ int main() {
   // lederliege.read_from_file("assets/models/lederliege.obj");
   // ObjectLoader::OBJLoader cottage_loader;
   // cottage_loader.read_from_file("assets/models/cottage_obj.obj");
-  // ObjectLoader::OBJLoader sphere_loader;
-  // sphere_loader.read_from_file("assets/models/light_sphere.obj");
+  ObjectLoader::OBJLoader sphere_loader;
+  sphere_loader.read_from_file("assets/models/light_sphere.obj");
 
   std::vector<std::string> shader_paths = {"assets/shaders/blinnphong.vert",
                                            "assets/shaders/blinnphong.frag"};
@@ -274,16 +178,19 @@ int main() {
                    glm::cos(glm::radians(17.5f)), // outer cutoff
                    1024, 1024, 1.0f, 100.0f, 10.0f);
 
+    auto right_spotlight_pos = glm::vec3(0.0f, 5.0f, 0.0f);
   Light right_spotlight(
-      LightType::SPOT, glm::vec3(5.0f, 1.5f, 0.0f), // position: to the right
+      LightType::SPOT, 
+        right_spotlight_pos, // position: to the right
       glm::vec3(-1.0f, 0.0f, 0.0f),                 // direction: pointing left
       glm::vec3(0.1f), glm::vec3(1.0f), glm::vec3(1.0f),
       glm::cos(glm::radians(95.0f)),  // inner cone
       glm::cos(glm::radians(125.0f)), // outer cone
       1024, 1024, 1.0f, 100.0f, 10.0f);
 
+    glm::vec3 overhead_light_pos = glm::vec3(0.0,5.0f,0.0f);
   Light overhead_spot(LightType::SPOT,
-                      glm::vec3(0.0f, 15.0f, 0.0f), // above the object
+                      overhead_light_pos, // above the object
                       glm::vec3(0.0f, -1.0f, 0.0f), // pointing straight down
                       glm::vec3(0.1f), glm::vec3(1.0f), glm::vec3(1.0f),
                       glm::cos(glm::radians(95.0f)),  // inner cone
@@ -311,8 +218,58 @@ auto bed = model_from_obj_file("assets/models/SimpleOldTownAssets/Bed01.obj", "B
     chair1_offset = glm::rotate(chair1_offset, glm::radians(90.0f), glm::vec3(0, 1, 0)); // rotate around Y-axis
     chair1.set_local_transform(chair1_offset);
     scene_manager.add_model(chair1);
+    
+    #define OFFSET(X,Y) glm::translate(glm::mat4(1.0f),X + Y)
+    std::string MODELS_FOLDER = "assets/models/SimpleOldTownAssets/";
+    std::string bookcase_obj = "BookCase01.obj";
+    auto bookcase_file = MODELS_FOLDER + bookcase_obj;
 
-  
+
+    glm::mat4 bookcase_offset = OFFSET(bed_position,glm::vec3(1.0f,0.0f,-3.5f));
+    auto bookcase = model_from_obj_file(bookcase_file, "bookcase1");
+    bookcase.set_local_transform(bookcase_offset);
+    scene_manager.add_model(bookcase);
+    
+
+    glm::mat4 bookcase2_offset = OFFSET(bed_position,glm::vec3(-0.20f,0.0f,-3.5f));
+    auto bookcase2 = model_from_obj_file(bookcase_file, "bookcase");
+    bookcase2.set_local_transform(bookcase2_offset);
+    scene_manager.add_model(bookcase2);
+
+    glm::mat4 bookcase3_offset = OFFSET(bed_position,glm::vec3(-1.4f,0.0f,-3.5f));
+    auto bookcase3 = model_from_obj_file(bookcase_file, "bookcase");
+    bookcase3.set_local_transform(bookcase3_offset);
+    scene_manager.add_model(bookcase3);
+    
+    glm::mat4 bookcase4_offset = OFFSET(bed_position,glm::vec3(1.4f,0.0f,-2.7f));
+    bookcase4_offset = glm::rotate(bookcase4_offset, glm::radians(-90.0f), glm::vec3(0, 1, 0)); // rotate around Y-axis
+    auto bookcase4 = model_from_obj_file(bookcase_file, "bookcase");
+    bookcase4.set_local_transform(bookcase4_offset);
+    scene_manager.add_model(bookcase4);
+
+
+    glm::mat4 table_offset = OFFSET(bed_position,glm::vec3(0.0f,0.0f,-2.0f));
+    auto table = model_from_obj_file(MODELS_FOLDER + "TableSmall1.obj", "Table");
+    table.set_local_transform(table_offset);
+    scene_manager.add_model(table);
+
+    glm::mat4 tablechair_offset = OFFSET(bed_position,glm::vec3(-1.0f,0.0f,-2.0f));
+    auto tablechair = model_from_obj_file(MODELS_FOLDER + "ChairCafeWhite01.obj", "TableChair");
+    tablechair.set_local_transform(tablechair_offset);
+    scene_manager.add_model(tablechair);
+    
+    auto overhead_light_model = model_from_obj_file("assets/models/light_sphere.obj", "lamp");
+    glm::mat4 overhead_light_offset = OFFSET(glm::vec3(0.0f,0.0f,0.0f),overhead_light_pos);
+    overhead_light_model.set_local_transform(overhead_light_offset);
+    scene_manager.add_model(overhead_light_model);
+    
+    auto rightlight_model = model_from_obj_file("assets/models/light_sphere.obj", "lamp2");
+    glm::mat4 rightlight_offset = OFFSET(glm::vec3(0.0f,0.0f,-2.0f),right_spotlight_pos);
+    rightlight_model.set_local_transform(rightlight_offset);
+    scene_manager.add_model(rightlight_model);
+
+
+
   Material material;
   {
     material.Ka = glm::vec3(0.15f, 0.07f, 0.02f);
@@ -327,7 +284,7 @@ auto bed = model_from_obj_file("assets/models/SimpleOldTownAssets/Bed01.obj", "B
     material.tex_Kd = texture;
   }
   float room_size = 12.5f;
-    float room_height = 12.5f;
+    float room_height = 7.5f;
   auto floor = repeating_tile(SurfaceType::Floor, 0.0f, material);
   auto ceiling = repeating_tile(SurfaceType::Ceiling, room_height, material);
   auto wallF = repeating_tile(SurfaceType::WallFront, -room_size, material);
