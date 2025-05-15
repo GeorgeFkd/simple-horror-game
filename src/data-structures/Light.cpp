@@ -142,6 +142,26 @@ void Light::draw_depth_pass(Shader* shader) const {
     }
 }
 
+void Light::bind_shadow_map(Shader* shader, const std::string& base, int index) const{
+
+    // pick the GLSL sampler name and GL bind‐target
+    // point lights use a cube‐map
+    if (type == LightType::POINT){
+        //shader->set_int(base + "shadowMapCube", index);
+        shader->set_texture(base + "shadowMapCube",
+                            get_depth_texture(),
+                            GL_TEXTURE0 + index,
+                            GL_TEXTURE_CUBE_MAP);
+    }else{
+        // spot or directional use a 2D depth map
+        //shader->set_int(base + "shadowMap2D", index);
+        shader->set_texture(base + "shadowMap2D",
+                            get_depth_texture(),
+                            GL_TEXTURE0 + index,
+                            GL_TEXTURE_2D);
+    }
+}
+
 
 glm::mat4 Light::get_light_projection() const
 {

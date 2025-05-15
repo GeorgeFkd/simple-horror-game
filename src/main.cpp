@@ -171,10 +171,10 @@ int main() {
     scene_manager.add_shader(blinnphong);
     scene_manager.add_shader(depth_2d);
     scene_manager.add_shader(depth_cube);
-    scene_manager.add_model(overhead_point_light_model);
+    //scene_manager.add_model(overhead_point_light_model);
     scene_manager.add_model(right_spot_light_model);
     scene_manager.add_model(floor);
-    scene_manager.add_light(overhead_point_light);
+    //scene_manager.add_light(overhead_point_light);
     scene_manager.add_light(right_spot_light);
 
 
