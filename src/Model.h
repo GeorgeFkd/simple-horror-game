@@ -63,6 +63,10 @@ namespace Model{
             return true;
         }
 
+        inline void set_local_transform(glm::mat4&& local_transform) {
+        this->local_transform = std::move(local_transform);
+    } 
+
         inline glm::vec3 get_aabbmin() const {
             return aabbmin;
         }

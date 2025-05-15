@@ -20,7 +20,9 @@ namespace SceneManager{
         inline void add_model(Model::Model& model){
             models.push_back(&model);
         }
-
+        inline void add_model(Model::Model&& model) {
+        models.push_back(std::move(&model));
+    }
         inline void add_light(Light& light) { 
             lights.push_back(&light); 
         }
