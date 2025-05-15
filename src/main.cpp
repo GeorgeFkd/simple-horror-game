@@ -111,7 +111,7 @@ int main() {
     Model::Model floor(floor_verts, floor_normals, floor_uvs, floor_indices, floor_material);
 
     auto right_light = model_from_obj_file("assets/models/light_sphere.obj", "Sphere");
-    auto overhead_light = model_from_obj_file("assets/models/light_sphere.obj","Overhead light");
+    auto overhead_point_light_model = model_from_obj_file("assets/models/light_sphere.obj","Overhead light");
     //hi
     Light flashlight(
         LightType::SPOT,
@@ -141,8 +141,8 @@ int main() {
         1.0f, 100.0f,
         10.0f);
 
-    Light overhead_spot(
-        LightType::SPOT,
+    Light overhead_point_light(
+        LightType::POINT,
         glm::vec3(0.0f, 5.0f, 0.0f),  // above the object
         glm::vec3(0.0f, -1.0f, 0.0f), // pointing straight down
         glm::vec3(0.1f),
@@ -155,12 +155,20 @@ int main() {
         10.0f);
 
     right_light.set_local_transform(glm::translate(glm::mat4(1.0f), right_spotlight.get_position()));
-    overhead_light.set_local_transform(glm::translate(glm::mat4(1.0f), overhead_spot.get_position()));
+
+    glm::vec3 overhead_light_spot = glm::vec3(15.0f, 5.0f, -20.0f);
+    overhead_point_light.set_position(overhead_light_spot);
+    overhead_point_light_model.set_local_transform(glm::translate(glm::mat4(1.0f), overhead_point_light.get_position()));
+    floor.set_local_transform(glm::translate(glm::mat4(1.0f), glm::vec3(15.0f, -0.01f, -20.0f)));
+
 
     SceneManager::SceneManager scene_manager(1280, 720);
     scene_manager.add_shader(blinnphong);
     scene_manager.add_shader(depth_2d);
     scene_manager.add_shader(depth_cube);
+    scene_manager.add_model(overhead_point_light_model);
+    scene_manager.add_model(floor);
+    scene_manager.add_light(overhead_point_light);
 
 
     glm::vec3 bed_position = glm::vec3(15.0f, 0.0f, -20.0f);
@@ -272,7 +280,7 @@ int main() {
         glm::mat4 view = camera.get_view_matrix();
         glm::mat4 proj = camera.get_projection_matrix();
         glm::mat4 vp = proj * view;
-        scene_manager.set_spotlight(0, camera.get_position(), camera.get_direction());
+        //scene_manager.set_spotlight(0, camera.get_position(), camera.get_direction());
         //scene_manager.set_spotlight(2, camera.get_position(), camera.get_direction());
         scene_manager.render_depth_pass();
     #ifdef DEBUG_DEPTH
