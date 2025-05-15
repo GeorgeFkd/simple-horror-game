@@ -251,9 +251,6 @@ void Model::Model::draw(const glm::mat4& view_projection, Shader* shader) const{
     shader->set_mat4("uViewProj", view_projection);
     shader->set_mat4("uModel", world_transform);
 
-    GLint loc_useTex   = shader->get_uniform_location("useTexture");
-    GLint loc_diffuse  = shader->get_uniform_location("diffuseMap");
-
     glBindVertexArray(vao);
     for (auto const& sm : submeshes) {
         shader->set_vec3("material.ambient", sm.mat.Ka);
@@ -265,11 +262,33 @@ void Model::Model::draw(const glm::mat4& view_projection, Shader* shader) const{
         shader->set_int("material.illumModel", sm.mat.illum);
         shader->set_float("material.ior", sm.mat.Ni);
 
-        if (sm.mat.tex_Kd != 0) {
-            shader->set_texture("diffuseMap", sm.mat.tex_Kd, GL_TEXTURE0);
-            shader->set_bool("useTexture", true);
+        if(sm.mat.tex_Ka) {
+            shader->set_texture("ambientMap", sm.mat.tex_Ka, GL_TEXTURE1);
+            shader->set_bool   ("useAmbientMap", true);
         } else {
-            shader->set_bool("useTexture", false);
+            shader->set_bool("useAmbientMap", false);
+        }
+
+        if(sm.mat.tex_Kd) {
+            shader->set_texture("diffuseMap", sm.mat.tex_Kd, GL_TEXTURE0);
+            shader->set_bool   ("useDiffuseMap", true);
+        } else {
+            shader->set_bool("useDiffuseMap", false);
+        }
+
+        if(sm.mat.tex_Ks) {
+            shader->set_texture("specularMap", sm.mat.tex_Ks, GL_TEXTURE2);
+            shader->set_bool   ("useSpecularMap", true);
+        } else {
+            shader->set_bool("useSpecularMap", false);
+        }
+
+        // normal map
+        if(sm.mat.tex_Bump) {
+            shader->set_texture("normalMap", sm.mat.tex_Bump, GL_TEXTURE3);
+            shader->set_bool   ("useNormalMap", true);
+        } else {
+            shader->set_bool("useNormalMap", false);
         }
 
         void* offsetPtr = (void*)(sm.index_offset * sizeof(GLuint));

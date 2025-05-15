@@ -1,5 +1,5 @@
 #include "Light.h"
-
+#include <iostream>
 Light::Light(
     LightType light_type, 
     const glm::vec3& position, 
@@ -13,7 +13,12 @@ Light::Light(
     int shadow_height,
     float near_plane,
     float far_plane,
-    float ortho_size)
+    float ortho_size,
+    float attenuation_constant,
+    float attenuation_linear,
+    float attenuation_quadratic,
+    float attenuation_power,
+    float light_intensity)
     : type(light_type), 
       position(position), 
       direction(direction), 
@@ -26,7 +31,13 @@ Light::Light(
       shadow_width(shadow_width), 
       near_plane(near_plane), 
       far_plane(far_plane),
-      ortho_size(ortho_size){
+      ortho_size(ortho_size), 
+      attenuation_constant(attenuation_constant), 
+      attenuation_linear(attenuation_linear),
+      attenuation_quadratic(attenuation_quadratic),
+      attenuation_power(attenuation_power),
+      light_intensity(light_intensity)
+      {
 
     glGenFramebuffers(1, &depth_map_fbo);
 
@@ -103,6 +114,12 @@ void Light::draw_lighting(Shader *shader, const std::string &base) const{
     }
 
     shader->set_int(base + "type", int(type));
+
+    shader->set_float(base + "attConstant",      attenuation_constant);
+    shader->set_float(base + "attLinear",        attenuation_linear);
+    shader->set_float(base + "attQuadratic",     attenuation_quadratic);
+    shader->set_float(base + "attenuationPower", attenuation_power);
+    shader->set_float(base + "lightIntensity",   light_intensity);
 }
 
 void Light::draw_depth_pass(Shader* shader) const {
