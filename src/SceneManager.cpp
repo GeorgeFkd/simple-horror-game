@@ -61,7 +61,7 @@ void SceneManager::SceneManager::render(const glm::mat4& view_projection){
     for (size_t i = 0; i < lights.size(); ++i) {
         const Light* light = lights[i];
         std::string base = "lights[" + std::to_string(i) + "].";
-        light->draw_lighting(shader, base);
+        light->draw_lighting(shader, base, i);
     }
 
     for (auto const& model: models){

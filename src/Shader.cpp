@@ -81,16 +81,91 @@ std::string Shader::load_file(const std::string& path){
 }
 
 GLint Shader::get_uniform_location(const std::string& name) {
+    // check cache
     auto it = uniform_cache.find(name);
-    if (it != uniform_cache.end()) {
-        return it->second;
-    }
+    if (it != uniform_cache.end()) return it->second;
 
     GLint loc = glGetUniformLocation(program_id, name.c_str());
+    if (loc < 0) {
+        std::cerr << "WARNING: Uniform '" << name
+                  << "' not found in shader '" << shader_name << "'\n";
+    }
     uniform_cache[name] = loc;
     return loc;
 }
 
+// Macro to reduce repetition
+#define SET_UNIFORM(loc, call)                 \
+    if (loc < 0) return;                       \
+    call;                                      \
+    {}     
+
+void Shader::set_bool(const std::string &name, bool v) {
+    GLint loc = get_uniform_location(name);
+    SET_UNIFORM(loc, glUniform1i(loc, (int)v));
+}
+void Shader::set_int(const std::string &name, int v) {
+    GLint loc = get_uniform_location(name);
+    SET_UNIFORM(loc, glUniform1i(loc, v));
+}
+void Shader::set_float(const std::string &name, float v) {
+    GLint loc = get_uniform_location(name);
+    SET_UNIFORM(loc, glUniform1f(loc, v));
+}
+void Shader::set_vec2(const std::string &name, const glm::vec2 &v) {
+    GLint loc = get_uniform_location(name);
+    SET_UNIFORM(loc, glUniform2fv(loc, 1, glm::value_ptr(v)));
+}
+void Shader::set_vec2(const std::string &name, float x, float y) {
+    GLint loc = get_uniform_location(name);
+    SET_UNIFORM(loc, glUniform2f(loc, x, y));
+}
+void Shader::set_vec3(const std::string &name, const glm::vec3 &v) {
+    GLint loc = get_uniform_location(name);
+    SET_UNIFORM(loc, glUniform3fv(loc, 1, glm::value_ptr(v)));
+}
+void Shader::set_vec3(const std::string &name, float x, float y, float z) {
+    GLint loc = get_uniform_location(name);
+    SET_UNIFORM(loc, glUniform3f(loc, x, y, z));
+}
+void Shader::set_vec4(const std::string &name, const glm::vec4 &v) {
+    GLint loc = get_uniform_location(name);
+    SET_UNIFORM(loc, glUniform4fv(loc, 1, glm::value_ptr(v)));
+}
+void Shader::set_vec4(const std::string &name, float x, float y, float z, float w) {
+    GLint loc = get_uniform_location(name);
+    SET_UNIFORM(loc, glUniform4f(loc, x, y, z, w));
+}
+void Shader::set_mat2(const std::string &name, const glm::mat2 &m) {
+    GLint loc = get_uniform_location(name);
+    SET_UNIFORM(loc, glUniformMatrix2fv(loc, 1, GL_FALSE, glm::value_ptr(m)));
+}
+void Shader::set_mat3(const std::string &name, const glm::mat3 &m) {
+    GLint loc = get_uniform_location(name);
+    SET_UNIFORM(loc, glUniformMatrix3fv(loc, 1, GL_FALSE, glm::value_ptr(m)));
+}
+void Shader::set_mat4(const std::string &name, const glm::mat4 &m) {
+    GLint loc = get_uniform_location(name);
+    SET_UNIFORM(loc, glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(m)));
+}
+void Shader::set_texture(
+    const std::string& name, 
+    GLuint tex, 
+    GLenum unit,
+    GLenum target
+) {
+    GLint loc = get_uniform_location(name);
+    if (loc < 0) {
+        std::cerr << "ERROR: Cannot bind texture to missing uniform '"
+                  << name << "' in shader '" << shader_name << "'\n";
+        return;
+    }
+    glActiveTexture(unit);
+    glBindTexture(target, tex);
+    glUniform1i(loc, unit - GL_TEXTURE0);
+}
+
+#undef SET_UNIFORM
 
 Shader::~Shader(){
     if (program_id!= 0) {

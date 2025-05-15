@@ -111,7 +111,8 @@ int main() {
     Model::Model floor(floor_verts, floor_normals, floor_uvs, floor_indices, floor_material);
 
     auto right_light = model_from_obj_file("assets/models/light_sphere.obj", "Sphere");
-    auto overhead_point_light_model = model_from_obj_file("assets/models/light_sphere.obj","Overhead light");
+    auto overhead_point_light_model = model_from_obj_file("assets/models/light_sphere.obj","Overhead point light");
+    auto right_spot_light_model = model_from_obj_file("assets/models/light_sphere.obj","Right spot light");
     //hi
     Light flashlight(
         LightType::SPOT,
@@ -128,15 +129,15 @@ int main() {
         100.0f,
         10.0f);
 
-    Light right_spotlight(
+    Light right_spot_light(
         LightType::SPOT,
         glm::vec3(5.0f, 1.5f, 0.0f),  // position: to the right
-        glm::vec3(-1.0f, 0.0f, 0.0f), // direction: pointing left
+        glm::vec3(1.0f, 0.0f, -1.0f), // direction: pointing left
         glm::vec3(0.1f),
         glm::vec3(1.0f),
         glm::vec3(1.0f),
-        glm::cos(glm::radians(15.0f)), // inner cone
-        glm::cos(glm::radians(25.0f)), // outer cone
+        glm::cos(glm::radians(100.0f)), // inner cone
+        glm::cos(glm::radians(200.0f)), // outer cone
         1024, 1024,
         1.0f, 100.0f,
         10.0f);
@@ -154,12 +155,16 @@ int main() {
         1.0f, 100.0f,
         10.0f);
 
-    right_light.set_local_transform(glm::translate(glm::mat4(1.0f), right_spotlight.get_position()));
 
     glm::vec3 overhead_light_spot = glm::vec3(15.0f, 5.0f, -20.0f);
     overhead_point_light.set_position(overhead_light_spot);
     overhead_point_light_model.set_local_transform(glm::translate(glm::mat4(1.0f), overhead_point_light.get_position()));
-    floor.set_local_transform(glm::translate(glm::mat4(1.0f), glm::vec3(15.0f, -0.01f, -20.0f)));
+
+    glm::vec3 right_light_spot = glm::vec3(15.0f, 2.0f, -17.0f);
+    right_spot_light.set_position(right_light_spot);
+    right_spot_light_model.set_local_transform(glm::translate(glm::mat4(1.0f), right_spot_light.get_position()));
+
+    floor.set_local_transform(glm::translate(glm::mat4(1.0f), glm::vec3(15.0f, 0.0f, -20.0f)));
 
 
     SceneManager::SceneManager scene_manager(1280, 720);
@@ -167,12 +172,18 @@ int main() {
     scene_manager.add_shader(depth_2d);
     scene_manager.add_shader(depth_cube);
     scene_manager.add_model(overhead_point_light_model);
+    scene_manager.add_model(right_spot_light_model);
     scene_manager.add_model(floor);
     scene_manager.add_light(overhead_point_light);
+    scene_manager.add_light(right_spot_light);
 
 
     glm::vec3 bed_position = glm::vec3(15.0f, 0.0f, -20.0f);
     glm::mat4 bed_offset = glm::translate(glm::mat4(1.0f), bed_position);
+
+    glm::vec3 right_spot_dir = glm::normalize(bed_position - right_light_spot);
+    right_spot_light.set_direction(right_spot_dir);
+
 
     auto bed = model_from_obj_file("assets/models/SimpleOldTownAssets/Bed01.obj", "Bed");
     bed.set_local_transform(bed_offset);

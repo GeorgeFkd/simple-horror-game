@@ -284,12 +284,12 @@ void Model::Model::draw(const glm::mat4& view_projection, Shader* shader) const{
         }
 
         // normal map
-        if(sm.mat.tex_Bump) {
-            shader->set_texture("normalMap", sm.mat.tex_Bump, GL_TEXTURE3);
-            shader->set_bool   ("useNormalMap", true);
-        } else {
-            shader->set_bool("useNormalMap", false);
-        }
+        //if(sm.mat.tex_Bump) {
+        //    shader->set_texture("normalMap", sm.mat.tex_Bump, GL_TEXTURE3);
+        //    shader->set_bool   ("useNormalMap", true);
+        //} else {
+        //    shader->set_bool("useNormalMap", false);
+        //}
 
         void* offsetPtr = (void*)(sm.index_offset * sizeof(GLuint));
         glDrawElements(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT, offsetPtr);

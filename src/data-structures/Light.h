@@ -96,7 +96,7 @@ public:
     glm::mat4 get_light_view() const;
     std::vector<glm::mat4> get_point_light_views() const;
 
-    void draw_lighting(Shader* shader, const std::string& base) const;
+    void draw_lighting(Shader* shader, const std::string& base, int index) const;
     void draw_depth_pass(Shader* shader) const;
 private:
     LightType type;

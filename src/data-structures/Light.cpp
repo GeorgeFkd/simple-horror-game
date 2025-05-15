@@ -98,7 +98,7 @@ Light::Light(
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void Light::draw_lighting(Shader *shader, const std::string &base) const{
+void Light::draw_lighting(Shader *shader, const std::string &base, int index) const{
     shader->set_vec3(base + "position", position);
     // only send direction for non-point lights
     if (type != LightType::POINT){
@@ -115,11 +115,9 @@ void Light::draw_lighting(Shader *shader, const std::string &base) const{
 
     shader->set_int(base + "type", int(type));
 
-    shader->set_float(base + "attConstant",      attenuation_constant);
-    shader->set_float(base + "attLinear",        attenuation_linear);
-    shader->set_float(base + "attQuadratic",     attenuation_quadratic);
-    shader->set_float(base + "attenuationPower", attenuation_power);
-    shader->set_float(base + "lightIntensity",   light_intensity);
+    glm::mat4  light_space_matrix = get_light_view() * get_light_projection();
+    shader->set_mat4(base + "lightSpaceMatrix", light_space_matrix);
+    //shader->set_texture(base + "shadowMap", get_depth_texture(), 5);
 }
 
 void Light::draw_depth_pass(Shader* shader) const {
