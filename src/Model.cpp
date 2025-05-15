@@ -313,19 +313,6 @@ void Model::Model::draw_depth(Shader* shader) const {
     glBindVertexArray(0);
 }
 
-void Model::Model::draw_depth(GLuint depth_shader){
-    glUseProgram(depth_shader);
-    GLint locM = glGetUniformLocation(depth_shader, "uModel");
-    glUniformMatrix4fv(locM, 1, GL_FALSE, glm::value_ptr(world_transform));
-
-    glBindVertexArray(vao);
-    for (auto const& sm : submeshes) {
-        void* offset = (void*)(sm.index_offset * sizeof(GLuint));
-        glDrawElements(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT, offset);
-    }
-    glBindVertexArray(0);
-}
-
 void Model::Model::compute_aabb() {
     // 1) Initialize to extreme opposites
     glm::vec3 world_min(  FLT_MAX );
