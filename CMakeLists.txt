@@ -103,12 +103,14 @@ set(SHADER_DST_DIR "${CMAKE_CURRENT_BINARY_DIR}/assets/shaders")
 file(GLOB SHADERS "${SHADER_SRC_DIR}/*.*")
 
 # Copy each shader file into build/assets/shaders/
-foreach(SHADER ${SHADERS})
-    add_custom_command(TARGET opengl_app POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E make_directory "${SHADER_DST_DIR}"
-        COMMAND ${CMAKE_COMMAND} -E copy ${SHADER} "${SHADER_DST_DIR}")
-endforeach()
 
+add_custom_target(copy_shaders ALL
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${SHADER_DST_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${SHADER_SRC_DIR}" "${SHADER_DST_DIR}"
+    COMMENT "Copying shader files..."
+)
+
+add_dependencies(opengl_app copy_shaders)
 
 # Copy .obj/mtl model files into build/assets/models/
 set(MODEL_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/assets/models")

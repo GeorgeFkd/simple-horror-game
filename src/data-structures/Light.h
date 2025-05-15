@@ -8,9 +8,9 @@
 #include "Shader.h"
 
 enum class LightType { 
-    POINT,
-    DIRECTIONAL, 
-    SPOT
+    POINT = 0,
+    DIRECTIONAL = 1, 
+    SPOT = 2
 };
 
 class Light {

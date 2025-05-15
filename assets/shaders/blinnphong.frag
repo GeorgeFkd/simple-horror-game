@@ -77,23 +77,29 @@ void main()
             spotFactor = clamp((theta - L.outerCutoff) / epsilon, 0.0, 1.0);
         }
 
+        float intensity = 1.0f;
+        if (L.type != 1){
+            float distance = length(L.position - FragPos);
+            intensity = intensity * 1 / (0.3f * distance);
+            intensity = intensity * 0.8f;
+        }
         // ambient term
-        ambientAccum += spotFactor * L.ambient * Ka;
+        ambientAccum += intensity * spotFactor * L.ambient * Ka;
 
         // diffuse term
         float diff = max(dot(N, Ldir), 0.0);
-        diffuseAccum += spotFactor * L.diffuse * Kd * diff;
+        diffuseAccum += intensity * spotFactor * L.diffuse * Kd * diff;
 
         // specular term (Blinn-Phong)
         vec3 H = normalize(Ldir + V);
         float spec = pow(max(dot(N, H), 0.0), material.shininess);
-        specAccum += spotFactor * L.specular * Ks * spec;
+        specAccum += intensity * spotFactor * L.specular * Ks * spec;
     }
 
     // 4) combine
-    vec3 color = material.emissive * 0.4f
-               + ambientAccum * 0.5f
-               + diffuseAccum
+    vec3 color = material.emissive
+               + ambientAccum * 0.4f
+               + diffuseAccum * 0.8f
                + specAccum * 0.1f;
 
     FragColor = vec4(color, material.opacity);
