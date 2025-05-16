@@ -1,4 +1,5 @@
 #include "Shader.h"
+#include <iostream>
 
 
 Shader::Shader(const std::vector<std::string>& shader_paths,
@@ -61,11 +62,18 @@ GLuint Shader::compile_shader(GLenum type, const std::string& source){
         // The maxLength includes the NULL character
         std::vector<GLchar> errorLog(max_length);
         glGetShaderInfoLog(shader, max_length, &max_length, &errorLog[0]);
+        
+        // convert to std::string
+        std::string error_message(errorLog.begin(), errorLog.end());
 
         // Provide the infolog in whatever manor you deem best.
         // Exit with failure.
         glDeleteShader(shader); // Don't leak the shader.
-        return -1;
+
+        std::cerr << error_message << std::endl;
+
+        // throw with the full message
+        throw std::runtime_error("Shader compilation failed:\n" + error_message);
     }
 
     return shader;
