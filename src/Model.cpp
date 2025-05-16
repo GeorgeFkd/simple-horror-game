@@ -299,6 +299,10 @@ void Model::Model::draw(const glm::mat4& view_projection, Shader* shader) const{
 
 void Model::Model::draw_depth(Shader* shader) const {
 
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_FRONT);
+    glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+
     shader->set_mat4("uModel", world_transform);
     glBindVertexArray(vao);
     for (auto const& sm : submeshes) {
@@ -310,6 +314,8 @@ void Model::Model::draw_depth(Shader* shader) const {
             offset_ptr
         );
     }
+    glCullFace(GL_BACK);
+    glColorMask(GL_TRUE,  GL_TRUE,  GL_TRUE,  GL_TRUE);
     glBindVertexArray(0);
 }
 

@@ -130,7 +130,7 @@ int main() {
         10.0f);
 
     Light right_spot_light(
-        LightType::SPOT,
+        LightType::DIRECTIONAL,
         glm::vec3(5.0f, 1.5f, 0.0f),  // position: to the right
         glm::vec3(1.0f, 0.0f, -1.0f), // direction: pointing left
         glm::vec3(0.1f),
@@ -160,11 +160,11 @@ int main() {
     overhead_point_light.set_position(overhead_light_spot);
     overhead_point_light_model.set_local_transform(glm::translate(glm::mat4(1.0f), overhead_point_light.get_position()));
 
-    glm::vec3 right_light_spot = glm::vec3(15.0f, 2.0f, -17.0f);
+    glm::vec3 right_light_spot = glm::vec3(15.0f, 2.0f, -25.0f);
     right_spot_light.set_position(right_light_spot);
     right_spot_light_model.set_local_transform(glm::translate(glm::mat4(1.0f), right_spot_light.get_position()));
 
-    floor.set_local_transform(glm::translate(glm::mat4(1.0f), glm::vec3(15.0f, 0.0f, -20.0f)));
+    floor.set_local_transform(glm::translate(glm::mat4(1.0f), glm::vec3(15.0f, -10.0f, -20.0f)));
 
 
     SceneManager::SceneManager scene_manager(1280, 720);
@@ -176,6 +176,7 @@ int main() {
     scene_manager.add_model(floor);
     //scene_manager.add_light(overhead_point_light);
     scene_manager.add_light(right_spot_light);
+    //scene_manager.add_light(flashlight);
 
 
     glm::vec3 bed_position = glm::vec3(15.0f, 0.0f, -20.0f);

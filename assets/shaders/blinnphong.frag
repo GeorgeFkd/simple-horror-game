@@ -25,7 +25,6 @@ struct Light {
     float outerCutoff; // outer cone cosine (spot only)
     int   type;        // 0=point,1=directional,2=spot
     mat4  lightSpaceMatrix;
-    //sampler2D   shadowMap2D;
 };
 
 uniform Material    material;
@@ -45,6 +44,17 @@ uniform bool        useDiffuseMap;
 uniform sampler2D   specularMap;
 uniform bool        useSpecularMap;
 
+// one sampler2D per light (only spot & dir. matter here)
+uniform sampler2D  shadowMap0;
+uniform sampler2D  shadowMap1;
+uniform sampler2D  shadowMap2;
+uniform sampler2D  shadowMap3;
+uniform sampler2D  shadowMap4;
+uniform sampler2D  shadowMap5;
+uniform sampler2D  shadowMap6;
+uniform sampler2D  shadowMap7;
+
+
 // arrays of shadow‐map samplers
 // uniform ;
 
@@ -62,60 +72,66 @@ out vec4  FragColor;
 // (https://github.com/iamkroot/shadow-mapping/blob/master/shaders/standard_frag.glsl)
 //——————————————————————————————————————————————————————————————————————————
 
-vec2 poissonDisk[16] = vec2[]( 
-    vec2(-0.94201624, -0.39906216),
-    vec2( 0.94558609, -0.76890725),
-    vec2(-0.094184101, -0.92938870),
-    vec2( 0.34495938,  0.29387760),
-    vec2(-0.91588581,  0.45771432),
-    vec2(-0.81544232, -0.87912464),
-    vec2(-0.38277543,  0.27676845),
-    vec2( 0.97484398,  0.75648379),
-    vec2( 0.44323325, -0.97511554),
-    vec2( 0.53742981, -0.47373420),
-    vec2(-0.26496911, -0.41893023),
-    vec2( 0.79197514,  0.19090188),
-    vec2(-0.24188840,  0.99706507),
-    vec2(-0.81409955,  0.91437590),
-    vec2( 0.19984126,  0.78641367),
-    vec2( 0.14383161, -0.14100790)
+// Poisson Disk
+vec2 poissonDisk[16] = vec2[](
+vec2(-0.94201624, -0.39906216),
+vec2(0.94558609, -0.76890725),
+vec2(-0.094184101, -0.92938870),
+vec2(0.34495938, 0.29387760),
+vec2(-0.91588581, 0.45771432),
+vec2(-0.81544232, -0.87912464),
+vec2(-0.38277543, 0.27676845),
+vec2(0.97484398, 0.75648379),
+vec2(0.44323325, -0.97511554),
+vec2(0.53742981, -0.47373420),
+vec2(-0.26496911, -0.41893023),
+vec2(0.79197514, 0.19090188),
+vec2(-0.24188840, 0.99706507),
+vec2(-0.81409955, 0.91437590),
+vec2(0.19984126, 0.78641367),
+vec2(0.14383161, -0.14100790)
 );
 
-//——————————————————————————————————————————————————————————————————————————
 // Method to get the degree of visibility of a fragment
-// (soft shadows via PCF)
-//——————————————————————————————————————————————————————————————————————————
+//float getVisibility(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir, sampler2D shadowMap) {
+//    // perform perspective divide
+//    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+//    FragColor = vec4(vec3(fragPosLightSpace.z), 1);
+//
+//    // normalize to [0,1] range
+//    // full formula: (((far-near) * coord) + near + far) / 2.0
+//    // we have far = 1, near = 0
+//    projCoords = projCoords * 0.5 + 0.5;
+//
+//    // declare a bias to deal with shadow acne
+//    float cosTheta = clamp(dot(normal, lightDir), 0.0, 1.0);
+//    float bias = clamp(0.0005 * tan(acos(cosTheta)), 0, 0.01);
+//    projCoords.z -= bias;
+//    float visibility = 1.0;
+//    float spreadParam = 500.0;
+//    for (int i = 0; i < 16; i++) {
+//        if (texture(shadowMap, projCoords.xy + poissonDisk[i] / spreadParam).r < projCoords.z){
+//            visibility -= 0.05;
+//        }
+//    }
+//    return visibility;
+//}
 
-float getVisibility(
-    vec4   fragPosLightSpace,
-    vec3   normal,
-    vec3   lightDir,
-    sampler2D shadowMap
-) {
+float getVisibility(vec4 fragPosLightSpace, sampler2D shadowMap)
+{
     // perform perspective divide
     vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
-
-    // normalize to [0,1] range
-    // full formula: (((far-near) * coord) + near + far) / 2.0
-    // we have far = 1, near = 0
+    // transform to [0,1] range
     projCoords = projCoords * 0.5 + 0.5;
+    // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
+    float closestDepth = texture(shadowMap, projCoords.xy).r; 
+    // get depth of current fragment from light's perspective
+    float currentDepth = projCoords.z;
+    // check whether current frag pos is in shadow
+    float shadow = currentDepth > closestDepth  ? 1.0 : 0.0;
 
-    // declare a bias to deal with shadow acne
-    float cosTheta = clamp(dot(normal, lightDir), 0.0, 1.0);
-    float bias     = clamp(0.0005 * tan(acos(cosTheta)), 0.0, 0.01);
-    projCoords.z  -= bias;
-
-    float visibility   = 1.0;
-    float spreadParam  = 500.0;
-    for (int i = 0; i < 16; ++i) {
-        if (texture(shadowMap, projCoords.xy + poissonDisk[i] / spreadParam).r 
-            < projCoords.z) 
-        {
-            visibility -= 0.05;
-        }
-    }
-    return visibility;
-}
+    return shadow;
+}  
 
 void main()
 {
@@ -161,14 +177,16 @@ void main()
 
         // calculate shadow visibility (only for spot & directional)
         float visibility = 1.0;
-        //if (L.type != 0) {
-        //    visibility = getVisibility(
-        //        fragPosLightSpace,
-        //        N,
-        //        Ldir,
-        //        shadowMap2D[i]
-        //    );
-        //}
+        if (L.type != 0) {
+            if      (i == 0) visibility = getVisibility(fragPosLightSpace, shadowMap0);
+            else if (i == 1) visibility = getVisibility(fragPosLightSpace, shadowMap1);
+            else if (i == 2) visibility = getVisibility(fragPosLightSpace, shadowMap2);
+            else if (i == 3) visibility = getVisibility(fragPosLightSpace, shadowMap3);
+            else if (i == 4) visibility = getVisibility(fragPosLightSpace, shadowMap4);
+            else if (i == 5) visibility = getVisibility(fragPosLightSpace, shadowMap5);
+            else if (i == 6) visibility = getVisibility(fragPosLightSpace, shadowMap6);
+            else if (i == 7) visibility = getVisibility(fragPosLightSpace, shadowMap7);
+        }
 
         // ambient term (ambient unaffected by shadows)
         ambientAccum += intensity * spotFactor * L.ambient * Ka;
@@ -188,6 +206,11 @@ void main()
                + ambientAccum * 0.4
                + diffuseAccum * 0.8
                + specAccum    * 0.1;
+
+    //vec3 color = material.emissive
+    //           + ambientAccum
+    //           + diffuseAccum
+    //           + specAccum;
 
     FragColor = vec4(color, material.opacity);
 }
