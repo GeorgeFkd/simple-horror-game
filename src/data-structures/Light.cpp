@@ -253,8 +253,8 @@ glm::mat4 Light::get_light_projection() const
         float fov = glm::radians(outer_cutoff * 50.0f);
         float aspect = (float)shadow_width / (float)shadow_height;
         return glm::perspective(
-            //fov,
-            glm::radians(90.0f),
+            fov,
+            //glm::radians(90.0f),
             aspect,
             near_plane,
             far_plane
@@ -266,11 +266,8 @@ glm::mat4 Light::get_light_projection() const
 glm::mat4 Light::get_light_view() const {
     // For directional and spot lights
     auto dir = glm::normalize(direction);
-    return glm::lookAt(
-        position,
-        position + dir,
-        glm::vec3(0.0f, 1.0f, 0.0f)
-    );
+    glm::vec3 up = (abs(dir.y) > 0.99f) ? glm::vec3(0.0f, 0.0f, 1.0f) : glm::vec3(0.0f, 1.0f, 0.0f);
+    return glm::lookAt(position, position + dir, up);
 }
 
 std::vector<glm::mat4> Light::get_point_light_views() const {

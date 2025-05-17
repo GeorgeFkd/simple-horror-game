@@ -138,21 +138,21 @@ int main() {
         glm::vec3(1.0f),
         glm::cos(glm::radians(10.0f)), // inner cone
         glm::cos(glm::radians(30.0f)), // outer cone
-        1024, 1024,
+        2048, 2048,
         1.0f, 100.0f,
         10.0f);
 
     Light overhead_point_light(
-        LightType::POINT,
+        LightType::SPOT,
         glm::vec3(0.0f, 5.0f, 0.0f),  // above the object
         glm::vec3(0.0f, -1.0f, 0.0f), // pointing straight down
         glm::vec3(0.1f),
         glm::vec3(1.0f),
         glm::vec3(1.0f),
-        glm::cos(glm::radians(15.0f)), // inner cone
-        glm::cos(glm::radians(25.0f)), // outer cone
-        1024, 1024,
-        1.0f, 100.0f,
+        glm::cos(glm::radians(10.0f)), // inner cone
+        glm::cos(glm::radians(30.0f)), // outer cone
+        2048, 2048,
+        0.1f, 100.0f,
         10.0f);
 
 
@@ -164,7 +164,7 @@ int main() {
     right_spot_light.set_position(right_light_spot);
     right_spot_light_model.set_local_transform(glm::translate(glm::mat4(1.0f), right_spot_light.get_position()));
 
-    floor.set_local_transform(glm::translate(glm::mat4(1.0f), glm::vec3(15.0f, 0.0f, -20.0f)));
+    floor.set_local_transform(glm::translate(glm::mat4(1.0f), glm::vec3(15.0f, -0.01f, -20.0f)));
 
 
     SceneManager::SceneManager scene_manager(1280, 720);
@@ -174,9 +174,9 @@ int main() {
     //scene_manager.add_model(overhead_point_light_model);
     //scene_manager.add_model(right_spot_light_model);
     scene_manager.add_model(floor);
-    //scene_manager.add_light(overhead_point_light);
-    scene_manager.add_light(right_spot_light);
     //scene_manager.add_light(flashlight);
+    scene_manager.add_light(overhead_point_light);
+    //scene_manager.add_light(right_spot_light);
 
 
     glm::vec3 bed_position = glm::vec3(15.0f, 0.0f, -20.0f);
@@ -185,6 +185,9 @@ int main() {
     //glm::vec3 right_spot_dir = glm::normalize((bed_position + glm::vec3(0.0f, 0.0f, -6.0f)) - right_spot_light.get_position());
     glm::vec3 right_spot_dir = glm::normalize(bed_position - right_spot_light.get_position());
     right_spot_light.set_direction(right_spot_dir);
+
+    glm::vec3 overhead_spot_dir = glm::normalize(bed_position - overhead_point_light.get_position());
+    overhead_point_light.set_direction(overhead_spot_dir);
 
 
     auto bed = model_from_obj_file("assets/models/SimpleOldTownAssets/Bed01.obj", "Bed");
@@ -210,8 +213,8 @@ int main() {
 
     // ─── Create camera ───────────────────────────────────────────────────
     Camera::CameraObj camera(1280, 720);
-    camera.set_position(right_spot_light.get_position());
-    camera.set_direction(right_spot_light.get_direction());
+    //camera.set_position(right_spot_light.get_position());
+    //camera.set_direction(right_spot_light.get_direction());
 
 #ifdef DEBUG_DEPTH
     float quadVertices[] = {
