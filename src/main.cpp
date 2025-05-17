@@ -136,8 +136,8 @@ int main() {
         glm::vec3(0.1f),
         glm::vec3(1.0f),
         glm::vec3(1.0f),
-        glm::cos(glm::radians(100.0f)), // inner cone
-        glm::cos(glm::radians(300.0f)), // outer cone
+        glm::cos(glm::radians(10.0f)), // inner cone
+        glm::cos(glm::radians(30.0f)), // outer cone
         1024, 1024,
         1.0f, 100.0f,
         10.0f);
@@ -160,7 +160,7 @@ int main() {
     overhead_point_light.set_position(overhead_light_spot);
     overhead_point_light_model.set_local_transform(glm::translate(glm::mat4(1.0f), overhead_point_light.get_position()));
 
-    glm::vec3 right_light_spot = glm::vec3(15.0f, 1.0f, -15.0f);
+    glm::vec3 right_light_spot = glm::vec3(15.0f, 2.0f, -25.0f);
     right_spot_light.set_position(right_light_spot);
     right_spot_light_model.set_local_transform(glm::translate(glm::mat4(1.0f), right_spot_light.get_position()));
 
@@ -182,7 +182,8 @@ int main() {
     glm::vec3 bed_position = glm::vec3(15.0f, 0.0f, -20.0f);
     glm::mat4 bed_offset = glm::translate(glm::mat4(1.0f), bed_position);
 
-    glm::vec3 right_spot_dir = glm::normalize(right_spot_light.get_position() - bed_position);
+    //glm::vec3 right_spot_dir = glm::normalize((bed_position + glm::vec3(0.0f, 0.0f, -6.0f)) - right_spot_light.get_position());
+    glm::vec3 right_spot_dir = glm::normalize(bed_position - right_spot_light.get_position());
     right_spot_light.set_direction(right_spot_dir);
 
 
@@ -209,8 +210,8 @@ int main() {
 
     // ─── Create camera ───────────────────────────────────────────────────
     Camera::CameraObj camera(1280, 720);
-    camera.set_position(glm::vec3{0.0f, 1.0f, 10.0f});
-    //camera.set_direction(overhead_spot.get_direction());
+    camera.set_position(right_spot_light.get_position());
+    camera.set_direction(right_spot_light.get_direction());
 
 #ifdef DEBUG_DEPTH
     float quadVertices[] = {
@@ -240,8 +241,7 @@ int main() {
     Uint64 lastTicks = SDL_GetPerformanceCounter();
 
     glm::vec3 last_camera_position;
-    while (running)
-    {
+    while (running){
         // 1) compute Δt
         Uint64 now = SDL_GetPerformanceCounter();
         float dt = float(now - lastTicks) / float(SDL_GetPerformanceFrequency());

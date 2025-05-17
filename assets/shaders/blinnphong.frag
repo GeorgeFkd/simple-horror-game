@@ -101,29 +101,29 @@ vec2(0.14383161, -0.14100790)
 );
 
 // Method to get the degree of visibility of a fragment
-//float getVisibility(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir, sampler2D shadowMap) {
-//    // perform perspective divide
-//    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
-//    FragColor = vec4(vec3(fragPosLightSpace.z), 1);
-////
-//    // normalize to [0,1] range
-//    // full formula: (((far-near) * coord) + near + far) / 2.0
-//    // we have far = 1, near = 0
-//    projCoords = projCoords * 0.5 + 0.5;
-////
-//    // declare a bias to deal with shadow acne
-//    float cosTheta = clamp(dot(normal, lightDir), 0.0, 1.0);
-//    float bias = clamp(0.0005 * tan(acos(cosTheta)), 0, 0.01);
-//    projCoords.z -= bias;
-//    float visibility = 1.0;
-//    float spreadParam = 500.0;
-//    for (int i = 0; i < 16; i++) {
-//        if (texture(shadowMap, projCoords.xy + poissonDisk[i] / spreadParam).r < projCoords.z){
-//            visibility -= 0.05;
-//        }
-//    }
-//    return visibility;
-//}
+float getVisibility(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir, sampler2D shadowMap) {
+    // perform perspective divide
+    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+    FragColor = vec4(vec3(fragPosLightSpace.z), 1);
+//
+    // normalize to [0,1] range
+    // full formula: (((far-near) * coord) + near + far) / 2.0
+    // we have far = 1, near = 0
+    projCoords = projCoords * 0.5 + 0.5;
+//
+    // declare a bias to deal with shadow acne
+    float cosTheta = clamp(dot(normal, lightDir), 0.0, 1.0);
+    float bias = clamp(0.0005 * tan(acos(cosTheta)), 0, 0.01);
+    projCoords.z -= bias;
+    float visibility = 1.0;
+    float spreadParam = 500.0;
+    for (int i = 0; i < 16; i++) {
+        if (texture(shadowMap, projCoords.xy + poissonDisk[i] / spreadParam).r < projCoords.z){
+            visibility -= 0.05;
+        }
+    }
+    return visibility;
+}
 
 //float getVisibility(vec4 fragPosLightSpace, sampler2D shadowMap)
 //{
@@ -141,24 +141,24 @@ vec2(0.14383161, -0.14100790)
 //    return shadow;
 //}  
 
-float getVisibility(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir, sampler2D shadowMap)
-{
-    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
-    projCoords = projCoords * 0.5 + 0.5;
-
-    if (projCoords.x < 0.0 || projCoords.x > 1.0 ||
-        projCoords.y < 0.0 || projCoords.y > 1.0 ||
-        projCoords.z > 1.0)
-        return 1.0;
-
-    float currentDepth = projCoords.z;
-    float closestDepth = texture(shadowMap, projCoords.xy).r;
-
-    float bias = max(0.005 * (1.0 - dot(normal, lightDir)), 0.001);
-    float shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0;
-
-    return 1.0 - shadow; // return visibility
-}
+//float getVisibility(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir, sampler2D shadowMap)
+//{
+//    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+//    projCoords = projCoords * 0.5 + 0.5;
+////
+//    if (projCoords.x < 0.0 || projCoords.x > 1.0 ||
+//        projCoords.y < 0.0 || projCoords.y > 1.0 ||
+//        projCoords.z > 1.0)
+//        return 1.0;
+////
+//    float currentDepth = projCoords.z;
+//    float closestDepth = texture(shadowMap, projCoords.xy).r;
+////
+//    float bias = max(0.005 * (1.0 - dot(normal, lightDir)), 0.001);
+//    float shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0;
+////
+//    return 1.0 - shadow; // return visibility
+//}
 
 void main()
 {
@@ -204,16 +204,16 @@ void main()
 
         // calculate shadow visibility (only for spot & directional)
         float visibility = 1.0;
-        //if (L.type != 0) {
-        //    if      (i == 0) visibility = getVisibility(fragPosLightSpace, Normal, Ldir, shadowMap0);
-        //    else if (i == 1) visibility = getVisibility(fragPosLightSpace, Normal, Ldir, shadowMap1);
-        //    else if (i == 2) visibility = getVisibility(fragPosLightSpace, Normal, Ldir, shadowMap2);
-        //    else if (i == 3) visibility = getVisibility(fragPosLightSpace, Normal, Ldir, shadowMap3);
-        //    else if (i == 4) visibility = getVisibility(fragPosLightSpace, Normal, Ldir, shadowMap4);
-        //    else if (i == 5) visibility = getVisibility(fragPosLightSpace, Normal, Ldir, shadowMap5);
-        //    else if (i == 6) visibility = getVisibility(fragPosLightSpace, Normal, Ldir, shadowMap6);
-        //    else if (i == 7) visibility = getVisibility(fragPosLightSpace, Normal, Ldir, shadowMap7);
-        //}
+        if (L.type != 0) {
+            if      (i == 0) visibility = getVisibility(fragPosLightSpace, Normal, Ldir, shadowMap0);
+            else if (i == 1) visibility = getVisibility(fragPosLightSpace, Normal, Ldir, shadowMap1);
+            else if (i == 2) visibility = getVisibility(fragPosLightSpace, Normal, Ldir, shadowMap2);
+            else if (i == 3) visibility = getVisibility(fragPosLightSpace, Normal, Ldir, shadowMap3);
+            else if (i == 4) visibility = getVisibility(fragPosLightSpace, Normal, Ldir, shadowMap4);
+            else if (i == 5) visibility = getVisibility(fragPosLightSpace, Normal, Ldir, shadowMap5);
+            else if (i == 6) visibility = getVisibility(fragPosLightSpace, Normal, Ldir, shadowMap6);
+            else if (i == 7) visibility = getVisibility(fragPosLightSpace, Normal, Ldir, shadowMap7);
+        }
 
         // ambient term (ambient unaffected by shadows)
         ambientAccum += visibility * intensity * spotFactor * L.ambient * Ka;
@@ -241,12 +241,22 @@ void main()
     //           + diffuseAccum
     //           + specAccum;
 
-    //vec4 fragPosLightSpace = lights[0].proj * lights[0].view * vec4(FragPos, 1.0);
-    //vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
-    //projCoords = projCoords * 0.5 + 0.5;
-    //float depth = texture(shadowMap0, projCoords.xy).r;
-    //float linear = LinearizeDepth(depth, lights[0].nearPlane, lights[0].farPlane) / lights[0].farPlane;
-    //FragColor = vec4(vec3(linear), 1.0); // Grayscale
+    vec4 fragPosLightSpace = lights[0].proj * lights[0].view * vec4(FragPos, 1.0);
+    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+    projCoords = projCoords * 0.5 + 0.5;
+    float depth = texture(shadowMap0, projCoords.xy).r;
+    //depth -= 0.05;
+    //float depth = projCoords.z;
+    float linear = LinearizeDepth(depth, lights[0].nearPlane, lights[0].farPlane) / lights[0].farPlane;
+    //FragColor = vec4(depth);
+    FragColor = vec4(vec3(linear), 1.0); // Grayscale
+    // Only valid if within [0,1] bounds
+    if (projCoords.x < 0.0 || projCoords.x > 1.0 ||
+        projCoords.y < 0.0 || projCoords.y > 1.0 ||
+        projCoords.z > 1.0)
+    {
+        FragColor = vec4(1.0, 0.0, 1.0, 1.0); // outside light frustum
+    }
 
 
     FragColor = vec4(color, material.opacity);
