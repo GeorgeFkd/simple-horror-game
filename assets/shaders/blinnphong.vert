@@ -5,7 +5,8 @@ layout(location = 1) in vec2 aTexCoord;
 layout(location = 2) in vec3 aNormal;
 
 uniform mat4 uModel;
-uniform mat4 uViewProj;
+uniform mat4 uProj;
+uniform mat4 uView;
 
 out vec3 FragPos;    // world‐space position
 out vec3 Normal;     // world‐space normal
@@ -19,5 +20,5 @@ void main() {
     Normal    = mat3(transpose(inverse(uModel))) * aNormal;
 
     TexCoord  = aTexCoord;
-    gl_Position = uViewProj * worldPos;
+    gl_Position = uProj * uView * worldPos;
 }

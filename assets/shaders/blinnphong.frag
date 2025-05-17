@@ -24,7 +24,10 @@ struct Light {
     float cutoff;      // inner cone cosine (spot only)
     float outerCutoff; // outer cone cosine (spot only)
     int   type;        // 0=point,1=directional,2=spot
-    mat4  lightSpaceMatrix;
+    mat4 view;
+    mat4 proj;
+    float nearPlane;
+    float farPlane;
 };
 
 uniform Material    material;
@@ -54,6 +57,11 @@ uniform sampler2D  shadowMap5;
 uniform sampler2D  shadowMap6;
 uniform sampler2D  shadowMap7;
 
+float LinearizeDepth(float depth, float nearPlane, float farPlane)
+{
+    float z = depth * 2.0 - 1.0; // back to NDC
+    return (2.0 * nearPlane * farPlane) / (farPlane + nearPlane - z * (farPlane - nearPlane));
+}
 
 // arrays of shadow‐map samplers
 // uniform ;
@@ -97,12 +105,12 @@ vec2(0.14383161, -0.14100790)
 //    // perform perspective divide
 //    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
 //    FragColor = vec4(vec3(fragPosLightSpace.z), 1);
-//
+////
 //    // normalize to [0,1] range
 //    // full formula: (((far-near) * coord) + near + far) / 2.0
 //    // we have far = 1, near = 0
 //    projCoords = projCoords * 0.5 + 0.5;
-//
+////
 //    // declare a bias to deal with shadow acne
 //    float cosTheta = clamp(dot(normal, lightDir), 0.0, 1.0);
 //    float bias = clamp(0.0005 * tan(acos(cosTheta)), 0, 0.01);
@@ -117,21 +125,40 @@ vec2(0.14383161, -0.14100790)
 //    return visibility;
 //}
 
-float getVisibility(vec4 fragPosLightSpace, sampler2D shadowMap)
-{
-    // perform perspective divide
-    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
-    // transform to [0,1] range
-    projCoords = projCoords * 0.5 + 0.5;
-    // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
-    float closestDepth = texture(shadowMap, projCoords.xy).r; 
-    // get depth of current fragment from light's perspective
-    float currentDepth = projCoords.z;
-    // check whether current frag pos is in shadow
-    float shadow = currentDepth > closestDepth  ? 1.0 : 0.0;
+//float getVisibility(vec4 fragPosLightSpace, sampler2D shadowMap)
+//{
+//    // perform perspective divide
+//    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+//    // transform to [0,1] range
+//    projCoords = projCoords * 0.5 + 0.5;
+//    // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
+//    float closestDepth = texture(shadowMap, projCoords.xy).r; 
+//    // get depth of current fragment from light's perspective
+//    float currentDepth = projCoords.z;
+//    // check whether current frag pos is in shadow
+//    float shadow = currentDepth > closestDepth  ? 1.0 : 0.0;
+//
+//    return shadow;
+//}  
 
-    return shadow;
-}  
+float getVisibility(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir, sampler2D shadowMap)
+{
+    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+    projCoords = projCoords * 0.5 + 0.5;
+
+    if (projCoords.x < 0.0 || projCoords.x > 1.0 ||
+        projCoords.y < 0.0 || projCoords.y > 1.0 ||
+        projCoords.z > 1.0)
+        return 1.0;
+
+    float currentDepth = projCoords.z;
+    float closestDepth = texture(shadowMap, projCoords.xy).r;
+
+    float bias = max(0.005 * (1.0 - dot(normal, lightDir)), 0.001);
+    float shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0;
+
+    return 1.0 - shadow; // return visibility
+}
 
 void main()
 {
@@ -153,7 +180,7 @@ void main()
         Light L = lights[i];
 
         // compute fragment position in light space
-        vec4 fragPosLightSpace = L.lightSpaceMatrix * vec4(FragPos, 1.0);
+        vec4 fragPosLightSpace = L.proj * L.view * vec4(FragPos, 1.0);
 
         // compute light direction
         vec3 Ldir = (L.type == 1)
@@ -170,26 +197,26 @@ void main()
 
         // distance attenuation for non-directional lights
         float intensity = 1.0;
-        if (L.type != 1) {
-            float distance = length(L.position - FragPos);
-            intensity      = (1.0 / (0.3 * distance)) * 0.8;
-        }
+        //if (L.type != 1) {
+        //    float distance = length(L.position - FragPos);
+        //    intensity      = (1.0 / (0.3 * distance)) * 0.8;
+        //}
 
         // calculate shadow visibility (only for spot & directional)
         float visibility = 1.0;
-        if (L.type != 0) {
-            if      (i == 0) visibility = getVisibility(fragPosLightSpace, shadowMap0);
-            else if (i == 1) visibility = getVisibility(fragPosLightSpace, shadowMap1);
-            else if (i == 2) visibility = getVisibility(fragPosLightSpace, shadowMap2);
-            else if (i == 3) visibility = getVisibility(fragPosLightSpace, shadowMap3);
-            else if (i == 4) visibility = getVisibility(fragPosLightSpace, shadowMap4);
-            else if (i == 5) visibility = getVisibility(fragPosLightSpace, shadowMap5);
-            else if (i == 6) visibility = getVisibility(fragPosLightSpace, shadowMap6);
-            else if (i == 7) visibility = getVisibility(fragPosLightSpace, shadowMap7);
-        }
+        //if (L.type != 0) {
+        //    if      (i == 0) visibility = getVisibility(fragPosLightSpace, Normal, Ldir, shadowMap0);
+        //    else if (i == 1) visibility = getVisibility(fragPosLightSpace, Normal, Ldir, shadowMap1);
+        //    else if (i == 2) visibility = getVisibility(fragPosLightSpace, Normal, Ldir, shadowMap2);
+        //    else if (i == 3) visibility = getVisibility(fragPosLightSpace, Normal, Ldir, shadowMap3);
+        //    else if (i == 4) visibility = getVisibility(fragPosLightSpace, Normal, Ldir, shadowMap4);
+        //    else if (i == 5) visibility = getVisibility(fragPosLightSpace, Normal, Ldir, shadowMap5);
+        //    else if (i == 6) visibility = getVisibility(fragPosLightSpace, Normal, Ldir, shadowMap6);
+        //    else if (i == 7) visibility = getVisibility(fragPosLightSpace, Normal, Ldir, shadowMap7);
+        //}
 
         // ambient term (ambient unaffected by shadows)
-        ambientAccum += intensity * spotFactor * L.ambient * Ka;
+        ambientAccum += visibility * intensity * spotFactor * L.ambient * Ka;
 
         // diffuse term (modulated by shadow visibility)
         float diff = max(dot(N, Ldir), 0.0);
@@ -199,6 +226,8 @@ void main()
         vec3 H    = normalize(Ldir + V);
         float spec = pow(max(dot(N, H), 0.0), material.shininess);
         specAccum += visibility * intensity * spotFactor * L.specular * Ks * spec;
+
+        //FragColor = vec4(vec3(visibility), 1.0);
     }
 
     // 4) combine
@@ -211,6 +240,14 @@ void main()
     //           + ambientAccum
     //           + diffuseAccum
     //           + specAccum;
+
+    //vec4 fragPosLightSpace = lights[0].proj * lights[0].view * vec4(FragPos, 1.0);
+    //vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+    //projCoords = projCoords * 0.5 + 0.5;
+    //float depth = texture(shadowMap0, projCoords.xy).r;
+    //float linear = LinearizeDepth(depth, lights[0].nearPlane, lights[0].farPlane) / lights[0].farPlane;
+    //FragColor = vec4(vec3(linear), 1.0); // Grayscale
+
 
     FragColor = vec4(color, material.opacity);
 }

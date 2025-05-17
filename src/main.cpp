@@ -121,23 +121,23 @@ int main() {
         glm::vec3(0.1f),               // ambient
         glm::vec3(1.0f),               // diffuse
         glm::vec3(1.0f),               // specular
-        glm::cos(glm::radians(12.5f)), // cutoff
-        glm::cos(glm::radians(17.5f)), // outer cutoff
-        1024,
-        1024,
+        glm::cos(glm::radians(10.0f)), // cutoff
+        glm::cos(glm::radians(20.0f)), // outer cutoff
+        1280,
+        720,
         1.0f,
-        100.0f,
+        50.0f,
         10.0f);
 
     Light right_spot_light(
-        LightType::DIRECTIONAL,
+        LightType::SPOT,
         glm::vec3(5.0f, 1.5f, 0.0f),  // position: to the right
         glm::vec3(1.0f, 0.0f, -1.0f), // direction: pointing left
         glm::vec3(0.1f),
         glm::vec3(1.0f),
         glm::vec3(1.0f),
         glm::cos(glm::radians(100.0f)), // inner cone
-        glm::cos(glm::radians(200.0f)), // outer cone
+        glm::cos(glm::radians(300.0f)), // outer cone
         1024, 1024,
         1.0f, 100.0f,
         10.0f);
@@ -160,11 +160,11 @@ int main() {
     overhead_point_light.set_position(overhead_light_spot);
     overhead_point_light_model.set_local_transform(glm::translate(glm::mat4(1.0f), overhead_point_light.get_position()));
 
-    glm::vec3 right_light_spot = glm::vec3(15.0f, 2.0f, -25.0f);
+    glm::vec3 right_light_spot = glm::vec3(15.0f, 1.0f, -15.0f);
     right_spot_light.set_position(right_light_spot);
     right_spot_light_model.set_local_transform(glm::translate(glm::mat4(1.0f), right_spot_light.get_position()));
 
-    floor.set_local_transform(glm::translate(glm::mat4(1.0f), glm::vec3(15.0f, -10.0f, -20.0f)));
+    floor.set_local_transform(glm::translate(glm::mat4(1.0f), glm::vec3(15.0f, 0.0f, -20.0f)));
 
 
     SceneManager::SceneManager scene_manager(1280, 720);
@@ -172,7 +172,7 @@ int main() {
     scene_manager.add_shader(depth_2d);
     scene_manager.add_shader(depth_cube);
     //scene_manager.add_model(overhead_point_light_model);
-    scene_manager.add_model(right_spot_light_model);
+    //scene_manager.add_model(right_spot_light_model);
     scene_manager.add_model(floor);
     //scene_manager.add_light(overhead_point_light);
     scene_manager.add_light(right_spot_light);
@@ -182,7 +182,7 @@ int main() {
     glm::vec3 bed_position = glm::vec3(15.0f, 0.0f, -20.0f);
     glm::mat4 bed_offset = glm::translate(glm::mat4(1.0f), bed_position);
 
-    glm::vec3 right_spot_dir = glm::normalize(bed_position - right_light_spot);
+    glm::vec3 right_spot_dir = glm::normalize(right_spot_light.get_position() - bed_position);
     right_spot_light.set_direction(right_spot_dir);
 
 
@@ -204,7 +204,7 @@ int main() {
     auto bookcase = model_from_obj_file("assets/models/SimpleOldTownAssets/BookCase01.obj", "Bookcase");
     bookcase.set_local_transform(bookcase_offset);
     scene_manager.add_model(bookcase);
-    scene_manager.add_light(flashlight);
+    //scene_manager.add_light(flashlight);
 
 
     // ─── Create camera ───────────────────────────────────────────────────
@@ -306,7 +306,7 @@ int main() {
         glDrawArrays(GL_TRIANGLES, 0, 6);
         glBindVertexArray(0);
     #endif
-        scene_manager.render(vp);
+        scene_manager.render(view, proj);
         // cube_model.draw(vp);
         SDL_GL_SwapWindow(window);
     }

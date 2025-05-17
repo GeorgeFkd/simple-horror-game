@@ -246,9 +246,10 @@ void Model::Model::update_world_transform(const glm::mat4& parent_transform) {
     }
 }
 
-void Model::Model::draw(const glm::mat4& view_projection, Shader* shader) const{
+void Model::Model::draw(const glm::mat4& view, const glm::mat4& projection, Shader* shader) const{
     // upload matrices
-    shader->set_mat4("uViewProj", view_projection);
+    shader->set_mat4("uView", view);
+    shader->set_mat4("uProj", projection);
     shader->set_mat4("uModel", world_transform);
 
     glBindVertexArray(vao);
@@ -299,9 +300,9 @@ void Model::Model::draw(const glm::mat4& view_projection, Shader* shader) const{
 
 void Model::Model::draw_depth(Shader* shader) const {
 
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_FRONT);
-    glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+    //glEnable(GL_CULL_FACE);
+    //glCullFace(GL_FRONT);
+    //glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 
     shader->set_mat4("uModel", world_transform);
     glBindVertexArray(vao);
@@ -314,8 +315,8 @@ void Model::Model::draw_depth(Shader* shader) const {
             offset_ptr
         );
     }
-    glCullFace(GL_BACK);
-    glColorMask(GL_TRUE,  GL_TRUE,  GL_TRUE,  GL_TRUE);
+    //glCullFace(GL_BACK);
+    //glColorMask(GL_TRUE,  GL_TRUE,  GL_TRUE,  GL_TRUE);
     glBindVertexArray(0);
 }
 

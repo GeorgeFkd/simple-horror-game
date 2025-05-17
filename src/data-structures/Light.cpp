@@ -115,8 +115,10 @@ void Light::draw_lighting(Shader *shader, const std::string &base, int index) co
 
     shader->set_int(base + "type", int(type));
 
-    glm::mat4  light_space_matrix = get_light_view() * get_light_projection();
-    shader->set_mat4(base + "lightSpaceMatrix", light_space_matrix);
+    shader->set_mat4(base + "view", get_light_view());
+    shader->set_mat4(base + "proj", get_light_projection());
+    shader->set_float(base + "nearPlane", get_near_plane());
+    shader->set_float(base + "farPlane", get_far_plane());
     //shader->set_texture(base + "shadowMap", get_depth_texture(), 5);
 }
 
@@ -177,8 +179,8 @@ void Light::draw_depth_pass(Shader* shader,
         glClear(GL_DEPTH_BUFFER_BIT);
 
         shader->use();
-        glm::mat4 light_space = get_light_projection() * get_light_view();
-        shader->set_mat4("uLightSpaceMatrix", light_space);
+        shader->set_mat4("uView", get_light_view());
+        shader->set_mat4("uProj", get_light_projection());
 
         // draw all models into this 2D map
         for (auto* m : models) {
@@ -243,10 +245,11 @@ glm::mat4 Light::get_light_projection() const
     case LightType::SPOT:
     {
         // Use the spot cone angle as FOV (double the cutoff half‐angle)
-        float fov = glm::radians(outer_cutoff * 2.0f);
+        float fov = glm::radians(outer_cutoff * 10.0f);
         float aspect = (float)shadow_width / (float)shadow_height;
         return glm::perspective(
             fov,
+            //glm::radians(90.0f),
             aspect,
             near_plane,
             far_plane
@@ -257,9 +260,10 @@ glm::mat4 Light::get_light_projection() const
 
 glm::mat4 Light::get_light_view() const {
     // For directional and spot lights
+    auto dir = glm::normalize(direction);
     return glm::lookAt(
         position,
-        position + direction,
+        position + dir,
         glm::vec3(0.0f, 1.0f, 0.0f)
     );
 }

@@ -25,7 +25,7 @@ void SceneManager::SceneManager::render_depth_pass() {
     }
 }
 
-void SceneManager::SceneManager::render(const glm::mat4& view_projection){
+void SceneManager::SceneManager::render(const glm::mat4& view, const glm::mat4& projection){
 
     // Optional: reset viewport to screen size
     glViewport(0, 0, screen_width, screen_height);
@@ -49,7 +49,8 @@ void SceneManager::SceneManager::render(const glm::mat4& view_projection){
 
     for (auto const& model: models){
         model->update_world_transform(glm::mat4(1.0f));
-        model->draw(view_projection, shader);
+        model->draw(view, projection, shader);
+        //model->draw(lights[0]->get_light_view(), lights[0]->get_light_projection(), shader);
     }
 
 
