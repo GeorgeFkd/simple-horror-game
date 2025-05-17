@@ -1,4 +1,5 @@
 #include "OBJLoader.h"
+#include "tiffio.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #include <GL/glew.h>
@@ -114,13 +115,75 @@ void ObjectLoader::OBJLoader::read_from_file(const std::string &filename) {
 
 
 }
+
+
+GLuint load_texture_from_tiff(const std::string& filename) {
+    TIFF* tif = TIFFOpen(filename.c_str(), "r");
+    if (!tif) {
+        std::cerr << "Failed to open TIFF: " << filename << "\n";
+
+        return 1;
+    }
+
+    uint32_t width, height;
+    TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &width);
+    TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &height);
+
+    std::vector<uint32_t> raster(width * height);
+    if (!TIFFReadRGBAImage(tif, width, height, raster.data(), 0)) {
+        std::cerr << "Failed to read TIFF image data from: " << filename << "\n";
+        TIFFClose(tif);
+        return 2;
+    }
+
+    // TIFF is bottom-up; reverse vertically if needed
+    std::vector<uint8_t> data(width * height * 4);
+    for (size_t y = 0; y < height; ++y) {
+        for (size_t x = 0; x < width; ++x) {
+            uint32_t pixel = raster[(height - 1 - y) * width + x];
+            data[4 * (y * width + x) + 0] = TIFFGetR(pixel);
+            data[4 * (y * width + x) + 1] = TIFFGetG(pixel);
+            data[4 * (y * width + x) + 2] = TIFFGetB(pixel);
+            data[4 * (y * width + x) + 3] = TIFFGetA(pixel);
+        }
+    }
+
+    GLuint tex;
+    glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0,
+                 GL_RGBA, GL_UNSIGNED_BYTE, data.data());
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    TIFFClose(tif);
+    return tex;
+}
+
+bool fileExtensionIs(const std::string& filename, const std::string& extension) {
+    auto pos = filename.rfind(extension);
+
+    if(pos != std::string::npos && (filename.substr(pos,filename.size()) == extension))
+            return true;
+
+    return false;
+}
+
+
 GLuint ObjectLoader::load_texture_from_file(const std::string& filepath) {
+    if (fileExtensionIs(filepath,".tif")) {
+        return load_texture_from_tiff(filepath);
+    }
     int width, height, channels;
     stbi_set_flip_vertically_on_load(true);
     unsigned char* data = stbi_load(filepath.c_str(), &width, &height, &channels, 0);
 
     if (!data) {
-        std::cerr << "Failed to load texture: " << filepath << std::endl;
+        std::cerr << "Failed to load texture " << filepath << "\n";
         return 0;
     }
 
@@ -142,6 +205,7 @@ GLuint ObjectLoader::load_texture_from_file(const std::string& filepath) {
 
     return texture_id;
 }
+
 
 void ObjectLoader::OBJLoader::load_textures() {
   std::cout << "Now preparing materials\n";

@@ -35,12 +35,12 @@ enum class SurfaceType {
   WallRight
 };
 Model::Model repeating_tile(SurfaceType surface, float offset,
-                            const Material &material) {
-  const int TILE_WIDTH = 100;
-  const int TILE_HEIGHT = 100;
-  const float half_width = TILE_WIDTH / 2.0f;
-  const float half_height = TILE_HEIGHT / 2.0f;
-  const float repeat = 5.0f;
+                            const Material &material,float repeat) {
+  constexpr int TILE_WIDTH = 50;
+  constexpr int TILE_HEIGHT = 50;
+  constexpr float half_width = TILE_WIDTH / 2.0f;
+  constexpr float half_height = TILE_HEIGHT / 2.0f;
+  // constexpr float repeat = 5.0f;
 
   std::vector<glm::vec3> verts;
   std::vector<glm::vec2> uvs;
@@ -120,7 +120,7 @@ int main() {
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
   SDL_Window *window = SDL_CreateWindow(
-      "Simple Cube", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720,
+      "Old room", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720,
       SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
   SDL_GLContext glCtx = SDL_GL_CreateContext(window);
 
@@ -213,13 +213,13 @@ auto bed = model_from_obj_file("assets/models/SimpleOldTownAssets/Bed01.obj", "B
     scene_manager.add_model(bed);
 
 
-    glm::mat4 chair1_offset = glm::translate(glm::mat4(1.0f), bed_position + glm::vec3(-0.5f, 0.0f, 1.0f));
+    #define OFFSET(X,Y) glm::translate(glm::mat4(1.0f),X + Y)
+    glm::mat4 chair1_offset = OFFSET(bed_position,glm::vec3(-0.5f, 0.0f, 1.0f));
     auto chair1 = model_from_obj_file("assets/models/SimpleOldTownAssets/ChairCafeWhite01.obj", "Chair 1");
     chair1_offset = glm::rotate(chair1_offset, glm::radians(90.0f), glm::vec3(0, 1, 0)); // rotate around Y-axis
     chair1.set_local_transform(chair1_offset);
     scene_manager.add_model(chair1);
     
-    #define OFFSET(X,Y) glm::translate(glm::mat4(1.0f),X + Y)
     std::string MODELS_FOLDER = "assets/models/SimpleOldTownAssets/";
     std::string bookcase_obj = "BookCase01.obj";
     auto bookcase_file = MODELS_FOLDER + bookcase_obj;
@@ -268,6 +268,127 @@ auto bed = model_from_obj_file("assets/models/SimpleOldTownAssets/Bed01.obj", "B
     rightlight_model.set_local_transform(rightlight_offset);
     scene_manager.add_model(rightlight_model);
 
+    auto carpet = model_from_obj_file(MODELS_FOLDER + "Flokati.obj", "carpet");
+    glm::mat4 carpet_offset = OFFSET(glm::vec3(0.0f,0.0f,-1.85f),glm::vec3(0.0f));
+    carpet.set_local_transform(carpet_offset);
+    scene_manager.add_model(carpet);
+
+
+  //   auto oldhousewindow = model_from_obj_file(MODELS_FOLDER + "OldHouseWindowWood.obj", "oldhousewindow");
+  //   glm::mat4 oldhousewindow_offset = OFFSET(glm::vec3(12.50f - 0.25f,1.0f,0.0f),glm::vec3(0.0f));
+  // oldhousewindow.set_local_transform(oldhousewindow_offset);
+  // scene_manager.add_model(oldhousewindow);
+  //
+  // auto oldhousewindow2 = model_from_obj_file(MODELS_FOLDER + "OldHouseWindowWood.obj", "oldhousewindow");
+  // glm::mat4 oldhousewindow2_offset = OFFSET(glm::vec3(12.50f - 0.25f,1.0f,0.0f + 1.0f),glm::vec3(0.0f));
+  // oldhousewindow2.set_local_transform(oldhousewindow2_offset);
+  // scene_manager.add_model(oldhousewindow2);
+  //
+  //
+  // auto oldhousewindow3 = model_from_obj_file(MODELS_FOLDER + "OldHouseWindowWood.obj", "oldhousewindow");
+  // glm::mat4 oldhousewindow3_offset = OFFSET(glm::vec3(12.50f - 0.25f,1.0f,0.0f + 2.0f),glm::vec3(0.0f));
+  // oldhousewindow3.set_local_transform(oldhousewindow3_offset);
+  // scene_manager.add_model(oldhousewindow3);
+
+    auto pot = model_from_obj_file(MODELS_FOLDER + "PotNtural.obj","pot");
+    glm::mat4 pot_offset = OFFSET(bed_position,glm::vec3(-6.0f,0,3.0f));
+    pot.set_local_transform(pot_offset);
+    scene_manager.add_model(pot);
+
+  auto pot2 = model_from_obj_file(MODELS_FOLDER + "PotNtural.obj","pot1");
+  glm::mat4 pot2_offset = OFFSET(bed_position,glm::vec3(-5.5f,0,3.0f));
+  pot2.set_local_transform(pot2_offset);
+  scene_manager.add_model(pot2);
+
+  auto pot3 = model_from_obj_file(MODELS_FOLDER + "PotNtural.obj","pot2");
+  glm::mat4 pot3_offset = OFFSET(bed_position,glm::vec3(-5.0f,0,3.0f));
+  pot3.set_local_transform(pot3_offset);
+  scene_manager.add_model(pot3);
+
+  auto pot4 = model_from_obj_file(MODELS_FOLDER + "PotNtural.obj","pot3");
+  glm::mat4 pot4_offset = OFFSET(bed_position,glm::vec3(-4.5f,0,3.0f));
+  pot4.set_local_transform(pot4_offset);
+  scene_manager.add_model(pot4);
+
+  auto watering_can = model_from_obj_file(MODELS_FOLDER + "watering-can.obj","watering-can");
+  glm::mat4 watering_can_offset = OFFSET(bed_position,glm::vec3(-4.0f,0.0f,3.5f));
+  watering_can.set_local_transform(watering_can_offset);
+  scene_manager.add_model(watering_can);
+
+  auto plant = model_from_obj_file(MODELS_FOLDER + "leaves.obj","leaves");
+  glm::mat4 plant_offset = OFFSET(bed_position,glm::vec3(-4.0f,0.0f,3.0f));
+  plant.set_local_transform(plant_offset);
+  scene_manager.add_model(plant);
+
+  auto dining = model_from_obj_file(MODELS_FOLDER + "dining-place.obj","dining-place");
+  glm::mat4 dining_offset = OFFSET(bed_position,glm::vec3(-5.5f,0.0f,-4.5f));
+  dining.set_local_transform(dining_offset);
+  // dining.set_scale(glm::vec3(0.65,0.65,0.65));
+  scene_manager.add_model(dining);
+
+  auto wall_large = model_from_obj_file(MODELS_FOLDER + "OldHouseBrownWallLarge.obj","wall_large-place");
+  glm::mat4 wall_large_offset = OFFSET(bed_position,glm::vec3(-3.5f,0.0f,-6.5f));
+  wall_large.set_local_transform(wall_large_offset);
+  // wall_large.set_scale(glm::vec3(0.65,0.65,0.65));
+  scene_manager.add_model(wall_large);
+  auto wall2_large = model_from_obj_file(MODELS_FOLDER + "OldHouseBrownWallLarge.obj","wall2_large-place");
+  glm::mat4 wall2_large_offset = OFFSET(bed_position,glm::vec3(-3.5f,0.0f,6.5f));
+  wall2_large.set_local_transform(wall2_large_offset);
+  // wall_large.set_scale(glm::vec3(0.65,0.65,0.65));
+  scene_manager.add_model(wall2_large);
+
+  auto wall3_large = model_from_obj_file(MODELS_FOLDER + "OldHouseBrownWallLarge.obj","wall2_large-place");
+  glm::mat4 wall3_large_offset = OFFSET(bed_position,glm::vec3(-3.5f,0.0f,3.5f));
+  wall3_large.set_local_transform(wall3_large_offset);
+  // wall_large.set_scale(glm::vec3(0.65,0.65,0.65));
+  scene_manager.add_model(wall3_large);
+  auto wall4_large = model_from_obj_file(MODELS_FOLDER + "OldHouseBrownWallLarge.obj","wall2_large-place");
+  glm::mat4 wall4_large_offset = OFFSET(bed_position,glm::vec3(-3.5f,0.0f,-3.5f));
+  wall4_large.set_local_transform(wall4_large_offset);
+  // wall_large.set_scale(glm::vec3(0.65,0.65,0.65));
+  scene_manager.add_model(wall4_large);
+  auto wall5_large = model_from_obj_file(MODELS_FOLDER + "OldHouseBrownWallLarge.obj","wall2_large-place");
+  glm::mat4 wall5_large_offset = OFFSET(bed_position,glm::vec3(-3.5f,0.0f,-1.5f));
+  wall5_large.set_local_transform(wall5_large_offset);
+  // wall_large.set_scale(glm::vec3(0.65,0.65,0.65));
+  scene_manager.add_model(wall5_large);
+
+
+
+  auto wall6_large = model_from_obj_file(MODELS_FOLDER + "OldHouseBrownWallLarge.obj","wall_large-place");
+  glm::mat4 wall6_large_offset = OFFSET(bed_position,glm::vec3(2.5f,0.0f,-6.5f));
+  wall6_large.set_local_transform(wall6_large_offset);
+  // wall_large.set_scale(glm::vec3(0.65,0.65,0.65));
+  scene_manager.add_model(wall6_large);
+  auto wall7_large = model_from_obj_file(MODELS_FOLDER + "OldHouseBrownWallLarge.obj","wall2_large-place");
+  glm::mat4 wall7_large_offset = OFFSET(bed_position,glm::vec3(2.5f,0.0f,6.5f));
+  wall7_large.set_local_transform(wall7_large_offset);
+  // wall_large.set_scale(glm::vec3(0.65,0.65,0.65));
+  scene_manager.add_model(wall7_large);
+
+  auto wall8_large = model_from_obj_file(MODELS_FOLDER + "OldHouseBrownWallLarge.obj","wall2_large-place");
+  glm::mat4 wall8_large_offset = OFFSET(bed_position,glm::vec3(2.5f,0.0f,3.5f));
+  wall8_large.set_local_transform(wall8_large_offset);
+  // wall_large.set_scale(glm::vec3(0.65,0.65,0.65));
+  scene_manager.add_model(wall8_large);
+  auto wall9_large = model_from_obj_file(MODELS_FOLDER + "OldHouseBrownWallLarge.obj","wall2_large-place");
+  glm::mat4 wall9_large_offset = OFFSET(bed_position,glm::vec3(2.5f,0.0f,-3.5f));
+  wall9_large.set_local_transform(wall9_large_offset);
+  // wall_large.set_scale(glm::vec3(0.65,0.65,0.65));
+  scene_manager.add_model(wall9_large);
+  auto wall10_large = model_from_obj_file(MODELS_FOLDER + "OldHouseBrownWallLarge.obj","wall2_large-place");
+  glm::mat4 wall10_large_offset = OFFSET(bed_position,glm::vec3(2.5f,0.0f,-1.5f));
+  wall10_large.set_local_transform(wall10_large_offset);
+  scene_manager.add_model(wall10_large);
+  // auto old_cupboard = model_from_obj_file(MODELS_FOLDER + "old_cupboard.obj","cupboard");
+  // glm::mat4 old_cupboard_offset = OFFSET(bed_position,glm::vec3(3.0f,0.0f,3.5f));
+  // old_cupboard.set_local_transform(old_cupboard_offset);
+  // scene_manager.add_model(old_cupboard);
+  // auto old_cabinet = model_from_obj_file(MODELS_FOLDER + "old-cabinet.obj","old_cabinet");
+  // glm::mat4 old_cabinet_offset = OFFSET(bed_position,glm::vec3(5.0f,0.0f,-1.5f));
+  // old_cabinet.set_local_transform(old_cabinet_offset);
+  // // old_cabinet.set_scale(glm::vec3(0.65,0.65,0.65));
+  // scene_manager.add_model(old_cabinet);
 
 
   Material material;
@@ -283,14 +404,35 @@ auto bed = model_from_obj_file("assets/models/SimpleOldTownAssets/Bed01.obj", "B
     material.map_Kd = texpath;
     material.tex_Kd = texture;
   }
-  float room_size = 12.5f;
-    float room_height = 7.5f;
-  auto floor = repeating_tile(SurfaceType::Floor, 0.0f, material);
-  auto ceiling = repeating_tile(SurfaceType::Ceiling, room_height, material);
-  auto wallF = repeating_tile(SurfaceType::WallFront, -room_size, material);
-  auto wallB = repeating_tile(SurfaceType::WallBack, room_size, material);
-  auto wallL = repeating_tile(SurfaceType::WallLeft, -room_size, material);
-  auto wallR = repeating_tile(SurfaceType::WallRight, room_size, material);
+
+  Material materialRoomWall;
+  {
+    materialRoomWall.Ka = glm::vec3(0.15f, 0.07f, 0.02f);
+    materialRoomWall.Kd = glm::vec3(0.59f, 0.29f, 0.00f);
+    materialRoomWall.Ks = glm::vec3(0.05f, 0.04f, 0.03f);
+    materialRoomWall.Ns = 16.0f;
+    materialRoomWall.d = 1.0f;
+    materialRoomWall.illum = 2;
+    auto texpath = "assets/models/SimpleOldTown/WallBrown.jpg";
+    GLuint texture = ObjectLoader::load_texture_from_file(texpath);
+    materialRoomWall.map_Kd = texpath;
+    materialRoomWall.tex_Kd = texture;
+  }
+
+
+
+  float room_size = 8.0f;
+    float room_height = 6.5f;
+
+  auto roomWall = repeating_tile(SurfaceType::WallFront,3.0f,materialRoomWall,0.5f);
+
+  auto wallsRepeat = 5.0f;
+  auto floor = repeating_tile(SurfaceType::Floor, 0.0f, material,wallsRepeat);
+  auto ceiling = repeating_tile(SurfaceType::Ceiling, room_height, material,wallsRepeat);
+  auto wallF = repeating_tile(SurfaceType::WallFront, -room_size, material,wallsRepeat);
+  auto wallB = repeating_tile(SurfaceType::WallBack, room_size, material,wallsRepeat);
+  auto wallL = repeating_tile(SurfaceType::WallLeft, -room_size, material,wallsRepeat);
+  auto wallR = repeating_tile(SurfaceType::WallRight, room_size, material,wallsRepeat);
 
   {
     scene_manager.add_model(floor);
@@ -299,6 +441,7 @@ auto bed = model_from_obj_file("assets/models/SimpleOldTownAssets/Bed01.obj", "B
     scene_manager.add_model(wallB);
     scene_manager.add_model(wallL);
     scene_manager.add_model(wallR);
+    // scene_manager.add_model(roomWall);
   }
 
   {
@@ -308,7 +451,7 @@ auto bed = model_from_obj_file("assets/models/SimpleOldTownAssets/Bed01.obj", "B
   }
   // ─── Create camera ───────────────────────────────────────────────────
   Camera::CameraObj camera(1280, 720);
-  camera.set_position(glm::vec3{0.0f, 1.0f, 10.0f});
+  camera.set_position(glm::vec3{0.0f, 1.0f, 5.0f});
   // camera.set_direction(overhead_spot.get_direction());
 
 #ifdef DEBUG_DEPTH
@@ -368,7 +511,7 @@ auto bed = model_from_obj_file("assets/models/SimpleOldTownAssets/Bed01.obj", "B
       if (camera.intersectSphereAABB(camera.get_position(), camera.get_radius(),
                                      model->get_aabbmin(),
                                      model->get_aabbmax())) {
-        std::cout << "Collision with: " << model->name() << "\n";
+        // std::cout << "Collision with: " << model->name() << "\n";
         // problem is we start from inside the object
         // collision! revert to last safe position
         camera.set_position(last_camera_position);
