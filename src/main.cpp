@@ -139,7 +139,7 @@ int main() {
         glm::cos(glm::radians(10.0f)), // inner cone
         glm::cos(glm::radians(30.0f)), // outer cone
         2048, 2048,
-        1.0f, 100.0f,
+        1.0f, 10.0f,
         10.0f);
 
     Light overhead_point_light(
@@ -152,7 +152,7 @@ int main() {
         glm::cos(glm::radians(10.0f)), // inner cone
         glm::cos(glm::radians(30.0f)), // outer cone
         2048, 2048,
-        0.1f, 100.0f,
+        0.1f, 10.0f,
         10.0f);
 
 
@@ -175,8 +175,8 @@ int main() {
     //scene_manager.add_model(right_spot_light_model);
     scene_manager.add_model(floor);
     //scene_manager.add_light(flashlight);
-    scene_manager.add_light(overhead_point_light);
-    //scene_manager.add_light(right_spot_light);
+    //scene_manager.add_light(overhead_point_light);
+    scene_manager.add_light(right_spot_light);
 
 
     glm::vec3 bed_position = glm::vec3(15.0f, 0.0f, -20.0f);

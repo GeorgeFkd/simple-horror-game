@@ -253,8 +253,8 @@ glm::mat4 Light::get_light_projection() const
         float fov = glm::radians(outer_cutoff * 50.0f);
         float aspect = (float)shadow_width / (float)shadow_height;
         return glm::perspective(
-            fov,
-            //glm::radians(90.0f),
+            //fov,
+            glm::radians(90.0f),
             aspect,
             near_plane,
             far_plane
