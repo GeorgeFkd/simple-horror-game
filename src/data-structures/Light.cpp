@@ -132,8 +132,8 @@ void Light::draw_depth_pass(Shader* shader,
     glViewport(0, 0, shadow_width, shadow_height);
     glBindFramebuffer(GL_FRAMEBUFFER, depth_map_fbo);
     glEnable(GL_DEPTH_TEST);
-    //glEnable(GL_CULL_FACE);
-    //glCullFace(GL_FRONT);
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_FRONT);
     //glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 
 
@@ -194,7 +194,7 @@ void Light::draw_depth_pass(Shader* shader,
         }
     }
 
-    //glCullFace(GL_BACK);
+    glCullFace(GL_BACK);
     glColorMask(GL_TRUE,  GL_TRUE,  GL_TRUE,  GL_TRUE);
     // restore default framebuffer
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -253,8 +253,8 @@ glm::mat4 Light::get_light_projection() const
         float fov = glm::radians(outer_cutoff * 50.0f);
         float aspect = (float)shadow_width / (float)shadow_height;
         return glm::perspective(
-            fov,
-            //glm::radians(90.0f),
+            //fov,
+            glm::radians(90.0f),
             aspect,
             near_plane,
             far_plane
