@@ -125,8 +125,8 @@ int main() {
         glm::cos(glm::radians(20.0f)), // outer cutoff
         1280,
         720,
-        1.0f,
-        50.0f,
+        0.1f,
+        500.0f,
         10.0f);
 
     Light right_spot_light(
@@ -143,7 +143,7 @@ int main() {
         10.0f);
 
     Light overhead_point_light(
-        LightType::POINT,
+        LightType::SPOT,
         glm::vec3(0.0f, 5.0f, 0.0f),  // above the object
         glm::vec3(0.0f, -1.0f, 0.0f), // pointing straight down
         glm::vec3(0.1f),
@@ -174,8 +174,8 @@ int main() {
     //scene_manager.add_model(overhead_point_light_model);
     //scene_manager.add_model(right_spot_light_model);
     scene_manager.add_model(floor);
-    //scene_manager.add_light(flashlight);
-    scene_manager.add_light(overhead_point_light);
+    scene_manager.add_light(flashlight);
+    //scene_manager.add_light(overhead_point_light);
     scene_manager.add_light(right_spot_light);
 
 
@@ -295,8 +295,12 @@ int main() {
         glm::mat4 view = camera.get_view_matrix();
         glm::mat4 proj = camera.get_projection_matrix();
         glm::mat4 vp = proj * view;
-        //scene_manager.set_spotlight(0, camera.get_position(), camera.get_direction());
-        //scene_manager.set_spotlight(2, camera.get_position(), camera.get_direction());
+        //float forward_offset = 0.5f;
+        float right_offset = 0.4f;
+        //glm::vec3 offset = right_offset * camera.get_right() + forward_offset * camera.get_direction();
+        glm::vec3 offset = right_offset * camera.get_right();
+        flashlight.set_position(camera.get_position() + offset);
+        flashlight.set_direction(camera.get_direction());
         scene_manager.render_depth_pass();
     #ifdef DEBUG_DEPTH
         depth_debug.use();

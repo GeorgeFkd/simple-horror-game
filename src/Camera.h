@@ -69,6 +69,10 @@ namespace Camera{
             return front;
         }
 
+        inline glm::vec3 get_right() const {
+            return right;
+        }
+
         inline glm::vec3 get_position() const {
             return position;
         }

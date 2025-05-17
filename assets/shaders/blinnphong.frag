@@ -279,17 +279,7 @@ void main()
             else if (i == 5) visibility = getVisibility(fragPosLightSpace, Normal, Ldir, shadowMap5);
             else if (i == 6) visibility = getVisibility(fragPosLightSpace, Normal, Ldir, shadowMap6);
             else if (i == 7) visibility = getVisibility(fragPosLightSpace, Normal, Ldir, shadowMap7);
-        }else if (L.type == 0) {
-            if      (i == 0) visibility = getVisibilityPointLight(FragPos, L.position, shadowMapCube0, L.farPlane);
-            if      (i == 1) visibility = getVisibilityPointLight(FragPos, L.position, shadowMapCube1, L.farPlane);
-            if      (i == 2) visibility = getVisibilityPointLight(FragPos, L.position, shadowMapCube2, L.farPlane);
-            if      (i == 3) visibility = getVisibilityPointLight(FragPos, L.position, shadowMapCube3, L.farPlane);
-            if      (i == 4) visibility = getVisibilityPointLight(FragPos, L.position, shadowMapCube4, L.farPlane);
-            if      (i == 5) visibility = getVisibilityPointLight(FragPos, L.position, shadowMapCube5, L.farPlane);
-            if      (i == 6) visibility = getVisibilityPointLight(FragPos, L.position, shadowMapCube6, L.farPlane);
-            if      (i == 7) visibility = getVisibilityPointLight(FragPos, L.position, shadowMapCube7, L.farPlane);
         }
-
         // ambient term (ambient unaffected by shadows)
         ambientAccum += visibility * intensity * spotFactor * L.ambient * Ka;
 
