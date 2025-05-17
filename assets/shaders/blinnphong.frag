@@ -57,6 +57,15 @@ uniform sampler2D  shadowMap5;
 uniform sampler2D  shadowMap6;
 uniform sampler2D  shadowMap7;
 
+uniform samplerCube  shadowMapCube0;
+uniform samplerCube  shadowMapCube1;
+uniform samplerCube  shadowMapCube2;
+uniform samplerCube  shadowMapCube3;
+uniform samplerCube  shadowMapCube4;
+uniform samplerCube  shadowMapCube5;
+uniform samplerCube  shadowMapCube6;
+uniform samplerCube  shadowMapCube7;
+
 float LinearizeDepth(float depth, float nearPlane, float farPlane)
 {
     float z = depth * 2.0 - 1.0; // back to NDC
@@ -123,6 +132,28 @@ float getVisibility(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir, sampler2
         }
     }
     return visibility;
+}
+
+float getVisibilityPointLight(vec3 fragPos, vec3 lightPos, samplerCube shadowMap, float farPlane)
+{
+    vec3 fragToLight = fragPos - lightPos;
+    float currentDepth = length(fragToLight);
+
+    // Bias to prevent shadow acne
+    float bias = 0.05;
+
+    // Create Poisson-sphere sample directions in 3D
+    vec3 sampleDirs[20] = vec3[](
+        vec3( 1,  0,  0), vec3(-1,  0,  0), vec3( 0,  1,  0), vec3( 0, -1,  0),
+        vec3( 0,  0,  1), vec3( 0,  0, -1), vec3( 1,  1,  0), vec3(-1,  1,  0),
+        vec3( 1, -1,  0), vec3(-1, -1,  0), vec3( 1,  0,  1), vec3(-1,  0,  1),
+        vec3( 1,  0, -1), vec3(-1,  0, -1), vec3( 0,  1,  1), vec3( 0, -1,  1),
+        vec3( 0,  1, -1), vec3( 0, -1, -1), vec3( 1,  1,  1), vec3(-1, -1, -1)
+    );
+
+
+    float closestDepth = texture(shadowMap, fragToLight).r * farPlane;
+    return (currentDepth - bias > closestDepth) ? 1.0 : 0.0; 
 }
 
 //float getVisibility(vec4 fragPosLightSpace, sampler2D shadowMap)
@@ -239,7 +270,7 @@ void main()
 
         // calculate shadow visibility (only for spot & directional)
         float visibility = 1.0;
-        if (L.type != 0) {
+        if (L.type == 2) {
             if      (i == 0) visibility = getVisibility(fragPosLightSpace, Normal, Ldir, shadowMap0);
             else if (i == 1) visibility = getVisibility(fragPosLightSpace, Normal, Ldir, shadowMap1);
             else if (i == 2) visibility = getVisibility(fragPosLightSpace, Normal, Ldir, shadowMap2);
@@ -248,6 +279,15 @@ void main()
             else if (i == 5) visibility = getVisibility(fragPosLightSpace, Normal, Ldir, shadowMap5);
             else if (i == 6) visibility = getVisibility(fragPosLightSpace, Normal, Ldir, shadowMap6);
             else if (i == 7) visibility = getVisibility(fragPosLightSpace, Normal, Ldir, shadowMap7);
+        }else if (L.type == 0) {
+            if      (i == 0) visibility = getVisibilityPointLight(FragPos, L.position, shadowMapCube0, L.farPlane);
+            if      (i == 1) visibility = getVisibilityPointLight(FragPos, L.position, shadowMapCube1, L.farPlane);
+            if      (i == 2) visibility = getVisibilityPointLight(FragPos, L.position, shadowMapCube2, L.farPlane);
+            if      (i == 3) visibility = getVisibilityPointLight(FragPos, L.position, shadowMapCube3, L.farPlane);
+            if      (i == 4) visibility = getVisibilityPointLight(FragPos, L.position, shadowMapCube4, L.farPlane);
+            if      (i == 5) visibility = getVisibilityPointLight(FragPos, L.position, shadowMapCube5, L.farPlane);
+            if      (i == 6) visibility = getVisibilityPointLight(FragPos, L.position, shadowMapCube6, L.farPlane);
+            if      (i == 7) visibility = getVisibilityPointLight(FragPos, L.position, shadowMapCube7, L.farPlane);
         }
 
         // ambient term (ambient unaffected by shadows)
@@ -292,6 +332,15 @@ void main()
     //{
     //    FragColor = vec4(1.0, 0.0, 1.0, 1.0); // outside light frustum
     //}
+    //vec3 fragToLight = FragPos - lights[0].position;
+    //float currentDepth = length(fragToLight);
 
+    //float closestDepth = texture(shadowMapCube0, fragToLight).r;
+    //closestDepth *= lights[0].farPlane; // convert from [0,1] to actual distance
+
+    //float bias = 0.05;
+    //float visibility = currentDepth - bias > closestDepth ? 0.0 : 1.0;
+
+    //FragColor = vec4(vec3(visibility), 1);
     FragColor = vec4(color, material.opacity);
 }

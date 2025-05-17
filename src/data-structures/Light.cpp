@@ -161,8 +161,8 @@ void Light::draw_depth_pass(Shader* shader,
                 "shadowMatrices[" + std::to_string(face) + "]",
                 proj * views[face]
             );
-            shader->set_vec3("light_pos", position);
-            shader->set_float("far_plane", far_plane);
+            shader->set_vec3("lightPos", position);
+            shader->set_float("farPlane", far_plane);
 
             // draw all models into this face
             for (auto* m : models) {
@@ -272,11 +272,11 @@ glm::mat4 Light::get_light_view() const {
 
 std::vector<glm::mat4> Light::get_point_light_views() const {
     return {
-        glm::lookAt(position, position + glm::vec3(1, 0, 0),   glm::vec3(0, -1, 0)), // +X
-        glm::lookAt(position, position + glm::vec3(-1, 0, 0),  glm::vec3(0, -1, 0)), // -X
-        glm::lookAt(position, position + glm::vec3(0, 1, 0),   glm::vec3(0, 0, 1)),  // +Y
-        glm::lookAt(position, position + glm::vec3(0, -1, 0),  glm::vec3(0, 0, -1)), // -Y
-        glm::lookAt(position, position + glm::vec3(0, 0, 1),   glm::vec3(0, -1, 0)), // +Z
-        glm::lookAt(position, position + glm::vec3(0, 0, -1),  glm::vec3(0, -1, 0)), // -Z
+        glm::lookAt(position, position + glm::vec3( 1,  0,  0), glm::vec3(0, -1,  0)), // +X
+        glm::lookAt(position, position + glm::vec3(-1,  0,  0), glm::vec3(0, -1,  0)), // -X
+        glm::lookAt(position, position + glm::vec3( 0,  1,  0), glm::vec3(0,  0,  1)), // +Y
+        glm::lookAt(position, position + glm::vec3( 0, -1,  0), glm::vec3(0,  0, -1)), // -Y
+        glm::lookAt(position, position + glm::vec3( 0,  0,  1), glm::vec3(0, -1,  0)), // +Z
+        glm::lookAt(position, position + glm::vec3( 0,  0, -1), glm::vec3(0, -1,  0))  // -Z
     };
 }

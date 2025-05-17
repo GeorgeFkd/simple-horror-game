@@ -143,7 +143,7 @@ int main() {
         10.0f);
 
     Light overhead_point_light(
-        LightType::SPOT,
+        LightType::POINT,
         glm::vec3(0.0f, 5.0f, 0.0f),  // above the object
         glm::vec3(0.0f, -1.0f, 0.0f), // pointing straight down
         glm::vec3(0.1f),
@@ -175,7 +175,7 @@ int main() {
     //scene_manager.add_model(right_spot_light_model);
     scene_manager.add_model(floor);
     //scene_manager.add_light(flashlight);
-    //scene_manager.add_light(overhead_point_light);
+    scene_manager.add_light(overhead_point_light);
     scene_manager.add_light(right_spot_light);
 
 
