@@ -174,8 +174,8 @@ int main() {
     //scene_manager.add_model(overhead_point_light_model);
     //scene_manager.add_model(right_spot_light_model);
     scene_manager.add_model(floor);
-    scene_manager.add_light(flashlight);
     //scene_manager.add_light(overhead_point_light);
+    scene_manager.add_light(flashlight);
     scene_manager.add_light(right_spot_light);
 
 
@@ -198,34 +198,34 @@ int main() {
         "assets/models/SimpleOldTownAssets/ChairCafeWhite01.obj",
         "Cafe Chair");
 
-    // Prepare instancing
-    constexpr int chair_count = 100;
+    constexpr int chair_count = 1000;
     chair.init_instancing(chair_count);
-
-    // Grid parameters
-    const int grid_width  = 10;
-    const int grid_height = 10;
+        
+    const int grid_width  = 40; // 40 × 25 = 1000
+    const int grid_height = 25;
     const float chair_spacing = 2.5f;
-
-    for (int row = 0; row < grid_height; ++row) {
-        for (int col = 0; col < grid_width; ++col) {
+        
+    int placed = 0;
+    for (int row = 0; row < grid_height && placed < chair_count; ++row) {
+        for (int col = 0; col < grid_width && placed < chair_count; ++col) {
             glm::vec3 offset = bed_position + glm::vec3(
                 (col - grid_width / 2) * chair_spacing,
                 0.0f,
                 (row - grid_height / 2) * chair_spacing
             );
-
+        
             glm::mat4 transform = glm::translate(glm::mat4(1.0f), offset);
-
-            // Optional: rotate every other chair
-            if ((row + col) % 2 == 0) {
+        
+            // Optional: rotate every third chair
+            if ((row + col) % 3 == 0) {
                 transform = glm::rotate(transform, glm::radians(90.0f), glm::vec3(0, 1, 0));
             }
-
+        
             chair.add_instance_transform(transform);
+            ++placed;
         }
     }
-
+    
     scene_manager.add_model(chair);
 
     glm::mat4 bookcase_offset = glm::translate(glm::mat4(1.0f), bed_position + glm::vec3(0.0f, 0.0f, -6.0f));
@@ -299,19 +299,34 @@ int main() {
         // 3.5) collision test
         #ifndef DEBUG_DEPTH
         for (auto* model : scene_manager.get_models()) {
-            if ( camera.intersectSphereAABB(
-                    camera.get_position(),
-                    camera.get_radius(),
-                    model->get_aabbmin(),
-                    model->get_aabbmax()) )
-            {
-                // std::cout << "Collision with: " << model->name() << "\n";
-                // problem is we start from inside the object
-                // collision! revert to last safe position
-                camera.set_position(last_camera_position);
-                break;
+            if (model->is_instanced()) {
+                // loop each instance’s box
+                for (size_t i = 0; i < model->get_instance_count(); ++i) {
+                    if ( camera.intersectSphereAABB(
+                        camera.get_position(),
+                        camera.get_radius(),
+                        model->get_instance_aabb_min(i),
+                        model->get_instance_aabb_max(i)) )
+                    {
+                    camera.set_position(last_camera_position);
+                    goto collision_done;
+                    }
+                }
+            }
+            else {
+                // single AABB path
+                if ( camera.intersectSphereAABB(
+                        camera.get_position(),
+                        camera.get_radius(),
+                        model->get_aabbmin(),
+                        model->get_aabbmax()) )
+                {
+                    camera.set_position(last_camera_position);
+                    break;
+                }
             }
         }
+        collision_done:;
         #endif
         // 4) clear and render
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
