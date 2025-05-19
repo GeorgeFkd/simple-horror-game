@@ -3,8 +3,6 @@
 layout(location = 0) in vec3 aPos;
 layout(location = 1) in vec2 aTexCoord;
 layout(location = 2) in vec3 aNormal;
-
-// these four locations must match how you set up your instance VBO
 layout(location = 3) in vec4 iModelCol0;
 layout(location = 4) in vec4 iModelCol1;
 layout(location = 5) in vec4 iModelCol2;

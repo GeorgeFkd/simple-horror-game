@@ -366,6 +366,7 @@ void Model::Model::draw_depth(Shader* shader) const {
     //glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 
     shader->set_mat4("uModel", world_transform);
+    shader->set_bool("uUseInstancing", false);
     glBindVertexArray(vao);
     for (auto const& sm : submeshes) {
         void* offset_ptr = (void*)(sm.index_offset * sizeof(GLuint));
@@ -378,6 +379,26 @@ void Model::Model::draw_depth(Shader* shader) const {
     }
     //glCullFace(GL_BACK);
     //glColorMask(GL_TRUE,  GL_TRUE,  GL_TRUE,  GL_TRUE);
+    glBindVertexArray(0);
+}
+
+void Model::Model::draw_depth_instanced(Shader* shader) const {
+    update_instance_data();
+
+    shader->set_bool("uUseInstancing", true);
+    glBindVertexArray(vao);
+
+
+    for (auto const& sm : submeshes) {
+        void* offset_ptr = (void*)(sm.index_offset * sizeof(GLuint));
+        glDrawElementsInstanced(
+            GL_TRIANGLES,
+            sm.index_count,
+            GL_UNSIGNED_INT,
+            offset_ptr,
+            static_cast<GLsizei>(instance_transforms.size())
+        );
+    }
     glBindVertexArray(0);
 }
 

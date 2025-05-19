@@ -48,6 +48,7 @@ namespace Model{
     class Model {
     public:
         void draw_depth(Shader* shader) const;
+        void draw_depth_instanced(Shader* shader) const;
         void draw(const glm::mat4& view, const glm::mat4& projection, Shader* shader) const;
         void draw_instanced(const glm::mat4& view, const glm::mat4& projection, Shader* shader) const;
         void set_local_transform(const glm::mat4& local_transform);
