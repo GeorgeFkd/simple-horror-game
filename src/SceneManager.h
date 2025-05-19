@@ -35,17 +35,10 @@ namespace SceneManager{
             return models;
         }
 
-        inline void set_spotlight(size_t idx, const glm::vec3& pos, const glm::vec3& dir) {
-            if (idx < lights.size()) {
-                lights[idx]->set_position(pos);
-                lights[idx]->set_direction(dir);
-            }
-        }
-
         Shader* get_shader_by_name(const std::string& shader_name);
 
         void render_depth_pass();
-        void render(const glm::mat4& view_projection);
+        void render(const glm::mat4& view, const glm::mat4& projection);
 
         SceneManager(int width, int height):screen_height(height), screen_width(width){};
         ~SceneManager();

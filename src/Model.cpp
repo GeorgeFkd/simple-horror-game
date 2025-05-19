@@ -247,10 +247,13 @@ void Model::Model::update_world_transform(const glm::mat4& parent_transform) {
     }
 }
 
-void Model::Model::draw(const glm::mat4& view_projection, Shader* shader) const{
-    // upload matrices
-    shader->set_mat4("uViewProj", view_projection);
-    shader->set_mat4("uModel", world_transform);
+void Model::Model::draw_instanced(const glm::mat4& view, const glm::mat4& projection, Shader* shader) const{
+
+    update_instance_data();
+
+    shader->set_mat4("uView", view);
+    shader->set_mat4("uProj", projection);
+    shader->set_bool("uUseInstancing", true);
 
     glBindVertexArray(vao);
     for (auto const& sm : submeshes) {
@@ -285,12 +288,71 @@ void Model::Model::draw(const glm::mat4& view_projection, Shader* shader) const{
         }
 
         // normal map
-        if(sm.mat.tex_Bump) {
-            shader->set_texture("normalMap", sm.mat.tex_Bump, GL_TEXTURE3);
-            shader->set_bool   ("useNormalMap", true);
+        //if(sm.mat.tex_Bump) {
+        //    shader->set_texture("normalMap", sm.mat.tex_Bump, GL_TEXTURE3);
+        //    shader->set_bool   ("useNormalMap", true);
+        //} else {
+        //    shader->set_bool("useNormalMap", false);
+        //}
+
+        void* offsetPtr = (void*)(sm.index_offset * sizeof(GLuint));
+        glDrawElementsInstanced(
+            GL_TRIANGLES,
+            sm.index_count,
+            GL_UNSIGNED_INT,
+            offsetPtr,
+            instance_transforms.size()
+        );
+    }
+    glBindVertexArray(0);
+}
+
+void Model::Model::draw(const glm::mat4& view, const glm::mat4& projection, Shader* shader) const{
+    // upload matrices
+    shader->set_mat4("uView", view);
+    shader->set_mat4("uProj", projection);
+    shader->set_mat4("uModel", world_transform);
+    shader->set_bool("uUseInstancing", false);
+
+    glBindVertexArray(vao);
+    for (auto const& sm : submeshes) {
+        shader->set_vec3("material.ambient", sm.mat.Ka);
+        shader->set_vec3("material.diffuse", sm.mat.Kd);
+        shader->set_vec3("material.specular", sm.mat.Ks);
+        shader->set_vec3("material.emissive", sm.mat.Ke);
+        shader->set_float("material.shininess", sm.mat.Ns);
+        shader->set_float("material.opacity", sm.mat.d);
+        shader->set_int("material.illumModel", sm.mat.illum);
+        shader->set_float("material.ior", sm.mat.Ni);
+
+        if(sm.mat.tex_Ka) {
+            shader->set_texture("ambientMap", sm.mat.tex_Ka, GL_TEXTURE1);
+            shader->set_bool   ("useAmbientMap", true);
         } else {
-            shader->set_bool("useNormalMap", false);
+            shader->set_bool("useAmbientMap", false);
         }
+
+        if(sm.mat.tex_Kd) {
+            shader->set_texture("diffuseMap", sm.mat.tex_Kd, GL_TEXTURE0);
+            shader->set_bool   ("useDiffuseMap", true);
+        } else {
+            shader->set_bool("useDiffuseMap", false);
+        }
+
+        if(sm.mat.tex_Ks) {
+            shader->set_texture("specularMap", sm.mat.tex_Ks, GL_TEXTURE2);
+            shader->set_bool   ("useSpecularMap", true);
+        } else {
+            shader->set_bool("useSpecularMap", false);
+        }
+
+        // normal map
+        //if(sm.mat.tex_Bump) {
+        //    shader->set_texture("normalMap", sm.mat.tex_Bump, GL_TEXTURE3);
+        //    shader->set_bool   ("useNormalMap", true);
+        //} else {
+        //    shader->set_bool("useNormalMap", false);
+        //}
 
         void* offsetPtr = (void*)(sm.index_offset * sizeof(GLuint));
         glDrawElements(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT, offsetPtr);
@@ -300,7 +362,12 @@ void Model::Model::draw(const glm::mat4& view_projection, Shader* shader) const{
 
 void Model::Model::draw_depth(Shader* shader) const {
 
+    //glEnable(GL_CULL_FACE);
+    //glCullFace(GL_FRONT);
+    //glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+
     shader->set_mat4("uModel", world_transform);
+    shader->set_bool("uUseInstancing", false);
     glBindVertexArray(vao);
     for (auto const& sm : submeshes) {
         void* offset_ptr = (void*)(sm.index_offset * sizeof(GLuint));
@@ -309,6 +376,28 @@ void Model::Model::draw_depth(Shader* shader) const {
             sm.index_count,
             GL_UNSIGNED_INT,
             offset_ptr
+        );
+    }
+    //glCullFace(GL_BACK);
+    //glColorMask(GL_TRUE,  GL_TRUE,  GL_TRUE,  GL_TRUE);
+    glBindVertexArray(0);
+}
+
+void Model::Model::draw_depth_instanced(Shader* shader) const {
+    update_instance_data();
+
+    shader->set_bool("uUseInstancing", true);
+    glBindVertexArray(vao);
+
+
+    for (auto const& sm : submeshes) {
+        void* offset_ptr = (void*)(sm.index_offset * sizeof(GLuint));
+        glDrawElementsInstanced(
+            GL_TRIANGLES,
+            sm.index_count,
+            GL_UNSIGNED_INT,
+            offset_ptr,
+            static_cast<GLsizei>(instance_transforms.size())
         );
     }
     glBindVertexArray(0);
@@ -340,3 +429,80 @@ void Model::Model::compute_aabb() {
     aabbmax = world_max;
 }
 
+static void compute_transformed_aabb(
+    const glm::vec3& local_min,
+    const glm::vec3& local_max,
+    const glm::mat4& xf,
+    glm::vec3& out_min,
+    glm::vec3& out_max)
+{
+    // all 8 corners of the local box
+    glm::vec3 corners[8] = {
+        {local_min.x, local_min.y, local_min.z},
+        {local_max.x, local_min.y, local_min.z},
+        {local_min.x, local_max.y, local_min.z},
+        {local_min.x, local_min.y, local_max.z},
+        {local_max.x, local_max.y, local_min.z},
+        {local_min.x, local_max.y, local_max.z},
+        {local_max.x, local_min.y, local_max.z},
+        {local_max.x, local_max.y, local_max.z},
+    };
+
+    out_min = glm::vec3( FLT_MAX);
+    out_max = glm::vec3(-FLT_MAX);
+
+    for (auto &c : corners) {
+        glm::vec3 w = glm::vec3(xf * glm::vec4(c, 1.0f));
+        out_min = glm::min(out_min, w);
+        out_max = glm::max(out_max, w);
+    }
+}
+
+void Model::Model::init_instancing(size_t max_instances) {
+    // Generate the instance‐buffer
+    glGenBuffers(1, &instance_vbo);
+    glBindVertexArray(vao);
+    glBindBuffer(GL_ARRAY_BUFFER, instance_vbo);
+    // allocate enough space for max_instances matrices
+    glBufferData(GL_ARRAY_BUFFER,
+                 max_instances * sizeof(glm::mat4),
+                 nullptr,
+                 GL_DYNAMIC_DRAW);
+
+    // Set up the four vec4 attributes (one per column of the mat4)
+    constexpr GLuint loc = 3; // choose free attribute locations
+    for (int i = 0; i < 4; ++i) {
+        GLuint attrib = loc + i;
+        glEnableVertexAttribArray(attrib);
+        glVertexAttribPointer(attrib,
+                              4,
+                              GL_FLOAT,
+                              GL_FALSE,
+                              sizeof(glm::mat4),
+                              (void*)(sizeof(glm::vec4) * i));
+        // tell GL this is per-instance, not per-vertex:
+        glVertexAttribDivisor(attrib, 1);
+    }
+    is_instanced_ = true;
+    glBindVertexArray(0);
+}
+
+void Model::Model::update_instance_data() const{
+    // Map & write only the portion we need (could also use glBufferSubData)
+    glBindBuffer(GL_ARRAY_BUFFER, instance_vbo);
+    void* ptr = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+    memcpy(ptr,
+        instance_transforms.data(),
+        instance_transforms.size() * sizeof(glm::mat4));
+    glUnmapBuffer(GL_ARRAY_BUFFER);
+}
+
+void Model::Model::add_instance_transform(const glm::mat4& xf) {
+    instance_transforms.push_back(xf);
+
+    glm::vec3 wmin, wmax;
+    compute_transformed_aabb(localaabbmin, localaabbmax, xf, wmin, wmax);
+
+    instance_aabb_min.push_back(wmin);
+    instance_aabb_max.push_back(wmax);
+}

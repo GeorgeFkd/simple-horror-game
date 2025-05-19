@@ -48,7 +48,9 @@ namespace Model{
     class Model {
     public:
         void draw_depth(Shader* shader) const;
-        void draw(const glm::mat4& view_projection, Shader* shader) const;
+        void draw_depth_instanced(Shader* shader) const;
+        void draw(const glm::mat4& view, const glm::mat4& projection, Shader* shader) const;
+        void draw_instanced(const glm::mat4& view, const glm::mat4& projection, Shader* shader) const;
         void set_local_transform(const glm::mat4& local_transform);
         void update_world_transform(const glm::mat4& parent_transform);
         void compute_aabb();
@@ -74,10 +76,35 @@ namespace Model{
         inline glm::vec3 get_aabbmax() const{
             return aabbmax;
         }
+
+        inline bool is_instanced() const{
+            return is_instanced_;
+        }
         
         inline void set_scale(const glm::vec3& s) {
             local_transform = glm::scale(glm::mat4(1.0f), s) * local_transform;
         }
+
+        inline void set_instance_transforms(const std::vector<glm::mat4> instance_transforms){
+            this->instance_transforms = instance_transforms;
+        }
+
+        const glm::vec3& get_instance_aabb_min(size_t i) const {
+            return instance_aabb_min[i];
+        }
+
+        const glm::vec3& get_instance_aabb_max(size_t i) const {
+            return instance_aabb_max[i];
+        }
+
+        inline size_t get_instance_count() const{
+            return instance_transforms.size();
+        }
+
+        void add_instance_transform(const glm::mat4& transform);
+
+        void init_instancing(size_t max_instances);
+        void update_instance_data() const;
 
         Model(const std::vector<glm::vec3>& positions,
             const std::vector<glm::vec3>& normals,
@@ -105,7 +132,12 @@ namespace Model{
         // where the model is actually placed
         // in the world after applying all parent transforms
         glm::mat4 world_transform;
+        std::vector<glm::mat4> instance_transforms;
+        std::vector<glm::vec3> instance_aabb_min;
+        std::vector<glm::vec3> instance_aabb_max;
 
+        GLuint instance_vbo = 0;
+        bool is_instanced_ = false;
         GLuint vao, vbo, ebo = 0; 
         GLuint texture_id = 0; 
 

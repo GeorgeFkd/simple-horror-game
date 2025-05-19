@@ -69,6 +69,10 @@ namespace Camera{
             return front;
         }
 
+        inline glm::vec3 get_right() const {
+            return right;
+        }
+
         inline glm::vec3 get_position() const {
             return position;
         }
@@ -91,10 +95,11 @@ namespace Camera{
 
         bool intersectSphereAABB(const glm::vec3& cen, float r, const glm::vec3& bmin, const glm::vec3& bmax)
         {
-            // find closest point on box to sphere center
-            glm::vec3 closest = glm::clamp(cen, bmin, bmax);
-            float   dist2   = glm::length2(closest - cen);
-            return dist2 <= r*r;
+            // Raise the center to make the "sphere" collision behave taller
+            glm::vec3 offset_cen = cen + glm::vec3(0.0f, -0.6f, 0.0f);
+            glm::vec3 closest = glm::clamp(offset_cen, bmin, bmax);
+            float dist2 = glm::length2(closest - offset_cen);
+            return dist2 <= r * r;
         }
 
         void updateCameraVectors();

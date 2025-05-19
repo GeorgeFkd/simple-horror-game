@@ -1,11 +1,14 @@
 cmake_minimum_required(VERSION 3.10)
 cmake_policy(SET CMP0072 NEW)
 
+add_compile_definitions(GLM_ENABLE_EXPERIMENTAL)
+
 project(OpenGLApp LANGUAGES CXX)
 
 option(BUILD_TESTS "Build Tests(Install Catch2 Dependency)" OFF)
 
 set(CMAKE_CXX_STANDARD 17)
+
 
 
 set(SOURCES

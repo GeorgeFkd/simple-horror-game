@@ -93,12 +93,16 @@ Light::Light(
         );
     }
 
+    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (status != GL_FRAMEBUFFER_COMPLETE) {
+        std::cerr << "Framebuffer not complete! Status: " << status << "\n";
+    }
     glDrawBuffer(GL_NONE);
     glReadBuffer(GL_NONE);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void Light::draw_lighting(Shader *shader, const std::string &base) const{
+void Light::draw_lighting(Shader *shader, const std::string &base, int index) const{
     shader->set_vec3(base + "position", position);
     // only send direction for non-point lights
     if (type != LightType::POINT){
@@ -115,32 +119,114 @@ void Light::draw_lighting(Shader *shader, const std::string &base) const{
 
     shader->set_int(base + "type", int(type));
 
-    shader->set_float(base + "attConstant",      attenuation_constant);
-    shader->set_float(base + "attLinear",        attenuation_linear);
-    shader->set_float(base + "attQuadratic",     attenuation_quadratic);
-    shader->set_float(base + "attenuationPower", attenuation_power);
-    shader->set_float(base + "lightIntensity",   light_intensity);
+    shader->set_mat4(base + "view", get_light_view());
+    shader->set_mat4(base + "proj", get_light_projection());
+    shader->set_float(base + "nearPlane", get_near_plane());
+    shader->set_float(base + "farPlane", get_far_plane());
+    //shader->set_texture(base + "shadowMap", get_depth_texture(), 5);
 }
 
-void Light::draw_depth_pass(Shader* shader) const {
+void Light::draw_depth_pass(Shader* shader, 
+                            const std::vector<Model::Model*>& models) const 
+{
     glViewport(0, 0, shadow_width, shadow_height);
     glBindFramebuffer(GL_FRAMEBUFFER, depth_map_fbo);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depth_map, 0);
-    glClear(GL_DEPTH_BUFFER_BIT);
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_FRONT);
+    //glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 
-    shader->use();
 
     if (type == LightType::POINT) {
-        glm::mat4 proj = get_light_projection();
-        auto views = get_point_light_views();
-        for (int i = 0; i < 6; ++i) {
-            shader->set_mat4("shadowMatrices[" + std::to_string(i) + "]", proj*views[i]);
+        // 1) Prepare  
+        glm::mat4 proj   = get_light_projection();
+        auto     views  = get_point_light_views();
+
+        // 2) Six passes, one per cube face
+        for (int face = 0; face < 6; ++face) {
+            // attach this face
+            glFramebufferTexture2D(
+                GL_FRAMEBUFFER,
+                GL_DEPTH_ATTACHMENT,
+                GL_TEXTURE_CUBE_MAP_POSITIVE_X + face,
+                depth_map,
+                0
+            );
+
+            glClear(GL_DEPTH_BUFFER_BIT);
+
+            shader->use();
+            // update this face's matrix
+            shader->set_mat4(
+                "shadowMatrices[" + std::to_string(face) + "]",
+                proj * views[face]
+            );
+            shader->set_vec3("lightPos", position);
+            shader->set_float("farPlane", far_plane);
+
+            // draw all models into this face
+            for (auto* m : models) {
+                //m->update_world_transform(glm::mat4(1.0f));
+                if(m->is_instanced()){
+                    m->draw_depth_instanced(shader);
+                }else{
+                    m->draw_depth(shader);
+                }
+            }
         }
-        shader->set_float("far_plane", far_plane);
-        shader->set_vec3("light_pos", position);
-    } else {
-        glm::mat4 light_space = get_light_projection() * get_light_view();
-        shader->set_mat4("uLightSpaceMatrix", light_space);
+    }
+    else {
+        // single 2D pass
+        glFramebufferTexture2D(
+            GL_FRAMEBUFFER,
+            GL_DEPTH_ATTACHMENT,
+            GL_TEXTURE_2D,
+            depth_map,
+            0
+        );
+
+        glClear(GL_DEPTH_BUFFER_BIT);
+
+        shader->use();
+        shader->set_mat4("uView", get_light_view());
+        shader->set_mat4("uProj", get_light_projection());
+
+        // draw all models into this 2D map
+        for (auto* m : models) {
+            //m->update_world_transform(glm::mat4(1.0f));
+            if(m->is_instanced()){
+                m->draw_depth_instanced(shader);
+            }else{
+                m->draw_depth(shader);
+            }
+        }
+    }
+
+    glCullFace(GL_BACK);
+    glColorMask(GL_TRUE,  GL_TRUE,  GL_TRUE,  GL_TRUE);
+    // restore default framebuffer
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glUseProgram(0);
+}
+
+void Light::bind_shadow_map(Shader* shader, const std::string& base, int index) const{
+    // pick the GLSL sampler name and GL bind‐target
+    // point lights use a cube‐map
+    if (type == LightType::POINT){
+        std::string base = "shadowMapCube" + std::to_string(index);
+        //shader->set_int(base + "shadowMapCube", index);
+        shader->set_texture(base,
+                            get_depth_texture(),
+                            GL_TEXTURE3 + index,
+                            GL_TEXTURE_CUBE_MAP);
+    }else{
+        // spot or directional use a 2D depth map
+        //shader->set_int(base + "shadowMap2D", index);
+        std::string base = "shadowMap" + std::to_string(index);
+        shader->set_texture(base,
+                            get_depth_texture(),
+                            GL_TEXTURE3 + index,
+                            GL_TEXTURE_2D);
     }
 }
 
@@ -172,10 +258,11 @@ glm::mat4 Light::get_light_projection() const
     case LightType::SPOT:
     {
         // Use the spot cone angle as FOV (double the cutoff half‐angle)
-        float fov = glm::radians(outer_cutoff * 2.0f);
+        float fov = glm::radians(outer_cutoff * 50.0f);
         float aspect = (float)shadow_width / (float)shadow_height;
         return glm::perspective(
-            fov,
+            //fov,
+            glm::radians(90.0f),
             aspect,
             near_plane,
             far_plane
@@ -186,20 +273,18 @@ glm::mat4 Light::get_light_projection() const
 
 glm::mat4 Light::get_light_view() const {
     // For directional and spot lights
-    return glm::lookAt(
-        position,
-        position + direction,
-        glm::vec3(0.0f, 1.0f, 0.0f)
-    );
+    auto dir = glm::normalize(direction);
+    glm::vec3 up = (abs(dir.y) > 0.99f) ? glm::vec3(0.0f, 0.0f, 1.0f) : glm::vec3(0.0f, 1.0f, 0.0f);
+    return glm::lookAt(position, position + dir, up);
 }
 
 std::vector<glm::mat4> Light::get_point_light_views() const {
     return {
-        glm::lookAt(position, position + glm::vec3(1, 0, 0),   glm::vec3(0, -1, 0)), // +X
-        glm::lookAt(position, position + glm::vec3(-1, 0, 0),  glm::vec3(0, -1, 0)), // -X
-        glm::lookAt(position, position + glm::vec3(0, 1, 0),   glm::vec3(0, 0, 1)),  // +Y
-        glm::lookAt(position, position + glm::vec3(0, -1, 0),  glm::vec3(0, 0, -1)), // -Y
-        glm::lookAt(position, position + glm::vec3(0, 0, 1),   glm::vec3(0, -1, 0)), // +Z
-        glm::lookAt(position, position + glm::vec3(0, 0, -1),  glm::vec3(0, -1, 0)), // -Z
+        glm::lookAt(position, position + glm::vec3( 1,  0,  0), glm::vec3(0, -1,  0)), // +X
+        glm::lookAt(position, position + glm::vec3(-1,  0,  0), glm::vec3(0, -1,  0)), // -X
+        glm::lookAt(position, position + glm::vec3( 0,  1,  0), glm::vec3(0,  0,  1)), // +Y
+        glm::lookAt(position, position + glm::vec3( 0, -1,  0), glm::vec3(0,  0, -1)), // -Y
+        glm::lookAt(position, position + glm::vec3( 0,  0,  1), glm::vec3(0, -1,  0)), // +Z
+        glm::lookAt(position, position + glm::vec3( 0,  0, -1), glm::vec3(0, -1,  0))  // -Z
     };
 }

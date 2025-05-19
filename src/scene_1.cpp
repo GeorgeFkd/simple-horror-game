@@ -155,9 +155,9 @@ int main() {
   Shader depth_cube = Shader(shader_paths, shader_types, "depth_cube");
 
   auto right_light =
-        model_from_obj_file("assets/models/SimpleOldTownAssets/light_sphere.obj", "Sphere");
+        model_from_obj_file("assets/models/light_sphere.obj", "Sphere");
   auto overhead_light =
-        model_from_obj_file("assets/models/SimpleOldTownAssets/light_sphere.obj", "Overhead light");
+        model_from_obj_file("assets/models/light_sphere.obj", "Overhead light");
   // hi
   Light flashlight(LightType::SPOT,
                    glm::vec3(0.0f),               // position
@@ -440,9 +440,7 @@ int main() {
   Camera::CameraObj camera(1280, 720);
   camera.set_position(glm::vec3{0.0f, 1.0f, 5.0f});
 
-
-  // ─── Main loop ───────────────────────────────────────────────────────
-  bool running = true;
+bool running = true;
   Uint64 lastTicks = SDL_GetPerformanceCounter();
 
   glm::vec3 last_camera_position;
@@ -465,34 +463,101 @@ int main() {
         int w = ev.window.data1, h = ev.window.data2;
         glViewport(0, 0, w, h);
       }
-    }
+    glm::vec3 last_camera_position;
+    while (running){
+        // 1) compute Δt
+        Uint64 now = SDL_GetPerformanceCounter();
+        float dt = float(now - lastTicks) / float(SDL_GetPerformanceFrequency());
+        lastTicks = now;
+        // 2) handle all pending SDL events
+        SDL_Event ev;
+        while (SDL_PollEvent(&ev))
+        {
+            if (ev.type == SDL_QUIT)
+            {
+                running = false;
+            }
+            // feed mouse/window events to the camera
+            camera.process_input(ev);
+            // adjust the GL viewport on resize
+            if (ev.type == SDL_WINDOWEVENT &&
+                ev.window.event == SDL_WINDOWEVENT_SIZE_CHANGED)
+            {
+                int w = ev.window.data1,
+                    h = ev.window.data2;
+                glViewport(0, 0, w, h);
+            }
+        }
 
-    last_camera_position = camera.get_position();
-    camera.update(dt);
-#ifndef DEBUG_DEPTH
-    for (auto *model : scene_manager.get_models()) {
-      if (camera.intersectSphereAABB(camera.get_position(), camera.get_radius(),
-                                     model->get_aabbmin(),
-                                     model->get_aabbmax())) {
-        camera.set_position(last_camera_position);
-        break;
-      }
+        // 3) update camera movement (WASD/etc) once per frame
+        last_camera_position = camera.get_position();
+        camera.update(dt);
+        // 3.5) collision test
+        #ifndef DEBUG_DEPTH
+        for (auto* model : scene_manager.get_models()) {
+            if (model->is_instanced()) {
+                // loop each instance’s box
+                for (size_t i = 0; i < model->get_instance_count(); ++i) {
+                    if ( camera.intersectSphereAABB(
+                        camera.get_position(),
+                        camera.get_radius(),
+                        model->get_instance_aabb_min(i),
+                        model->get_instance_aabb_max(i)) )
+                    {
+                    camera.set_position(last_camera_position);
+                    goto collision_done;
+                    }
+                }
+            }
+            else {
+                // single AABB path
+                if ( camera.intersectSphereAABB(
+                        camera.get_position(),
+                        camera.get_radius(),
+                        model->get_aabbmin(),
+                        model->get_aabbmax()) )
+                {
+                    camera.set_position(last_camera_position);
+                    break;
+                }
+            }
+        }
+        collision_done:;
+        #endif
+        // 4) clear and render
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glm::mat4 view = camera.get_view_matrix();
+        glm::mat4 proj = camera.get_projection_matrix();
+        glm::mat4 vp = proj * view;
+        //float forward_offset = 0.5f;
+        float right_offset = 0.4f;
+        //glm::vec3 offset = right_offset * camera.get_right() + forward_offset * camera.get_direction();
+        glm::vec3 offset = right_offset * camera.get_right();
+        flashlight.set_position(camera.get_position() + offset);
+        flashlight.set_direction(camera.get_direction());
+        scene_manager.render_depth_pass();
+    #ifdef DEBUG_DEPTH
+        depth_debug.use();
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, flashlight.get_depth_texture());
+        glUniform1i(depth_debug.get_uniform_location("depthMap"), 0);
+        glUniform1f(depth_debug.get_uniform_location("near_plane"), 1.0f);
+        glUniform1f(depth_debug.get_uniform_location("far_plane"), 100.0f);
+        glBindVertexArray(quadVAO);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glBindVertexArray(0);
+    #endif
+        scene_manager.render(view, proj);
+        // cube_model.draw(vp);
+        SDL_GL_SwapWindow(window);
     }
-#endif
-    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glm::mat4 view = camera.get_view_matrix();
-    glm::mat4 proj = camera.get_projection_matrix();
-    glm::mat4 vp = proj * view;
-    scene_manager.set_spotlight(0, camera.get_position(),
-                                camera.get_direction());
-    scene_manager.render_depth_pass();
-    scene_manager.render(vp);
-    SDL_GL_SwapWindow(window);
-  }
+    }
+  }   
   // ─── Cleanup ─────────────────────────────────────────────────────────
   SDL_GL_DeleteContext(glCtx);
   SDL_DestroyWindow(window);
   SDL_Quit();
   return 0;
+
 }

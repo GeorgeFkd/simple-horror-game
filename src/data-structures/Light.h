@@ -6,6 +6,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <string>
 #include "Shader.h"
+#include "Model.h"
 
 enum class LightType { 
     POINT = 0,
@@ -96,8 +97,9 @@ public:
     glm::mat4 get_light_view() const;
     std::vector<glm::mat4> get_point_light_views() const;
 
-    void draw_lighting(Shader* shader, const std::string& base) const;
-    void draw_depth_pass(Shader* shader) const;
+    void bind_shadow_map(Shader* shader, const std::string& base, int index) const;
+    void draw_lighting(Shader* shader, const std::string& base, int index) const;
+    void draw_depth_pass(Shader* shader, const std::vector<Model::Model*>& models) const;
 private:
     LightType type;
     glm::vec3 position;
