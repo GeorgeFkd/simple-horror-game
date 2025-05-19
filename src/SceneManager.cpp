@@ -48,7 +48,7 @@ void SceneManager::SceneManager::render(const glm::mat4& view, const glm::mat4& 
     }
 
     for (auto const& model: models){
-        //model->update_world_transform(glm::mat4(1.0f));
+        model->update_world_transform(glm::mat4(1.0f));
         if(model->is_instanced()){
             model->draw_instanced(view, projection, shader);
         }else{

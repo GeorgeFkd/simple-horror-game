@@ -143,7 +143,7 @@ int main() {
         10.0f);
 
     Light overhead_point_light(
-        LightType::SPOT,
+        LightType::POINT,
         glm::vec3(0.0f, 5.0f, 0.0f),  // above the object
         glm::vec3(0.0f, -1.0f, 0.0f), // pointing straight down
         glm::vec3(0.1f),
@@ -174,7 +174,7 @@ int main() {
     //scene_manager.add_model(overhead_point_light_model);
     //scene_manager.add_model(right_spot_light_model);
     scene_manager.add_model(floor);
-    //scene_manager.add_light(flashlight);
+    scene_manager.add_light(flashlight);
     //scene_manager.add_light(overhead_point_light);
     scene_manager.add_light(right_spot_light);
 
@@ -197,16 +197,35 @@ int main() {
     auto chair = model_from_obj_file(
         "assets/models/SimpleOldTownAssets/ChairCafeWhite01.obj",
         "Cafe Chair");
-    chair.init_instancing(3);
-    glm::mat4 chair1_offset = glm::translate(glm::mat4(1.0f), bed_position + glm::vec3( 2.0f, 0.0f, -1.5f));
-    glm::mat4 chair2_offset =
-    glm::translate(glm::mat4(1.0f), bed_position + glm::vec3(-2.0f, 0.0f, -1.5f));
-    chair2_offset =
-        glm::rotate(chair2_offset, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-    glm::mat4 chair3_offset = glm::translate(glm::mat4(1.0f), bed_position + glm::vec3(1.0f, 0.0f, -3.0f));
-    chair.add_instance_transform(chair1_offset);
-    chair.add_instance_transform(chair2_offset);
-    chair.add_instance_transform(chair3_offset);
+
+    // Prepare instancing
+    constexpr int chair_count = 100;
+    chair.init_instancing(chair_count);
+
+    // Grid parameters
+    const int grid_width  = 10;
+    const int grid_height = 10;
+    const float chair_spacing = 2.5f;
+
+    for (int row = 0; row < grid_height; ++row) {
+        for (int col = 0; col < grid_width; ++col) {
+            glm::vec3 offset = bed_position + glm::vec3(
+                (col - grid_width / 2) * chair_spacing,
+                0.0f,
+                (row - grid_height / 2) * chair_spacing
+            );
+
+            glm::mat4 transform = glm::translate(glm::mat4(1.0f), offset);
+
+            // Optional: rotate every other chair
+            if ((row + col) % 2 == 0) {
+                transform = glm::rotate(transform, glm::radians(90.0f), glm::vec3(0, 1, 0));
+            }
+
+            chair.add_instance_transform(transform);
+        }
+    }
+
     scene_manager.add_model(chair);
 
     glm::mat4 bookcase_offset = glm::translate(glm::mat4(1.0f), bed_position + glm::vec3(0.0f, 0.0f, -6.0f));
