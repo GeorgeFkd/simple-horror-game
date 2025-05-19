@@ -10,7 +10,6 @@
 #include "Model.h"
 #include "Light.h"
 #include "Shader.h"
-
 namespace SceneManager{
 
 

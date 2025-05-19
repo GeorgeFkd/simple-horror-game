@@ -57,38 +57,38 @@ Model::Model::Model(const std::vector<glm::vec3>& positions,
     submeshes.push_back(sm);
 
     // Create & upload GL buffers
-    glGenVertexArrays(1, &vao);
-    glGenBuffers(1, &vbo);
-    glGenBuffers(1, &ebo);
+    GLCall(glGenVertexArrays(1, &vao));
+    GLCall(glGenBuffers(1, &vbo));
+    GLCall(glGenBuffers(1, &ebo));
 
-    glBindVertexArray(vao);
+    GLCall(glBindVertexArray(vao));
 
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER,
+    GLCall(glBindBuffer(GL_ARRAY_BUFFER, vbo));
+    GLCall(glBufferData(GL_ARRAY_BUFFER,
                  unique_vertices.size() * sizeof(Vertex),
                  unique_vertices.data(),
-                 GL_STATIC_DRAW);
+                 GL_STATIC_DRAW));
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+    GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo));
+    GLCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER,
                  indices.size() * sizeof(GLuint),
                  indices.data(),
-                 GL_STATIC_DRAW);
+                 GL_STATIC_DRAW));
 
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
+    GLCall(glEnableVertexAttribArray(0));
+    GLCall(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
                           sizeof(Vertex),
-                          (void*)offsetof(Vertex, position));
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE,
+                          (void*)offsetof(Vertex, position)));
+    GLCall(glEnableVertexAttribArray(1));
+    GLCall(glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE,
                           sizeof(Vertex),
-                          (void*)offsetof(Vertex, texcoord));
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE,
+                          (void*)offsetof(Vertex, texcoord)));
+    GLCall(glEnableVertexAttribArray(2));
+    GLCall(glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE,
                           sizeof(Vertex),
-                          (void*)offsetof(Vertex, normal));
+                          (void*)offsetof(Vertex, normal)));
 
-    glBindVertexArray(0);
+    GLCall(glBindVertexArray(0));
 }
 
 Model::Model::Model(const ObjectLoader::OBJLoader& loader, const std::string& label)
@@ -171,41 +171,41 @@ Model::Model::Model(const ObjectLoader::OBJLoader& loader, const std::string& la
     }
 
     //create & upload VAO/VBO/EBO
-    glGenVertexArrays(1, &vao);
-    glGenBuffers(1, &vbo);
-    glGenBuffers(1, &ebo);
+    GLCall(glGenVertexArrays(1, &vao));
+    GLCall(glGenBuffers(1, &vbo));
+    GLCall(glGenBuffers(1, &ebo));
 
-    glBindVertexArray(vao);
+    GLCall(glBindVertexArray(vao));
 
     // VBO
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER,
+    GLCall(glBindBuffer(GL_ARRAY_BUFFER, vbo));
+    GLCall(glBufferData(GL_ARRAY_BUFFER,
                  unique_vertices.size() * sizeof(Vertex),
                  unique_vertices.data(),
-                 GL_STATIC_DRAW);
+                 GL_STATIC_DRAW));
 
     // EBO
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+    GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo));
+    GLCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER,
                  all_indices.size() * sizeof(GLuint),
                  all_indices.data(),
-                 GL_STATIC_DRAW);
+                 GL_STATIC_DRAW));
 
     // attributes (pos, tex, norm) …
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
+    GLCall(glEnableVertexAttribArray(0));
+    GLCall(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
                           sizeof(Vertex),
-                          (void*)offsetof(Vertex, position));
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE,
+                          (void*)offsetof(Vertex, position)));
+    GLCall(glEnableVertexAttribArray(1));
+    GLCall(glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE,
                           sizeof(Vertex),
-                          (void*)offsetof(Vertex, texcoord));
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE,
+                          (void*)offsetof(Vertex, texcoord)));
+    GLCall(glEnableVertexAttribArray(2));
+    GLCall(glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE,
                           sizeof(Vertex),
-                          (void*)offsetof(Vertex, normal));
+                          (void*)offsetof(Vertex, normal)));
 
-    glBindVertexArray(0);
+    GLCall(glBindVertexArray(0));
 
     // compute local AABB
     for (auto const& v : unique_vertices) {
@@ -217,15 +217,15 @@ Model::Model::Model(const ObjectLoader::OBJLoader& loader, const std::string& la
 Model::Model::~Model(){
     // Tear down GL objects in reverse order of creation:
     if (ebo) {
-        glDeleteBuffers(1, &ebo);
+        GLCall(glDeleteBuffers(1, &ebo));
         ebo = 0;
     }
     if (vbo) {
-        glDeleteBuffers(1, &vbo);
+        GLCall(glDeleteBuffers(1, &vbo));
         vbo = 0;
     }
     if (vao) {
-        glDeleteVertexArrays(1, &vao);
+        GLCall(glDeleteVertexArrays(1, &vao));
         vao = 0;
     }
 }
@@ -255,7 +255,7 @@ void Model::Model::draw_instanced(const glm::mat4& view, const glm::mat4& projec
     shader->set_mat4("uProj", projection);
     shader->set_bool("uUseInstancing", true);
 
-    glBindVertexArray(vao);
+    GLCall(glBindVertexArray(vao));
     for (auto const& sm : submeshes) {
         shader->set_vec3("material.ambient", sm.mat.Ka);
         shader->set_vec3("material.diffuse", sm.mat.Kd);
@@ -296,15 +296,15 @@ void Model::Model::draw_instanced(const glm::mat4& view, const glm::mat4& projec
         //}
 
         void* offsetPtr = (void*)(sm.index_offset * sizeof(GLuint));
-        glDrawElementsInstanced(
+        GLCall(glDrawElementsInstanced(
             GL_TRIANGLES,
             sm.index_count,
             GL_UNSIGNED_INT,
             offsetPtr,
             instance_transforms.size()
-        );
+        ));
     }
-    glBindVertexArray(0);
+    GLCall(glBindVertexArray(0));
 }
 
 void Model::Model::draw(const glm::mat4& view, const glm::mat4& projection, Shader* shader) const{
@@ -314,7 +314,7 @@ void Model::Model::draw(const glm::mat4& view, const glm::mat4& projection, Shad
     shader->set_mat4("uModel", world_transform);
     shader->set_bool("uUseInstancing", false);
 
-    glBindVertexArray(vao);
+    GLCall(glBindVertexArray(vao));
     for (auto const& sm : submeshes) {
         shader->set_vec3("material.ambient", sm.mat.Ka);
         shader->set_vec3("material.diffuse", sm.mat.Kd);
@@ -347,60 +347,60 @@ void Model::Model::draw(const glm::mat4& view, const glm::mat4& projection, Shad
         }
 
         // normal map
-        //if(sm.mat.tex_Bump) {
+        // if(sm.mat.tex_Bump) {
         //    shader->set_texture("normalMap", sm.mat.tex_Bump, GL_TEXTURE3);
         //    shader->set_bool   ("useNormalMap", true);
-        //} else {
+        // } else {
         //    shader->set_bool("useNormalMap", false);
-        //}
+        // }
 
         void* offsetPtr = (void*)(sm.index_offset * sizeof(GLuint));
-        glDrawElements(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT, offsetPtr);
+        GLCall(glDrawElements(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT, offsetPtr));
     }
-    glBindVertexArray(0);
+    GLCall(glBindVertexArray(0));
 }
 
 void Model::Model::draw_depth(Shader* shader) const {
 
-    //glEnable(GL_CULL_FACE);
-    //glCullFace(GL_FRONT);
-    //glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+    //GLCall(glEnable(GL_CULL_FACE));
+    //GLCall(glCullFace(GL_FRONT));
+    //GLCall(glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE));
 
     shader->set_mat4("uModel", world_transform);
     shader->set_bool("uUseInstancing", false);
-    glBindVertexArray(vao);
+    GLCall(glBindVertexArray(vao));
     for (auto const& sm : submeshes) {
         void* offset_ptr = (void*)(sm.index_offset * sizeof(GLuint));
-        glDrawElements(
+        GLCall(glDrawElements(
             GL_TRIANGLES,
             sm.index_count,
             GL_UNSIGNED_INT,
             offset_ptr
-        );
+        ));
     }
-    //glCullFace(GL_BACK);
-    //glColorMask(GL_TRUE,  GL_TRUE,  GL_TRUE,  GL_TRUE);
-    glBindVertexArray(0);
+    //GLCall(glCullFace(GL_BACK));
+    //GLCall(glColorMask(GL_TRUE,  GL_TRUE,  GL_TRUE,  GL_TRUE));
+    GLCall(glBindVertexArray(0));
 }
 
 void Model::Model::draw_depth_instanced(Shader* shader) const {
     update_instance_data();
 
     shader->set_bool("uUseInstancing", true);
-    glBindVertexArray(vao);
+    GLCall(glBindVertexArray(vao));
 
 
     for (auto const& sm : submeshes) {
         void* offset_ptr = (void*)(sm.index_offset * sizeof(GLuint));
-        glDrawElementsInstanced(
+        GLCall(glDrawElementsInstanced(
             GL_TRIANGLES,
             sm.index_count,
             GL_UNSIGNED_INT,
             offset_ptr,
             static_cast<GLsizei>(instance_transforms.size())
-        );
+        ));
     }
-    glBindVertexArray(0);
+    GLCall(glBindVertexArray(0));
 }
 
 void Model::Model::compute_aabb() {
@@ -460,41 +460,41 @@ static void compute_transformed_aabb(
 
 void Model::Model::init_instancing(size_t max_instances) {
     // Generate the instance‐buffer
-    glGenBuffers(1, &instance_vbo);
-    glBindVertexArray(vao);
-    glBindBuffer(GL_ARRAY_BUFFER, instance_vbo);
+    GLCall(glGenBuffers(1, &instance_vbo));
+    GLCall(glBindVertexArray(vao));
+    GLCall(glBindBuffer(GL_ARRAY_BUFFER, instance_vbo));
     // allocate enough space for max_instances matrices
-    glBufferData(GL_ARRAY_BUFFER,
+    GLCall(glBufferData(GL_ARRAY_BUFFER,
                  max_instances * sizeof(glm::mat4),
                  nullptr,
-                 GL_DYNAMIC_DRAW);
+                 GL_DYNAMIC_DRAW));
 
     // Set up the four vec4 attributes (one per column of the mat4)
     constexpr GLuint loc = 3; // choose free attribute locations
     for (int i = 0; i < 4; ++i) {
         GLuint attrib = loc + i;
-        glEnableVertexAttribArray(attrib);
-        glVertexAttribPointer(attrib,
+        GLCall(glEnableVertexAttribArray(attrib));
+        GLCall(glVertexAttribPointer(attrib,
                               4,
                               GL_FLOAT,
                               GL_FALSE,
                               sizeof(glm::mat4),
-                              (void*)(sizeof(glm::vec4) * i));
+                              (void*)(sizeof(glm::vec4) * i)));
         // tell GL this is per-instance, not per-vertex:
-        glVertexAttribDivisor(attrib, 1);
+        GLCall(glVertexAttribDivisor(attrib, 1));
     }
     is_instanced_ = true;
-    glBindVertexArray(0);
+    GLCall(glBindVertexArray(0));
 }
 
 void Model::Model::update_instance_data() const{
     // Map & write only the portion we need (could also use glBufferSubData)
-    glBindBuffer(GL_ARRAY_BUFFER, instance_vbo);
+    GLCall(glBindBuffer(GL_ARRAY_BUFFER, instance_vbo));
     void* ptr = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
     memcpy(ptr,
         instance_transforms.data(),
         instance_transforms.size() * sizeof(glm::mat4));
-    glUnmapBuffer(GL_ARRAY_BUFFER);
+    GLCall(glUnmapBuffer(GL_ARRAY_BUFFER));
 }
 
 void Model::Model::add_instance_transform(const glm::mat4& xf) {
