@@ -206,7 +206,7 @@ int main() {
         720,
         0.1f,
         500.0f,
-        10.0f);
+        10.0f,1.0f, 0.35f,0.44f,1.0f,1.0f);
 
     Light right_spot_light(
         LightType::SPOT,
@@ -219,7 +219,7 @@ int main() {
         glm::cos(glm::radians(30.0f)), // outer cone
         2048, 2048,
         1.0f, 10.0f,
-        10.0f);
+        10.0f,1.0f,0.35f,0.44f,1.0f,1.0f);
 
     Light overhead_point_light(
         LightType::POINT,
@@ -230,9 +230,10 @@ int main() {
         glm::vec3(1.0f),
         glm::cos(glm::radians(10.0f)), // inner cone
         glm::cos(glm::radians(30.0f)), // outer cone
-        2048, 2048,
+        2048,  
+        2048, 
         0.1f, 10.0f,
-        10.0f);
+        10.0f, 1.0f,0.35f,0.44f,1.0f,1.0f);
 
 
     glm::vec3 overhead_light_spot = glm::vec3(15.0f, 5.0f, -20.0f);
@@ -326,239 +327,8 @@ int main() {
   Shader depth_debug = Shader(shader_paths, shader_types, "depth_debug");
 #endif
 
-  // shader_paths = {"assets/shaders/depth_cube.vert",
-  //                 "assets/shaders/depth_cube.geom",
-  //                 "assets/shaders/depth_cube.frag"};
-  // shader_types = {GL_VERTEX_SHADER, GL_GEOMETRY_SHADER, GL_FRAGMENT_SHADER};
-  // Shader depth_cube = Shader(shader_paths, shader_types, "depth_cube");
 
 
-//   auto right_light =
-//       model_from_obj_file("assets/models/light_sphere.obj", "Sphere");
-//   auto overhead_light =
-//       model_from_obj_file("assets/models/light_sphere.obj", "Overhead light");
-//   // hi
-//   Light flashlight(LightType::SPOT,
-//                    glm::vec3(0.0f),               // position
-//                    glm::vec3(0.0f, 0.0f, -1.0f),  // direction
-//                    glm::vec3(0.1f),               // ambient
-//                    glm::vec3(1.0f),               // diffuse
-//                    glm::vec3(1.0f),               // specular
-//                    glm::cos(glm::radians(12.5f)), // cutoff
-//                    glm::cos(glm::radians(17.5f)), // outer cutoff
-//                    1024, 1024, 1.0f, 100.0f, 10.0f);
-//
-//     auto right_spotlight_pos = glm::vec3(0.0f, 5.0f, 0.0f);
-//   Light right_spotlight(
-//       LightType::SPOT, 
-//         right_spotlight_pos, // position: to the right
-//       glm::vec3(-1.0f, 0.0f, 0.0f),                 // direction: pointing left
-//       glm::vec3(0.1f), glm::vec3(1.0f), glm::vec3(1.0f),
-//       glm::cos(glm::radians(95.0f)),  // inner cone
-//       glm::cos(glm::radians(125.0f)), // outer cone
-//       1024, 1024, 1.0f, 100.0f, 10.0f);
-//
-//     glm::vec3 overhead_light_pos = glm::vec3(0.0,5.0f,0.0f);
-//   Light overhead_spot(LightType::SPOT,
-//                       overhead_light_pos, // above the object
-//                       glm::vec3(0.0f, -1.0f, 0.0f), // pointing straight down
-//                       glm::vec3(0.1f), glm::vec3(1.0f), glm::vec3(1.0f),
-//                       glm::cos(glm::radians(95.0f)),  // inner cone
-//                       glm::cos(glm::radians(125.0f)), // outer cone
-//                       1024, 1024, 1.0f, 100.0f, 10.0f);
-//
-//   right_light.set_local_transform(
-//       glm::translate(glm::mat4(1.0f), right_spotlight.get_position()));
-//   overhead_light.set_local_transform(
-//       glm::translate(glm::mat4(1.0f), overhead_spot.get_position()));
-//
-//   SceneManager::SceneManager scene_manager(1280, 720);
-//   scene_manager.add_shader(blinnphong);
-//   scene_manager.add_shader(depth_2d);
-//   scene_manager.add_shader(depth_cube);
-//
-//
-//     auto bed_position = glm::vec3(0.25f,0.0f,0.25f);
-// auto bed = model_from_obj_file("assets/models/SimpleOldTownAssets/Bed01.obj", "Bed");
-//     scene_manager.add_model(bed);
-//
-//
-//     #define OFFSET(X,Y) glm::translate(glm::mat4(1.0f),X + Y)
-//     glm::mat4 chair1_offset = OFFSET(bed_position,glm::vec3(-0.5f, 0.0f, 1.0f));
-//     auto chair1 = model_from_obj_file("assets/models/SimpleOldTownAssets/ChairCafeWhite01.obj", "Chair 1");
-//     chair1_offset = glm::rotate(chair1_offset, glm::radians(90.0f), glm::vec3(0, 1, 0)); // rotate around Y-axis
-//     chair1.set_local_transform(chair1_offset);
-//     scene_manager.add_model(chair1);
-//
-//     std::string MODELS_FOLDER = "assets/models/SimpleOldTownAssets/";
-//     std::string bookcase_obj = "BookCase01.obj";
-//     auto bookcase_file = MODELS_FOLDER + bookcase_obj;
-//
-//
-//     glm::mat4 bookcase_offset = OFFSET(bed_position,glm::vec3(1.0f,0.0f,-3.5f));
-//     auto bookcase = model_from_obj_file(bookcase_file, "bookcase1");
-//     bookcase.set_local_transform(bookcase_offset);
-//     scene_manager.add_model(bookcase);
-//
-//
-//     glm::mat4 bookcase2_offset = OFFSET(bed_position,glm::vec3(-0.20f,0.0f,-3.5f));
-//     auto bookcase2 = model_from_obj_file(bookcase_file, "bookcase");
-//     bookcase2.set_local_transform(bookcase2_offset);
-//     scene_manager.add_model(bookcase2);
-//
-//     glm::mat4 bookcase3_offset = OFFSET(bed_position,glm::vec3(-1.4f,0.0f,-3.5f));
-//     auto bookcase3 = model_from_obj_file(bookcase_file, "bookcase");
-//     bookcase3.set_local_transform(bookcase3_offset);
-//     scene_manager.add_model(bookcase3);
-//
-//     glm::mat4 bookcase4_offset = OFFSET(bed_position,glm::vec3(1.4f,0.0f,-2.7f));
-//     bookcase4_offset = glm::rotate(bookcase4_offset, glm::radians(-90.0f), glm::vec3(0, 1, 0)); // rotate around Y-axis
-//     auto bookcase4 = model_from_obj_file(bookcase_file, "bookcase");
-//     bookcase4.set_local_transform(bookcase4_offset);
-//     scene_manager.add_model(bookcase4);
-//
-//
-//     glm::mat4 table_offset = OFFSET(bed_position,glm::vec3(0.0f,0.0f,-2.0f));
-//     auto table = model_from_obj_file(MODELS_FOLDER + "TableSmall1.obj", "Table");
-//     table.set_local_transform(table_offset);
-//     scene_manager.add_model(table);
-//
-//     glm::mat4 tablechair_offset = OFFSET(bed_position,glm::vec3(-1.0f,0.0f,-2.0f));
-//     auto tablechair = model_from_obj_file(MODELS_FOLDER + "ChairCafeWhite01.obj", "TableChair");
-//     tablechair.set_local_transform(tablechair_offset);
-//     scene_manager.add_model(tablechair);
-//
-//     auto overhead_light_model = model_from_obj_file("assets/models/light_sphere.obj", "lamp");
-//     glm::mat4 overhead_light_offset = OFFSET(glm::vec3(0.0f,0.0f,0.0f),overhead_light_pos);
-//     overhead_light_model.set_local_transform(overhead_light_offset);
-//     scene_manager.add_model(overhead_light_model);
-//
-//     auto rightlight_model = model_from_obj_file("assets/models/light_sphere.obj", "lamp2");
-//     glm::mat4 rightlight_offset = OFFSET(glm::vec3(0.0f,0.0f,-2.0f),right_spotlight_pos);
-//     rightlight_model.set_local_transform(rightlight_offset);
-//     scene_manager.add_model(rightlight_model);
-//
-//     auto carpet = model_from_obj_file(MODELS_FOLDER + "Flokati.obj", "carpet");
-//     glm::mat4 carpet_offset = OFFSET(glm::vec3(0.0f,0.0f,-1.85f),glm::vec3(0.0f));
-//     carpet.set_local_transform(carpet_offset);
-//     scene_manager.add_model(carpet);
-
-
-  //   auto oldhousewindow = model_from_obj_file(MODELS_FOLDER + "OldHouseWindowWood.obj", "oldhousewindow");
-  //   glm::mat4 oldhousewindow_offset = OFFSET(glm::vec3(12.50f - 0.25f,1.0f,0.0f),glm::vec3(0.0f));
-  // oldhousewindow.set_local_transform(oldhousewindow_offset);
-  // scene_manager.add_model(oldhousewindow);
-  //
-  // auto oldhousewindow2 = model_from_obj_file(MODELS_FOLDER + "OldHouseWindowWood.obj", "oldhousewindow");
-  // glm::mat4 oldhousewindow2_offset = OFFSET(glm::vec3(12.50f - 0.25f,1.0f,0.0f + 1.0f),glm::vec3(0.0f));
-  // oldhousewindow2.set_local_transform(oldhousewindow2_offset);
-  // scene_manager.add_model(oldhousewindow2);
-  //
-  //
-  // auto oldhousewindow3 = model_from_obj_file(MODELS_FOLDER + "OldHouseWindowWood.obj", "oldhousewindow");
-  // glm::mat4 oldhousewindow3_offset = OFFSET(glm::vec3(12.50f - 0.25f,1.0f,0.0f + 2.0f),glm::vec3(0.0f));
-  // oldhousewindow3.set_local_transform(oldhousewindow3_offset);
-  // scene_manager.add_model(oldhousewindow3);
-
-  //   auto pot = model_from_obj_file(MODELS_FOLDER + "PotNtural.obj","pot");
-  //   glm::mat4 pot_offset = OFFSET(bed_position,glm::vec3(-6.0f,0,3.0f));
-  //   pot.set_local_transform(pot_offset);
-  //   scene_manager.add_model(pot);
-  //
-  // auto pot2 = model_from_obj_file(MODELS_FOLDER + "PotNtural.obj","pot1");
-  // glm::mat4 pot2_offset = OFFSET(bed_position,glm::vec3(-5.5f,0,3.0f));
-  // pot2.set_local_transform(pot2_offset);
-  // scene_manager.add_model(pot2);
-  //
-  // auto pot3 = model_from_obj_file(MODELS_FOLDER + "PotNtural.obj","pot2");
-  // glm::mat4 pot3_offset = OFFSET(bed_position,glm::vec3(-5.0f,0,3.0f));
-  // pot3.set_local_transform(pot3_offset);
-  // scene_manager.add_model(pot3);
-  //
-  // auto pot4 = model_from_obj_file(MODELS_FOLDER + "PotNtural.obj","pot3");
-  // glm::mat4 pot4_offset = OFFSET(bed_position,glm::vec3(-4.5f,0,3.0f));
-  // pot4.set_local_transform(pot4_offset);
-  // scene_manager.add_model(pot4);
-  //
-  // auto watering_can = model_from_obj_file(MODELS_FOLDER + "watering-can.obj","watering-can");
-  // glm::mat4 watering_can_offset = OFFSET(bed_position,glm::vec3(-4.0f,0.0f,3.5f));
-  // watering_can.set_local_transform(watering_can_offset);
-  // scene_manager.add_model(watering_can);
-  //
-  // auto plant = model_from_obj_file(MODELS_FOLDER + "leaves.obj","leaves");
-  // glm::mat4 plant_offset = OFFSET(bed_position,glm::vec3(-4.0f,0.0f,3.0f));
-  // plant.set_local_transform(plant_offset);
-  // scene_manager.add_model(plant);
-  //
-  // auto dining = model_from_obj_file(MODELS_FOLDER + "dining-place.obj","dining-place");
-  // glm::mat4 dining_offset = OFFSET(bed_position,glm::vec3(-5.5f,0.0f,-4.5f));
-  // dining.set_local_transform(dining_offset);
-  // // dining.set_scale(glm::vec3(0.65,0.65,0.65));
-  // scene_manager.add_model(dining);
-  //
-  // auto wall_large = model_from_obj_file(MODELS_FOLDER + "OldHouseBrownWallLarge.obj","wall_large-place");
-  // glm::mat4 wall_large_offset = OFFSET(bed_position,glm::vec3(-3.5f,0.0f,-6.5f));
-  // wall_large.set_local_transform(wall_large_offset);
-  // // wall_large.set_scale(glm::vec3(0.65,0.65,0.65));
-  // scene_manager.add_model(wall_large);
-  // auto wall2_large = model_from_obj_file(MODELS_FOLDER + "OldHouseBrownWallLarge.obj","wall2_large-place");
-  // glm::mat4 wall2_large_offset = OFFSET(bed_position,glm::vec3(-3.5f,0.0f,6.5f));
-  // wall2_large.set_local_transform(wall2_large_offset);
-  // // wall_large.set_scale(glm::vec3(0.65,0.65,0.65));
-  // scene_manager.add_model(wall2_large);
-  //
-  // auto wall3_large = model_from_obj_file(MODELS_FOLDER + "OldHouseBrownWallLarge.obj","wall2_large-place");
-  // glm::mat4 wall3_large_offset = OFFSET(bed_position,glm::vec3(-3.5f,0.0f,3.5f));
-  // wall3_large.set_local_transform(wall3_large_offset);
-  // // wall_large.set_scale(glm::vec3(0.65,0.65,0.65));
-  // scene_manager.add_model(wall3_large);
-  // auto wall4_large = model_from_obj_file(MODELS_FOLDER + "OldHouseBrownWallLarge.obj","wall2_large-place");
-  // glm::mat4 wall4_large_offset = OFFSET(bed_position,glm::vec3(-3.5f,0.0f,-3.5f));
-  // wall4_large.set_local_transform(wall4_large_offset);
-  // // wall_large.set_scale(glm::vec3(0.65,0.65,0.65));
-  // scene_manager.add_model(wall4_large);
-  // auto wall5_large = model_from_obj_file(MODELS_FOLDER + "OldHouseBrownWallLarge.obj","wall2_large-place");
-  // glm::mat4 wall5_large_offset = OFFSET(bed_position,glm::vec3(-3.5f,0.0f,-1.5f));
-  // wall5_large.set_local_transform(wall5_large_offset);
-  // // wall_large.set_scale(glm::vec3(0.65,0.65,0.65));
-  // scene_manager.add_model(wall5_large);
-  //
-  //
-  //
-  // auto wall6_large = model_from_obj_file(MODELS_FOLDER + "OldHouseBrownWallLarge.obj","wall_large-place");
-  // glm::mat4 wall6_large_offset = OFFSET(bed_position,glm::vec3(2.5f,0.0f,-6.5f));
-  // wall6_large.set_local_transform(wall6_large_offset);
-  // // wall_large.set_scale(glm::vec3(0.65,0.65,0.65));
-  // scene_manager.add_model(wall6_large);
-  // auto wall7_large = model_from_obj_file(MODELS_FOLDER + "OldHouseBrownWallLarge.obj","wall2_large-place");
-  // glm::mat4 wall7_large_offset = OFFSET(bed_position,glm::vec3(2.5f,0.0f,6.5f));
-  // wall7_large.set_local_transform(wall7_large_offset);
-  // // wall_large.set_scale(glm::vec3(0.65,0.65,0.65));
-  // scene_manager.add_model(wall7_large);
-  //
-  // auto wall8_large = model_from_obj_file(MODELS_FOLDER + "OldHouseBrownWallLarge.obj","wall2_large-place");
-  // glm::mat4 wall8_large_offset = OFFSET(bed_position,glm::vec3(2.5f,0.0f,3.5f));
-  // wall8_large.set_local_transform(wall8_large_offset);
-  // // wall_large.set_scale(glm::vec3(0.65,0.65,0.65));
-  // scene_manager.add_model(wall8_large);
-  // auto wall9_large = model_from_obj_file(MODELS_FOLDER + "OldHouseBrownWallLarge.obj","wall2_large-place");
-  // glm::mat4 wall9_large_offset = OFFSET(bed_position,glm::vec3(2.5f,0.0f,-3.5f));
-  // wall9_large.set_local_transform(wall9_large_offset);
-  // // wall_large.set_scale(glm::vec3(0.65,0.65,0.65));
-  // scene_manager.add_model(wall9_large);
-  // auto wall10_large = model_from_obj_file(MODELS_FOLDER + "OldHouseBrownWallLarge.obj","wall2_large-place");
-  // glm::mat4 wall10_large_offset = OFFSET(bed_position,glm::vec3(2.5f,0.0f,-1.5f));
-  // wall10_large.set_local_transform(wall10_large_offset);
-  // scene_manager.add_model(wall10_large);
-  // // auto old_cupboard = model_from_obj_file(MODELS_FOLDER + "old_cupboard.obj","cupboard");
-  // glm::mat4 old_cupboard_offset = OFFSET(bed_position,glm::vec3(3.0f,0.0f,3.5f));
-  // old_cupboard.set_local_transform(old_cupboard_offset);
-  // scene_manager.add_model(old_cupboard);
-  // auto old_cabinet = model_from_obj_file(MODELS_FOLDER + "old-cabinet.obj","old_cabinet");
-  // glm::mat4 old_cabinet_offset = OFFSET(bed_position,glm::vec3(5.0f,0.0f,-1.5f));
-  // old_cabinet.set_local_transform(old_cabinet_offset);
-  // // old_cabinet.set_scale(glm::vec3(0.65,0.65,0.65));
-  // scene_manager.add_model(old_cabinet);
 
 
   Material material;
@@ -636,6 +406,23 @@ int main() {
             {
                 running = false;
             }
+            if(ev.type == SDL_KEYDOWN && ev.key.repeat == 0) {
+            const Uint8 *keys = SDL_GetKeyboardState(nullptr);
+              if (keys[SDL_SCANCODE_L]) {
+                flashlight.toggle_light();
+                std::cout << "Flashlight is now on: " << flashlight.is_turned_on() << "\n";
+              }
+
+              if (keys[SDL_SCANCODE_R]) {
+                flashlight.make_light_red();
+              } else if (keys[SDL_SCANCODE_G]) {
+                flashlight.make_light_green();
+              } else if (keys[SDL_SCANCODE_B]) {
+                flashlight.make_light_blue();
+              } 
+              
+
+            }
             // feed mouse/window events to the camera
             camera.process_input(ev);
             // adjust the GL viewport on resize
@@ -646,6 +433,8 @@ int main() {
                     h = ev.window.data2;
                 glViewport(0, 0, w, h);
             }
+            
+   
         }
 
         // 3) update camera movement (WASD/etc) once per frame
@@ -695,6 +484,8 @@ int main() {
         glm::vec3 offset = right_offset * camera.get_right();
         flashlight.set_position(camera.get_position() + offset);
         flashlight.set_direction(camera.get_direction());
+        // glEnable(GL_BLEND);
+        // glBlendFunc(GL_ONE,GL_ONE);
         scene_manager.render_depth_pass();
     #ifdef DEBUG_DEPTH
         depth_debug.use();
@@ -708,6 +499,7 @@ int main() {
         glBindVertexArray(0);
     #endif
         scene_manager.render(view, proj);
+        // glDisable(GL_BLEND);
         // cube_model.draw(vp);
         SDL_GL_SwapWindow(window);
       }

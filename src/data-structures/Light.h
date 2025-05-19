@@ -7,6 +7,7 @@
 #include <string>
 #include "Shader.h"
 #include "Model.h"
+#include "fwd.hpp"
 
 enum class LightType { 
     POINT = 0,
@@ -35,9 +36,47 @@ public:
         float attenuation_linear    = 0.35f,
         float attenuation_quadratic = 0.44f,
         float attenuation_power     = 1.0f,
-        float light_intensity       = 1.0f
+        float light_power = 1.0f,
+        bool is_on = true,
+        glm::vec3 color = glm::vec3(1.0f)
     );
 
+    inline bool is_turned_on() const {
+        return is_on;
+    };
+    
+    inline void set_light(glm::vec3 new_color) {
+        color = new_color;
+    }
+
+    inline void make_light_red() {
+        color = glm::vec3(1.0f,0.0f,0.0f);
+    }
+
+    inline void make_light_green() {
+        color = glm::vec3(0.0f,1.0f,0.0f);
+    }
+
+    inline void make_light_blue() {
+        color = glm::vec3(0.0f,0.0f,1.0f);
+    }
+
+    inline void  toggle_light() {
+        if(is_on) {
+            //now being turned off
+            prev_light_power = light_power;
+            light_power = 0.0f;
+            is_on = false;
+        }else {
+            //being turned back on again
+            light_power = prev_light_power;
+            is_on = true;
+        }
+    }
+
+    inline float get_light_power() const {
+        return light_power;
+    }
 
     inline glm::vec3 get_position() const{
         return position;
@@ -120,8 +159,11 @@ private:
     float attenuation_linear;
     float attenuation_quadratic;
     float attenuation_power;
-    float light_intensity;
-
+    float light_power ;
+    float prev_light_power;    
     GLuint   depth_map_fbo;
     GLuint   depth_map;
+
+    bool is_on;
+    glm::vec3 color;
 };

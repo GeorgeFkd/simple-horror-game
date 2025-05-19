@@ -28,6 +28,8 @@ struct Light {
     mat4 proj;
     float nearPlane;
     float farPlane;
+    float power;
+    vec3 color;
 };
 
 uniform Material    material;
@@ -243,8 +245,10 @@ void main()
 
     // 3) light loop
     for (int i = 0; i < numLights; ++i) {
+        
         Light L = lights[i];
 
+        
         // compute fragment position in light space
         vec4 fragPosLightSpace = L.proj * L.view * vec4(FragPos, 1.0);
 
@@ -258,9 +262,9 @@ void main()
         if (L.type == 2) {
             float theta   = dot(Ldir, normalize(-L.direction));
             float epsilon = L.cutoff - L.outerCutoff;
-            spotFactor     = clamp((theta - L.outerCutoff) / epsilon, 0.0, 1.0);
+            spotFactor    = clamp((theta - L.outerCutoff) / epsilon, 0.0, 1.0);
         }
-
+        
         // distance attenuation for non-directional lights
         float intensity = 1.0;
         //if (L.type != 1) {
@@ -297,14 +301,15 @@ void main()
 
         // diffuse term (modulated by shadow visibility)
         float diff = max(dot(N, Ldir), 0.0);
-        diffuseAccum += visibility * intensity * spotFactor * L.diffuse * Kd * diff;
+        diffuseAccum += visibility * intensity * spotFactor * L.power * L.color * L.diffuse * Kd * diff;
 
         // specular term (modulated by shadow visibility)
         vec3 H    = normalize(Ldir + V);
         float spec = pow(max(dot(N, H), 0.0), material.shininess);
-        specAccum += visibility * intensity * spotFactor * L.specular * Ks * spec;
+        specAccum += visibility * intensity * spotFactor * L.power * L.color * L.specular * Ks * spec;
 
         //FragColor = vec4(vec3(visibility), 1.0);
+        
     }
 
     // 4) combine
