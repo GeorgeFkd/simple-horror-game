@@ -18,7 +18,8 @@ Light::Light(
     float attenuation_linear,
     float attenuation_quadratic,
     float attenuation_power,
-    float light_intensity)
+    float light_power,
+    bool is_on)
     : type(light_type), 
       position(position), 
       direction(direction), 
@@ -36,74 +37,77 @@ Light::Light(
       attenuation_linear(attenuation_linear),
       attenuation_quadratic(attenuation_quadratic),
       attenuation_power(attenuation_power),
-      light_intensity(light_intensity)
+      light_power(light_power),
+        is_on(is_on)
       {
 
-    glGenFramebuffers(1, &depth_map_fbo);
+    GLCall(glGenFramebuffers(1, &depth_map_fbo));
 
     if (type == LightType::POINT) {
-        glGenTextures(1, &depth_map);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, depth_map);
+        GLCall(glGenTextures(1, &depth_map));
+        GLCall(glBindTexture(GL_TEXTURE_CUBE_MAP, depth_map));
         for (unsigned i = 0; i < 6; ++i) {
-            glTexImage2D(
+            GLCall(glTexImage2D(
                 GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
                 0, GL_DEPTH_COMPONENT,
                 shadow_width, shadow_height,
                 0, GL_DEPTH_COMPONENT,
                 GL_FLOAT, nullptr
-            );
+            ));
         }
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S,     GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T,     GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R,     GL_CLAMP_TO_EDGE);
+        GLCall(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST));
+        GLCall(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
+        GLCall(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S,     GL_CLAMP_TO_EDGE));
+        GLCall(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T,     GL_CLAMP_TO_EDGE));
+        GLCall(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R,     GL_CLAMP_TO_EDGE));
 
-        glBindFramebuffer(GL_FRAMEBUFFER, depth_map_fbo);
-        glFramebufferTexture(
+        GLCall(glBindFramebuffer(GL_FRAMEBUFFER, depth_map_fbo));
+        GLCall(glFramebufferTexture(
             GL_FRAMEBUFFER, 
             GL_DEPTH_ATTACHMENT, 
             depth_map, 
             0
-        );
+        ));
     } else {
         // -- spot or directional: 2D depth texture --
-        glGenTextures(1, &depth_map);
-        glBindTexture(GL_TEXTURE_2D, depth_map);
-        glTexImage2D(
+        GLCall(glGenTextures(1, &depth_map));
+        GLCall(glBindTexture(GL_TEXTURE_2D, depth_map));
+        GLCall(glTexImage2D(
             GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
             shadow_width, shadow_height,
             0, GL_DEPTH_COMPONENT,
             GL_FLOAT, nullptr
-        );
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,     GL_CLAMP_TO_BORDER);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,     GL_CLAMP_TO_BORDER);
+        ));
+        GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST));
+        GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
+        GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,     GL_CLAMP_TO_BORDER));
+        GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,     GL_CLAMP_TO_BORDER));
         float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-        glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+        GLCall(glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor));
 
-        glBindFramebuffer(GL_FRAMEBUFFER, depth_map_fbo);
-        glFramebufferTexture2D(
+        GLCall(glBindFramebuffer(GL_FRAMEBUFFER, depth_map_fbo));
+        GLCall(glFramebufferTexture2D(
             GL_FRAMEBUFFER,
             GL_DEPTH_ATTACHMENT,
             GL_TEXTURE_2D,
             depth_map,
             0
-        );
+        ));
     }
 
-    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    GLCall(GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER));
     if (status != GL_FRAMEBUFFER_COMPLETE) {
         std::cerr << "Framebuffer not complete! Status: " << status << "\n";
     }
-    glDrawBuffer(GL_NONE);
-    glReadBuffer(GL_NONE);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    GLCall(glDrawBuffer(GL_NONE));
+    GLCall(glReadBuffer(GL_NONE));
+    GLCall(glBindFramebuffer(GL_FRAMEBUFFER, 0));
 }
 
 void Light::draw_lighting(Shader *shader, const std::string &base, int index) const{
     shader->set_vec3(base + "position", position);
+    shader->set_float(base + "power", light_power);
+    std::cout << "Power is: " << light_power << "\n";
     // only send direction for non-point lights
     if (type != LightType::POINT){
         shader->set_vec3(base + "direction", direction);
@@ -129,11 +133,11 @@ void Light::draw_lighting(Shader *shader, const std::string &base, int index) co
 void Light::draw_depth_pass(Shader* shader, 
                             const std::vector<Model::Model*>& models) const 
 {
-    glViewport(0, 0, shadow_width, shadow_height);
-    glBindFramebuffer(GL_FRAMEBUFFER, depth_map_fbo);
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_FRONT);
+    GLCall(glViewport(0, 0, shadow_width, shadow_height));
+    GLCall(glBindFramebuffer(GL_FRAMEBUFFER, depth_map_fbo));
+    GLCall(glEnable(GL_DEPTH_TEST));
+    GLCall(glEnable(GL_CULL_FACE));
+    GLCall(glCullFace(GL_FRONT));
     //glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 
 
@@ -145,15 +149,15 @@ void Light::draw_depth_pass(Shader* shader,
         // 2) Six passes, one per cube face
         for (int face = 0; face < 6; ++face) {
             // attach this face
-            glFramebufferTexture2D(
+            GLCall(glFramebufferTexture2D(
                 GL_FRAMEBUFFER,
                 GL_DEPTH_ATTACHMENT,
                 GL_TEXTURE_CUBE_MAP_POSITIVE_X + face,
                 depth_map,
                 0
-            );
+            ));
 
-            glClear(GL_DEPTH_BUFFER_BIT);
+            GLCall(glClear(GL_DEPTH_BUFFER_BIT));
 
             shader->use();
             // update this face's matrix
@@ -177,15 +181,15 @@ void Light::draw_depth_pass(Shader* shader,
     }
     else {
         // single 2D pass
-        glFramebufferTexture2D(
+        GLCall(glFramebufferTexture2D(
             GL_FRAMEBUFFER,
             GL_DEPTH_ATTACHMENT,
             GL_TEXTURE_2D,
             depth_map,
             0
-        );
+        ));
 
-        glClear(GL_DEPTH_BUFFER_BIT);
+        GLCall(glClear(GL_DEPTH_BUFFER_BIT));
 
         shader->use();
         shader->set_mat4("uView", get_light_view());
@@ -202,11 +206,11 @@ void Light::draw_depth_pass(Shader* shader,
         }
     }
 
-    glCullFace(GL_BACK);
-    glColorMask(GL_TRUE,  GL_TRUE,  GL_TRUE,  GL_TRUE);
+    GLCall(glCullFace(GL_BACK));
+    GLCall(glColorMask(GL_TRUE,  GL_TRUE,  GL_TRUE,  GL_TRUE));
     // restore default framebuffer
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glUseProgram(0);
+    GLCall(glBindFramebuffer(GL_FRAMEBUFFER, 0));
+    GLCall(glUseProgram(0));
 }
 
 void Light::bind_shadow_map(Shader* shader, const std::string& base, int index) const{
