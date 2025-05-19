@@ -428,6 +428,34 @@ void Model::Model::compute_aabb() {
     aabbmax = world_max;
 }
 
+static void compute_transformed_aabb(
+    const glm::vec3& local_min,
+    const glm::vec3& local_max,
+    const glm::mat4& xf,
+    glm::vec3& out_min,
+    glm::vec3& out_max)
+{
+    // all 8 corners of the local box
+    glm::vec3 corners[8] = {
+        {local_min.x, local_min.y, local_min.z},
+        {local_max.x, local_min.y, local_min.z},
+        {local_min.x, local_max.y, local_min.z},
+        {local_min.x, local_min.y, local_max.z},
+        {local_max.x, local_max.y, local_min.z},
+        {local_min.x, local_max.y, local_max.z},
+        {local_max.x, local_min.y, local_max.z},
+        {local_max.x, local_max.y, local_max.z},
+    };
+
+    out_min = glm::vec3( FLT_MAX);
+    out_max = glm::vec3(-FLT_MAX);
+
+    for (auto &c : corners) {
+        glm::vec3 w = glm::vec3(xf * glm::vec4(c, 1.0f));
+        out_min = glm::min(out_min, w);
+        out_max = glm::max(out_max, w);
+    }
+}
 
 void Model::Model::init_instancing(size_t max_instances) {
     // Generate the instance‐buffer
@@ -466,4 +494,14 @@ void Model::Model::update_instance_data() const{
         instance_transforms.data(),
         instance_transforms.size() * sizeof(glm::mat4));
     glUnmapBuffer(GL_ARRAY_BUFFER);
+}
+
+void Model::Model::add_instance_transform(const glm::mat4& xf) {
+    instance_transforms.push_back(xf);
+
+    glm::vec3 wmin, wmax;
+    compute_transformed_aabb(localaabbmin, localaabbmax, xf, wmin, wmax);
+
+    instance_aabb_min.push_back(wmin);
+    instance_aabb_max.push_back(wmax);
 }
