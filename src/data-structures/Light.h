@@ -37,12 +37,29 @@ public:
         float attenuation_quadratic = 0.44f,
         float attenuation_power     = 1.0f,
         float light_power = 1.0f,
-        bool is_on = true
+        bool is_on = true,
+        glm::vec3 color = glm::vec3(1.0f)
     );
 
     inline bool is_turned_on() const {
         return is_on;
     };
+    
+    inline void set_light(glm::vec3 new_color) {
+        color = new_color;
+    }
+
+    inline void make_light_red() {
+        color = glm::vec3(1.0f,0.0f,0.0f);
+    }
+
+    inline void make_light_green() {
+        color = glm::vec3(0.0f,1.0f,0.0f);
+    }
+
+    inline void make_light_blue() {
+        color = glm::vec3(0.0f,0.0f,1.0f);
+    }
 
     inline void  toggle_light() {
         if(is_on) {
@@ -148,4 +165,5 @@ private:
     GLuint   depth_map;
 
     bool is_on;
+    glm::vec3 color;
 };

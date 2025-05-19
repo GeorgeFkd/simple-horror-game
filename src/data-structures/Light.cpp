@@ -19,7 +19,9 @@ Light::Light(
     float attenuation_quadratic,
     float attenuation_power,
     float light_power,
-    bool is_on)
+    bool is_on,
+    glm::vec3 color
+)
     : type(light_type), 
       position(position), 
       direction(direction), 
@@ -38,7 +40,8 @@ Light::Light(
       attenuation_quadratic(attenuation_quadratic),
       attenuation_power(attenuation_power),
       light_power(light_power),
-        is_on(is_on)
+        is_on(is_on),
+        color(color)
       {
 
     GLCall(glGenFramebuffers(1, &depth_map_fbo));
@@ -107,7 +110,7 @@ Light::Light(
 void Light::draw_lighting(Shader *shader, const std::string &base, int index) const{
     shader->set_vec3(base + "position", position);
     shader->set_float(base + "power", light_power);
-    std::cout << "Power is: " << light_power << "\n";
+    shader->set_vec3(base + "color",color);
     // only send direction for non-point lights
     if (type != LightType::POINT){
         shader->set_vec3(base + "direction", direction);

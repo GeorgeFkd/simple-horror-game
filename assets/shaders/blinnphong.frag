@@ -29,6 +29,7 @@ struct Light {
     float nearPlane;
     float farPlane;
     float power;
+    vec3 color;
 };
 
 uniform Material    material;
@@ -300,12 +301,12 @@ void main()
 
         // diffuse term (modulated by shadow visibility)
         float diff = max(dot(N, Ldir), 0.0);
-        diffuseAccum += visibility * intensity * spotFactor * L.power * L.diffuse * Kd * diff;
+        diffuseAccum += visibility * intensity * spotFactor * L.power * L.color * L.diffuse * Kd * diff;
 
         // specular term (modulated by shadow visibility)
         vec3 H    = normalize(Ldir + V);
         float spec = pow(max(dot(N, H), 0.0), material.shininess);
-        specAccum += visibility * intensity * spotFactor * L.power * L.specular * Ks * spec;
+        specAccum += visibility * intensity * spotFactor * L.power * L.color * L.specular * Ks * spec;
 
         //FragColor = vec4(vec3(visibility), 1.0);
         

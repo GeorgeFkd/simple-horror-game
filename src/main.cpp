@@ -413,6 +413,15 @@ int main() {
                 std::cout << "Flashlight is now on: " << flashlight.is_turned_on() << "\n";
               }
 
+              if (keys[SDL_SCANCODE_R]) {
+                flashlight.make_light_red();
+              } else if (keys[SDL_SCANCODE_G]) {
+                flashlight.make_light_green();
+              } else if (keys[SDL_SCANCODE_B]) {
+                flashlight.make_light_blue();
+              } 
+              
+
             }
             // feed mouse/window events to the camera
             camera.process_input(ev);
