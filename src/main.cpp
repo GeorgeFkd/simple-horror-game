@@ -174,7 +174,7 @@ int main() {
     //scene_manager.add_model(overhead_point_light_model);
     //scene_manager.add_model(right_spot_light_model);
     scene_manager.add_model(floor);
-    scene_manager.add_light(flashlight);
+    //scene_manager.add_light(flashlight);
     //scene_manager.add_light(overhead_point_light);
     scene_manager.add_light(right_spot_light);
 
@@ -194,15 +194,20 @@ int main() {
     bed.set_local_transform(bed_offset);
     scene_manager.add_model(bed);
 
-    glm::mat4 chair1_offset = glm::translate(glm::mat4(1.0f), bed_position + glm::vec3(2.0f, 0.0f, -1.5f));
-    auto chair1 = model_from_obj_file("assets/models/SimpleOldTownAssets/ChairCafeWhite01.obj", "Chair 1");
-    chair1.set_local_transform(chair1_offset);
-    scene_manager.add_model(chair1);
-
-    glm::mat4 chair2_offset = glm::translate(glm::mat4(1.0f), bed_position + glm::vec3(-2.0f, 0.0f, -1.5f));
-    auto chair2 = model_from_obj_file("assets/models/SimpleOldTownAssets/ChairCafeWhite01.obj", "Chair 2");
-    chair2.set_local_transform(chair2_offset);
-    scene_manager.add_model(chair2);
+    auto chair = model_from_obj_file(
+        "assets/models/SimpleOldTownAssets/ChairCafeWhite01.obj",
+        "Cafe Chair");
+    chair.init_instancing(3);
+    glm::mat4 chair1_offset = glm::translate(glm::mat4(1.0f), bed_position + glm::vec3( 2.0f, 0.0f, -1.5f));
+    glm::mat4 chair2_offset =
+    glm::translate(glm::mat4(1.0f), bed_position + glm::vec3(-2.0f, 0.0f, -1.5f));
+    chair2_offset =
+        glm::rotate(chair2_offset, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::mat4 chair3_offset = glm::translate(glm::mat4(1.0f), bed_position + glm::vec3(1.0f, 0.0f, -3.0f));
+    chair.add_instance_transform(chair1_offset);
+    chair.add_instance_transform(chair2_offset);
+    chair.add_instance_transform(chair3_offset);
+    scene_manager.add_model(chair);
 
     glm::mat4 bookcase_offset = glm::translate(glm::mat4(1.0f), bed_position + glm::vec3(0.0f, 0.0f, -6.0f));
     auto bookcase = model_from_obj_file("assets/models/SimpleOldTownAssets/BookCase01.obj", "Bookcase");
