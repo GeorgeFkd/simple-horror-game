@@ -10,18 +10,18 @@ Shader::Shader(const std::vector<std::string>& shader_paths,
             throw std::runtime_error("Shader constructor: Mismatched input vector sizes.");
         }
 
-        program_id = glCreateProgram();
+        GLCall(program_id = glCreateProgram());
         std::vector<GLuint> compiled_shaders;
 
         for (size_t i = 0; i < shader_paths.size(); ++i) {
             std::string shader_source = load_file(shader_paths[i]);
             GLuint shader = compile_shader(shader_types[i], shader_source);
 
-            glAttachShader(program_id, shader);
+            GLCall(glAttachShader(program_id, shader));
             compiled_shaders.push_back(shader);
         }
 
-        glLinkProgram(program_id);
+        GLCall(glLinkProgram(program_id));
 
         // Check for linking errors
         GLint success;
@@ -34,8 +34,8 @@ Shader::Shader(const std::vector<std::string>& shader_paths,
 
         // Clean up shaders (they are already linked into the program)
         for (GLuint shader : compiled_shaders) {
-            glDetachShader(program_id, shader);
-            glDeleteShader(shader);
+            GLCall(glDetachShader(program_id, shader));
+            GLCall(glDeleteShader(shader));
         }
 
         this->shader_name = shader_name;
@@ -47,10 +47,10 @@ GLuint Shader::compile_shader(GLenum type, const std::string& source){
     // GL_BLEND, etc.—is actually just an integer constant 
     // of type GLenum.
     // glBindBuffer((GLenum)0x8892, vbo);
-    GLuint shader = glCreateShader(type);
+    GLCall(GLuint shader = glCreateShader(type));
     const char* src = source.c_str();
-    glShaderSource(shader, 1, &src, nullptr);
-    glCompileShader(shader);
+    GLCall(glShaderSource(shader, 1, &src, nullptr));
+    GLCall(glCompileShader(shader));
 
     GLint success = 0;
     glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
@@ -93,7 +93,7 @@ GLint Shader::get_uniform_location(const std::string& name) {
     auto it = uniform_cache.find(name);
     if (it != uniform_cache.end()) return it->second;
 
-    GLint loc = glGetUniformLocation(program_id, name.c_str());
+    GLCall(GLint loc = glGetUniformLocation(program_id, name.c_str()));
     if (loc < 0) {
         std::cerr << "WARNING: Uniform '" << name
                   << "' not found in shader '" << shader_name << "'\n";
@@ -168,9 +168,9 @@ void Shader::set_texture(
                   << name << "' in shader '" << shader_name << "'\n";
         return;
     }
-    glActiveTexture(unit);
-    glBindTexture(target, tex);
-    glUniform1i(loc, unit - GL_TEXTURE0);
+    GLCall(glActiveTexture(unit));
+    GLCall(glBindTexture(target, tex));
+    GLCall(glUniform1i(loc, unit - GL_TEXTURE0));
 }
 
 #undef SET_UNIFORM
