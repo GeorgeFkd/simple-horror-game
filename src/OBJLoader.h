@@ -20,6 +20,9 @@
 
 
 namespace ObjectLoader{ 
+    
+
+    GLuint load_texture_from_file(const std::string& filepath);
 
     struct Face {
         glm::ivec4 vertices;

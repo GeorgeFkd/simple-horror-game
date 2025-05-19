@@ -29,11 +29,12 @@ Model::Model::Model(const std::vector<glm::vec3>& positions,
                     const std::vector<glm::vec3>& normals,
                     const std::vector<glm::vec2>& texcoords,
                     const std::vector<GLuint>& indices,
-                    const Material& mat)
+                    const Material& mat,const std::string& label)
     : local_transform(1.0f),
       world_transform(1.0f),
       localaabbmin(std::numeric_limits<float>::max()),
-      localaabbmax(-std::numeric_limits<float>::lowest())
+      localaabbmax(-std::numeric_limits<float>::lowest()),
+      label(label)
 {
     // Build unique vertex array
     for (size_t i = 0; i < positions.size(); ++i) {

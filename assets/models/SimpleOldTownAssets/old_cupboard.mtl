@@ -1,0 +1,22 @@
+# Blender 4.4.3 MTL File: 'Untitled.blend'
+# www.blender.org
+
+newmtl spera_cupboard_tst_flat_parts.001
+Ns 200.000000
+Ka 0.500000 0.500000 0.500000
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 3
+map_Kd spera_cupboard_tst_flat_material_diffuse_1024x1024.tga
+
+newmtl spera_cupboard_tst_unique_parts.001
+Ns 200.000000
+Ka 0.500000 0.500000 0.500000
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 3
+map_Kd spera_cupboard_tst_unique_parts_diffuse_2048x2048.tga

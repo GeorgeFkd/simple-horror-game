@@ -65,6 +65,10 @@ namespace Model{
             return true;
         }
 
+        inline void set_local_transform(glm::mat4&& local_transform) {
+        this->local_transform = std::move(local_transform);
+    } 
+
         inline glm::vec3 get_aabbmin() const {
             return aabbmin;
         }
@@ -106,7 +110,8 @@ namespace Model{
             const std::vector<glm::vec3>& normals,
             const std::vector<glm::vec2>& texcoords,
             const std::vector<GLuint>& indices,
-            const Material& mat = Material());
+            const Material& mat = Material(),
+              const std::string& label="");
 
         Model(const ObjectLoader::OBJLoader& loader);
 

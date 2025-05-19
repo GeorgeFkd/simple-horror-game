@@ -1,0 +1,50 @@
+# Blender 4.4.3 MTL File: 'Untitled.blend'
+# www.blender.org
+
+newmtl Candle
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd Candle_Base_Color.png
+map_Ns Candle_Roughness.png
+map_refl Candle_Metallic.png
+map_Bump -bm 1.000000 Candle_Normal_OpenGL.png
+
+newmtl Chair
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd Chair_Base_Color.png
+map_Ns Chair_Roughness.png
+map_refl Chair_Metallic.png
+map_Bump -bm 1.000000 Chair_Normal_OpenGL.png
+
+newmtl PlateAndCutlery
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd PlateAndCutlery_Base_Color.png
+map_Ns PlateAndCutlery_Roughness.png
+map_refl PlateAndCutlery_Metallic.png
+map_Bump -bm 1.000000 PlateAndCutlery_Normal_OpenGL.png
+
+newmtl Table
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd DiningTable_Base_Color.png
+map_Ns DiningTable_Roughness.png
+map_refl DiningTable_Metallic.png
+map_Bump -bm 1.000000 DiningTable_Normal_OpenGL.png

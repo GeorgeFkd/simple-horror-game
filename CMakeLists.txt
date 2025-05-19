@@ -26,6 +26,11 @@ find_package(SDL2 REQUIRED)
 find_package(GLEW REQUIRED)
 find_package(glm REQUIRED)
 find_package(Catch2)
+find_package(TIFF REQUIRED)
+
+if (NOT TIFF_FOUND)
+    message(STATUS "Did not find TIFF, .tiff files wont load properly")
+endif()
 
 if (NOT Catch2_FOUND)
     message(STATUS "Did not find Catch2, setting BUILD_TESTS option to OFF")
@@ -62,12 +67,14 @@ target_include_directories(opengl_app PRIVATE
     ${GLEW_INCLUDE_DIRS}
     /usr/include/glm
     ${CMAKE_CURRENT_SOURCE_DIR}/src   # So headers like Renderer.h and OBJLoader.h are found
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
+    ${TIFF_INCLUDE_DIR}
 )
 
 target_link_libraries(opengl_app PRIVATE
     ${OPENGL_LIBRARIES}
     ${SDL2_LIBRARIES}
+    TIFF::TIFF
     GLEW::glew
     glm::glm
 )
@@ -83,11 +90,13 @@ target_include_directories(obj_loader PRIVATE
     ${GLEW_INCLUDE_DIRS}
     /usr/include/glm
     ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
+        ${TIFF_INCLUDE_DIR}
 )
 
 target_link_libraries(obj_loader PRIVATE
     ${OPENGL_LIBRARIES}
     ${SDL2_LIBRARIES}
+        TIFF::TIFF
     GLEW::glew
     glm::glm
 )
@@ -130,16 +139,52 @@ add_custom_target(copy_models ALL
     COMMENT "Copying model files..."
 )
 
-add_dependencies(opengl_app copy_models)
-# file(GLOB MODEL_FILES
-#     "${MODEL_SRC_DIR}/*.obj"
-#     "${MODEL_SRC_DIR}/*.mtl"
-#     "${MODEL_SRC_DIR}/SimpleOldTownAssets/*.obj"
-#     "${MODEL_SRC_DIR}/SimpleOldTownAssets/*.mtl"
-# )
+set(TEXTURES_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/assets/textures")
+set(TEXTURES_DST_DIR "${CMAKE_CURRENT_BINARY_DIR}/assets/textures")
 
-# foreach(MODEL_FILE ${MODEL_FILES})
-#     add_custom_command(TARGET opengl_app POST_BUILD
-#         COMMAND ${CMAKE_COMMAND} -E make_directory "${MODEL_DST_DIR}"
-#         COMMAND ${CMAKE_COMMAND} -E copy ${MODEL_FILE} "${MODEL_DST_DIR}")
-# endforeach()
+file(GLOB_RECURSE ALL_TEXTURE_FILES
+    "${TEXTURES_SRC_DIR}/*.jpg"
+)
+
+add_custom_target(copy_textures ALL
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${TEXTURES_DST_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${TEXTURES_SRC_DIR}" "${TEXTURES_DST_DIR}"
+    COMMENT "Copying texture files..."
+
+)
+
+add_dependencies(opengl_app copy_models)
+add_dependencies(opengl_app copy_textures)
+
+
+set(SCENE1_SOURCES
+    src/scene_1.cpp
+    src/SceneManager.cpp
+    src/OBJLoader.cpp
+    src/Camera.cpp
+    src/Model.cpp
+    src/Shader.cpp
+    src/data-structures/Light.cpp
+)
+add_executable(scene1 ${SCENE1_SOURCES})
+target_include_directories(scene1 PRIVATE
+    ${OPENGL_INCLUDE_DIR}
+    ${SDL2_INCLUDE_DIRS}
+    ${GLEW_INCLUDE_DIRS}
+    /usr/include/glm
+    ${CMAKE_CURRENT_SOURCE_DIR}/src   # So headers like Renderer.h and OBJLoader.h are found
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
+    ${TIFF_INCLUDE_DIR}
+)
+
+target_link_libraries(scene1 PRIVATE
+    ${OPENGL_LIBRARIES}
+    ${SDL2_LIBRARIES}
+    TIFF::TIFF
+    GLEW::glew
+    glm::glm
+)
+
+add_dependencies(scene1 copy_models)
+add_dependencies(scene1 copy_textures)
+
