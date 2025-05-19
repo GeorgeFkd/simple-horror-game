@@ -153,7 +153,7 @@ float getVisibilityPointLight(vec3 fragPos, vec3 lightPos, samplerCube shadowMap
 
 
     float closestDepth = texture(shadowMap, fragToLight).r * farPlane;
-    return (currentDepth - bias > closestDepth) ? 1.0 : 0.0; 
+    return (currentDepth - bias > closestDepth) ? 0.0 : 1.0; 
 }
 
 //float getVisibility(vec4 fragPosLightSpace, sampler2D shadowMap)
@@ -280,6 +280,8 @@ void main()
             else if (i == 6) visibility = getVisibility(fragPosLightSpace, Normal, Ldir, shadowMap6);
             else if (i == 7) visibility = getVisibility(fragPosLightSpace, Normal, Ldir, shadowMap7);
         }
+
+        //visibility = getVisibilityPointLight(FragPos, L.position, shadowMapCube0, L.farPlane);
         // ambient term (ambient unaffected by shadows)
         ambientAccum += visibility * intensity * spotFactor * L.ambient * Ka;
 
