@@ -404,10 +404,10 @@ int main() {
             }
             if(ev.type == SDL_KEYDOWN && ev.key.repeat == 0) {
               const Uint8 *keys = SDL_GetKeyboardState(nullptr);
-              if (keys[SDL_SCANCODE_L]) {
-                flashlight.toggle_light();
-                std::cout << "Flashlight is now on: " << flashlight.is_turned_on() << "\n";
-              }
+              // if (keys[SDL_SCANCODE_L]) {
+              //   flashlight.toggle_light();
+              //   std::cout << "Flashlight is now on: " << flashlight.is_turned_on() << "\n";
+              // }
 
               if (keys[SDL_SCANCODE_R]) {
                 flashlight.make_light_red();
@@ -424,6 +424,23 @@ int main() {
               if (keys[SDL_SCANCODE_N]) {
                 std::cout << "Removing bookcase\n";
                 scene_manager.remove_model(&bookcase);
+              }
+
+              
+
+              if(keys[SDL_SCANCODE_K]){
+                scene_manager.move_model_Y(bookcase.name(),1.0f);
+              }
+              if(keys[SDL_SCANCODE_J]) {
+                scene_manager.move_model_Y(bookcase.name(),-1.0f);
+              }
+
+              if(keys[SDL_SCANCODE_H]) {
+                scene_manager.move_model_X(bookcase.name(),-1.0f);
+              }
+
+              if(keys[SDL_SCANCODE_L]) {
+                scene_manager.move_model_X(bookcase.name(),1.0f);
               }
 
             }

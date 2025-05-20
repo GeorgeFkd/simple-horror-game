@@ -34,17 +34,39 @@ namespace SceneManager{
         inline const std::vector<Model::Model*> get_models() const{
             return models;
         }
+        
+        
 
+        void move_model(Model::Model* model,const glm::vec3& direction) {
+            auto model_pos = findModel(model);
+            model_pos->move_relative_to(direction);
+        }
+
+        void move_model(std::string_view name,const glm::vec3& direction) {
+            auto model_pos = findModel(name);
+            model_pos->move_relative_to(direction);
+        }
+
+        void move_model_X(std::string_view name,float x) {
+            move_model(name,glm::vec3(x,0.0f,0.0f));
+        }
+        
+        void move_model_Y(std::string_view name,float y) {
+            move_model(name,glm::vec3(0.0f,y,0.0f));
+        }
+
+        void move_model_Z(std::string_view name, float z) {
+            move_model(name,glm::vec3(0.0f,0.0f,z));
+        }
+        
+        
         inline void remove_model(Model::Model* model) {
             //we probably need to switch to a hashmap, this costs O(n)   
             auto res = std::remove_if(models.begin(),models.end(),[model](auto* m) { return m->name() == model->name();});
-            
             models.erase(res,models.end());
         }
 
-        inline void remove_instanced_model_at() {
-
-        }
+        inline void remove_instanced_model_at() {throw std::runtime_error("not yet implemented");}
 
         
 
@@ -56,7 +78,14 @@ namespace SceneManager{
         SceneManager(int width, int height):screen_height(height), screen_width(width){};
         ~SceneManager();
     private:
-
+        inline Model::Model* findModel(Model::Model* model) {
+            auto model_pos = std::find_if(models.begin(),models.end(),[model](auto* m) { return m->name() == model->name();});
+            return *model_pos;
+        }
+        inline Model::Model* findModel(std::string_view name) {
+            auto model_pos = std::find_if(models.begin(),models.end(),[name](auto* m) { return m->name() == name;});
+            return *model_pos;
+        } 
         std::vector<Model::Model*> models;
         std::vector<Light*> lights;
         std::vector<Shader*> shaders;

@@ -56,6 +56,7 @@ namespace Model{
         void compute_aabb();
         void add_child(Model* child);
         void debug_dump() const;
+        void move_relative_to(const glm::vec3& direction);
 
         inline bool intersectAABB(const glm::vec3& minA, const glm::vec3& maxA, const glm::vec3& minB, const glm::vec3& maxB){
             // If one box is completely to the “left” of the other, no collision

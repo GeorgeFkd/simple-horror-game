@@ -24,6 +24,21 @@ void Model::Model::debug_dump() const {
          << localaabbmax.z << ")" << std::endl;
 }
 
+void Model::Model::move_relative_to(const glm::vec3& direction) {
+    
+    glm::mat4 tf = local_transform;
+
+    glm::vec3 forward = glm::normalize(glm::vec3(tf[2]));  // local Z
+    glm::vec3 right   = glm::normalize(glm::vec3(tf[0]));  // local X
+    glm::vec3 up      = glm::normalize(glm::vec3(tf[1]));  // local Y
+
+    glm::vec3 move = direction.x * right + direction.y * up - direction.z * forward;
+
+    tf = glm::translate(tf, move);
+    this->set_local_transform(tf);
+
+}
+
 
 Model::Model::Model(const std::vector<glm::vec3>& positions,
                     const std::vector<glm::vec3>& normals,
