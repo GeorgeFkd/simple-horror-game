@@ -1,6 +1,7 @@
 #pragma once
 
 #include <GL/glew.h>
+#include <functional>
 #include <glm/glm.hpp>
 #include <glm/gtc/epsilon.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -11,11 +12,10 @@
 #include <unordered_map>
 #include <limits>
 #include <numeric>
-#include "OBJLoader.h"
 #include "SubMesh.h"
 #include "Shader.h"
-
-namespace Model{
+#include "OBJLoader.h"
+namespace Models{
 
     struct Vertex {
         glm::vec3 position;
@@ -81,7 +81,15 @@ namespace Model{
         inline bool is_instanced() const{
             return is_instanced_;
         }
+        inline void set_interactivity(bool is_interactive) {
+            this->interactable = is_interactive;
+        }
         
+        inline bool can_interact() {
+            return interactable;
+        }
+        
+
         inline bool isActive() const {
             return this->active;
         }
@@ -131,7 +139,9 @@ namespace Model{
             const std::string& label,
             const Material& mat = Material());
 
-        
+        inline glm::mat4 get_world_transform() {
+            return world_transform;
+        }       
 
         Model(const std::string& objFile,const std::string& label);
 
@@ -166,7 +176,8 @@ namespace Model{
         // 2) World-space AABB (after applying world_transform)
         glm::vec3 aabbmin;
         glm::vec3 aabbmax;
-
+        
+        bool interactable = false;
         bool active = true;
         std::vector<Model*> children; 
     };

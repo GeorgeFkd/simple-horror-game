@@ -11,16 +11,13 @@
 #include "Light.h"
 #include "Shader.h"
 namespace SceneManager{
-    
-    
-
     class SceneManager{
     public: 
 
-        inline void add_model(Model::Model& model){
+        inline void add_model(Models::Model& model){
             models.push_back(&model);
         }
-        inline void add_model(Model::Model&& model) {
+        inline void add_model(Models::Model&& model) {
         models.push_back(std::move(&model));
     }
         inline void add_light(Light& light) { 
@@ -31,13 +28,17 @@ namespace SceneManager{
             shaders.push_back(&shader); 
         }
 
-        inline const std::vector<Model::Model*> get_models() const{
+        inline const std::vector<Models::Model*> get_models() const{
             return models;
+        }
+
+        inline std::vector<Light*>& get_lights() {
+            return lights;
         }
         
         
 
-        void move_model(Model::Model* model,const glm::vec3& direction) {
+        void move_model(Models::Model* model,const glm::vec3& direction) {
             auto model_pos = findModel(model);
             model_pos->move_relative_to(direction);
         }
@@ -60,7 +61,7 @@ namespace SceneManager{
         }
         
         
-        inline void remove_model(Model::Model* model) {
+        inline void remove_model(Models::Model* model) {
             //we probably need to switch to a hashmap, this costs O(n)   
             auto res = std::remove_if(models.begin(),models.end(),[model](auto* m) { return m->name() == model->name();});
             models.erase(res,models.end());
@@ -68,8 +69,36 @@ namespace SceneManager{
 
         inline void remove_instanced_model_at() {throw std::runtime_error("not yet implemented");}
 
-        
+        inline int on_interaction_with(Models::Model* m,std::function<void(SceneManager*)> handler) {
+            #if 1 
+            std::cout << m->name()  << "-> " << sizeof(handler) << "\n";
+            #endif
 
+            eventHandlers[m->name()] = handler;
+            return 0;
+        }
+
+         inline int on_interaction_with(std::string_view name,std::function<void(SceneManager*)> handler){
+            #if 1 
+            std::cout << name  << "-> " << sizeof(handler) << "\n";
+            #endif    
+            eventHandlers.insert({name,handler});
+            return 0;
+        }
+
+        inline int run_handler_for(Models::Model* m) {
+            std::cout << "Run handler for: " << m->name() << "\n";
+            std::cout << "Keys: " << eventHandlers.count(m->name()) << "\n";
+            assert(eventHandlers.find(m->name()) != eventHandlers.end());
+            eventHandlers.at(m->name())(this);
+        }
+
+        inline void run_handler_for(std::string_view name) {
+            std::cout << "Run handler for: " << name << "\n";
+            std::cout << "Keys: " << eventHandlers.count(name) << "\n";
+            assert(eventHandlers.find(name) != eventHandlers.end());
+            eventHandlers.at(name)(this);
+        }
         Shader* get_shader_by_name(const std::string& shader_name);
 
         void render_depth_pass();
@@ -77,19 +106,21 @@ namespace SceneManager{
 
         SceneManager(int width, int height):screen_height(height), screen_width(width){};
         ~SceneManager();
+        
+
     private:
-        inline Model::Model* findModel(Model::Model* model) {
+        inline Models::Model* findModel(Models::Model* model) {
             auto model_pos = std::find_if(models.begin(),models.end(),[model](auto* m) { return m->name() == model->name();});
             return *model_pos;
         }
-        inline Model::Model* findModel(std::string_view name) {
+        inline Models::Model* findModel(std::string_view name) {
             auto model_pos = std::find_if(models.begin(),models.end(),[name](auto* m) { return m->name() == name;});
             return *model_pos;
         } 
-        std::vector<Model::Model*> models;
+        std::vector<Models::Model*> models;
         std::vector<Light*> lights;
         std::vector<Shader*> shaders;
-
+        std::unordered_map<std::string_view,std::function<void(SceneManager*)>> eventHandlers = {};
         int screen_width, screen_height;
 
     };

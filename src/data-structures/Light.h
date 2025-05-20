@@ -138,7 +138,7 @@ public:
 
     void bind_shadow_map(Shader* shader, const std::string& base, int index) const;
     void draw_lighting(Shader* shader, const std::string& base, int index) const;
-    void draw_depth_pass(Shader* shader, const std::vector<Model::Model*>& models) const;
+    void draw_depth_pass(Shader* shader, const std::vector<Models::Model*>& models) const;
 private:
     LightType type;
     glm::vec3 position;

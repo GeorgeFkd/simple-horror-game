@@ -1,6 +1,6 @@
 #include "Model.h"
 
-void Model::Model::debug_dump() const {
+void Models::Model::debug_dump() const {
     size_t total_indices   = 0;
     size_t total_triangles = 0;
     for (auto const& sm : submeshes) {
@@ -24,7 +24,7 @@ void Model::Model::debug_dump() const {
          << localaabbmax.z << ")" << std::endl;
 }
 
-void Model::Model::move_relative_to(const glm::vec3& direction) {
+void Models::Model::move_relative_to(const glm::vec3& direction) {
     
     glm::mat4 tf = local_transform;
 
@@ -39,14 +39,14 @@ void Model::Model::move_relative_to(const glm::vec3& direction) {
 
 }
 
-// Model::Model::Model(const std::string &obj_file,
+// Models::Model::Model(const std::string &obj_file,
 //                                  const std::string &label) {
 //
 //   ObjectLoader::OBJLoader loader;
 //   loader.read_from_file(obj_file);
 //   std::cout << "For Model " << label << "\n";
 // }
-Model::Model::Model(const std::vector<glm::vec3>& positions,
+Models::Model::Model(const std::vector<glm::vec3>& positions,
                     const std::vector<glm::vec3>& normals,
                     const std::vector<glm::vec2>& texcoords,
                     const std::vector<GLuint>& indices,
@@ -113,7 +113,7 @@ Model::Model::Model(const std::vector<glm::vec3>& positions,
     GLCall(glBindVertexArray(0));
 }
 
-Model::Model::Model(const std::string& objFile, const std::string& label)
+Models::Model::Model(const std::string& objFile, const std::string& label)
   : local_transform(1.0f)
   , world_transform(1.0f)
   , localaabbmin(std::numeric_limits<float>::max())
@@ -240,7 +240,7 @@ Model::Model::Model(const std::string& objFile, const std::string& label)
     }
 }
 
-Model::Model::~Model(){
+Models::Model::~Model(){
     // Tear down GL objects in reverse order of creation:
     if (ebo) {
         GLCall(glDeleteBuffers(1, &ebo));
@@ -256,15 +256,15 @@ Model::Model::~Model(){
     }
 }
 
-void Model::Model::add_child(Model* child){
+void Models::Model::add_child(Model* child){
     children.push_back(child);
 }
 
-void Model::Model::set_local_transform(const glm::mat4& local_transform){
+void Models::Model::set_local_transform(const glm::mat4& local_transform){
     this->local_transform = local_transform;
 }
 
-void Model::Model::update_world_transform(const glm::mat4& parent_transform) {
+void Models::Model::update_world_transform(const glm::mat4& parent_transform) {
     world_transform =  parent_transform * local_transform;
 
     compute_aabb();
@@ -273,7 +273,7 @@ void Model::Model::update_world_transform(const glm::mat4& parent_transform) {
     }
 }
 
-void Model::Model::draw_instanced(const glm::mat4& view, const glm::mat4& projection, Shader* shader) const{
+void Models::Model::draw_instanced(const glm::mat4& view, const glm::mat4& projection, Shader* shader) const{
 
     update_instance_data();
 
@@ -333,7 +333,7 @@ void Model::Model::draw_instanced(const glm::mat4& view, const glm::mat4& projec
     GLCall(glBindVertexArray(0));
 }
 
-void Model::Model::draw(const glm::mat4& view, const glm::mat4& projection, Shader* shader) const{
+void Models::Model::draw(const glm::mat4& view, const glm::mat4& projection, Shader* shader) const{
     // upload matrices
     shader->set_mat4("uView", view);
     shader->set_mat4("uProj", projection);
@@ -386,7 +386,7 @@ void Model::Model::draw(const glm::mat4& view, const glm::mat4& projection, Shad
     GLCall(glBindVertexArray(0));
 }
 
-void Model::Model::draw_depth(Shader* shader) const {
+void Models::Model::draw_depth(Shader* shader) const {
 
     //GLCall(glEnable(GL_CULL_FACE));
     //GLCall(glCullFace(GL_FRONT));
@@ -409,7 +409,7 @@ void Model::Model::draw_depth(Shader* shader) const {
     GLCall(glBindVertexArray(0));
 }
 
-void Model::Model::draw_depth_instanced(Shader* shader) const {
+void Models::Model::draw_depth_instanced(Shader* shader) const {
     update_instance_data();
 
     shader->set_bool("uUseInstancing", true);
@@ -429,7 +429,7 @@ void Model::Model::draw_depth_instanced(Shader* shader) const {
     GLCall(glBindVertexArray(0));
 }
 
-void Model::Model::compute_aabb() {
+void Models::Model::compute_aabb() {
     // 1) Initialize to extreme opposites
     glm::vec3 world_min(  FLT_MAX );
     glm::vec3 world_max( -FLT_MAX );
@@ -484,7 +484,7 @@ static void compute_transformed_aabb(
     }
 }
 
-void Model::Model::init_instancing(size_t max_instances) {
+void Models::Model::init_instancing(size_t max_instances) {
     // Generate the instance‐buffer
     GLCall(glGenBuffers(1, &instance_vbo));
     GLCall(glBindVertexArray(vao));
@@ -513,7 +513,7 @@ void Model::Model::init_instancing(size_t max_instances) {
     GLCall(glBindVertexArray(0));
 }
 
-void Model::Model::update_instance_data() const{
+void Models::Model::update_instance_data() const{
     // Map & write only the portion we need (could also use glBufferSubData)
     GLCall(glBindBuffer(GL_ARRAY_BUFFER, instance_vbo));
     void* ptr = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
@@ -523,7 +523,7 @@ void Model::Model::update_instance_data() const{
     GLCall(glUnmapBuffer(GL_ARRAY_BUFFER));
 }
 
-void Model::Model::add_instance_transform(const glm::mat4& xf) {
+void Models::Model::add_instance_transform(const glm::mat4& xf) {
     instance_transforms.push_back(xf);
 
     glm::vec3 wmin, wmax;

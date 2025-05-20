@@ -134,7 +134,7 @@ void Light::draw_lighting(Shader *shader, const std::string &base, int index) co
 }
 
 void Light::draw_depth_pass(Shader* shader, 
-                            const std::vector<Model::Model*>& models) const 
+                            const std::vector<Models::Model*>& models) const 
 {
     GLCall(glViewport(0, 0, shadow_width, shadow_height));
     GLCall(glBindFramebuffer(GL_FRAMEBUFFER, depth_map_fbo));
@@ -245,40 +245,41 @@ glm::mat4 Light::get_light_projection() const
 {
     switch (type)
     {
-    case LightType::DIRECTIONAL:
-    {
-        // Ortho dims: half‐width/height of the shadow volume
-        float orthoSize = this->ortho_size;
-        return glm::ortho(
-            -ortho_size, +ortho_size,
-            -ortho_size, +ortho_size,
-            near_plane, far_plane
-        );
+        case LightType::DIRECTIONAL:
+        {
+            // Ortho dims: half‐width/height of the shadow volume
+            float orthoSize = this->ortho_size;
+            return glm::ortho(
+                -ortho_size, +ortho_size,
+                -ortho_size, +ortho_size,
+                near_plane, far_plane
+            );
+        }
+        case LightType::POINT:
+        {
+            // For point lights we render a cubemap: 90° FOV and square aspect
+            return glm::perspective(
+                glm::radians(90.0f),
+                1.0f,
+                near_plane,
+                far_plane
+            );
+        }
+        case LightType::SPOT:
+        {
+            // Use the spot cone angle as FOV (double the cutoff half‐angle)
+            float fov = glm::radians(outer_cutoff * 50.0f);
+            float aspect = (float)shadow_width / (float)shadow_height;
+            return glm::perspective(
+                //fov,
+                glm::radians(90.0f),
+                aspect,
+                near_plane,
+                far_plane
+            );
+        }
     }
-    case LightType::POINT:
-    {
-        // For point lights we render a cubemap: 90° FOV and square aspect
-        return glm::perspective(
-            glm::radians(90.0f),
-            1.0f,
-            near_plane,
-            far_plane
-        );
-    }
-    case LightType::SPOT:
-    {
-        // Use the spot cone angle as FOV (double the cutoff half‐angle)
-        float fov = glm::radians(outer_cutoff * 50.0f);
-        float aspect = (float)shadow_width / (float)shadow_height;
-        return glm::perspective(
-            //fov,
-            glm::radians(90.0f),
-            aspect,
-            near_plane,
-            far_plane
-        );
-    }
-    }
+    assert(false);
 }
 
 glm::mat4 Light::get_light_view() const {
