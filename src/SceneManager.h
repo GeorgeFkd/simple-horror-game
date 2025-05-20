@@ -11,7 +11,8 @@
 #include "Light.h"
 #include "Shader.h"
 namespace SceneManager{
-
+    
+    
 
     class SceneManager{
     public: 
@@ -33,6 +34,8 @@ namespace SceneManager{
         inline const std::vector<Model::Model*> get_models() const{
             return models;
         }
+
+        
 
         Shader* get_shader_by_name(const std::string& shader_name);
 

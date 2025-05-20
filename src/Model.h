@@ -81,6 +81,23 @@ namespace Model{
             return is_instanced_;
         }
         
+        inline bool isActive() const {
+            return this->active;
+        }
+
+        inline void toggleActive() {
+            active = !active;
+        }
+
+        inline void disable() {
+            this->active = false;
+        }
+
+        inline void enable() {
+            this->active = true;
+        }
+
+
         inline void set_scale(const glm::vec3& s) {
             local_transform = glm::scale(glm::mat4(1.0f), s) * local_transform;
         }
@@ -149,7 +166,7 @@ namespace Model{
         glm::vec3 aabbmin;
         glm::vec3 aabbmax;
 
-
+        bool active = true;
         std::vector<Model*> children; 
     };
 }

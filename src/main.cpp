@@ -327,10 +327,6 @@ int main() {
   Shader depth_debug = Shader(shader_paths, shader_types, "depth_debug");
 #endif
 
-
-
-
-
   Material material;
   {
     material.Ka = glm::vec3(0.15f, 0.07f, 0.02f);
@@ -407,7 +403,7 @@ int main() {
                 running = false;
             }
             if(ev.type == SDL_KEYDOWN && ev.key.repeat == 0) {
-            const Uint8 *keys = SDL_GetKeyboardState(nullptr);
+              const Uint8 *keys = SDL_GetKeyboardState(nullptr);
               if (keys[SDL_SCANCODE_L]) {
                 flashlight.toggle_light();
                 std::cout << "Flashlight is now on: " << flashlight.is_turned_on() << "\n";
@@ -421,6 +417,9 @@ int main() {
                 flashlight.make_light_blue();
               } 
               
+              if (keys[SDL_SCANCODE_T]) {
+                bookcase.toggleActive();
+              }
 
             }
             // feed mouse/window events to the camera
@@ -443,32 +442,34 @@ int main() {
         // 3.5) collision test
         #ifndef DEBUG_DEPTH
         for (auto* model : scene_manager.get_models()) {
-            if (model->is_instanced()) {
-                // loop each instance’s box
-                for (size_t i = 0; i < model->get_instance_count(); ++i) {
-                    if ( camera.intersectSphereAABB(
-                        camera.get_position(),
-                        camera.get_radius(),
-                        model->get_instance_aabb_min(i),
-                        model->get_instance_aabb_max(i)) )
-                    {
-                    camera.set_position(last_camera_position);
-                    goto collision_done;
-                    }
-                }
-            }
-            else {
-                // single AABB path
-                if ( camera.intersectSphereAABB(
-                        camera.get_position(),
-                        camera.get_radius(),
-                        model->get_aabbmin(),
-                        model->get_aabbmax()) )
-                {
-                    camera.set_position(last_camera_position);
-                    break;
-                }
-            }
+              if(!model->isActive()) continue;
+              if (model->is_instanced()) {
+                  // loop each instance’s box
+                  for (size_t i = 0; i < model->get_instance_count(); ++i) {
+                      if ( camera.intersectSphereAABB(
+                          camera.get_position(),
+                          camera.get_radius(),
+                          model->get_instance_aabb_min(i),
+                          model->get_instance_aabb_max(i)) )
+                      {
+                      camera.set_position(last_camera_position);
+                      goto collision_done;
+                      }
+                  }
+              }
+              else {
+                  // single AABB path
+                  if ( camera.intersectSphereAABB(
+                          camera.get_position(),
+                          camera.get_radius(),
+                          model->get_aabbmin(),
+                          model->get_aabbmax()) )
+                  {
+                      camera.set_position(last_camera_position);
+                      break;
+                  }
+              }
+          
         }
         collision_done:;
         #endif
