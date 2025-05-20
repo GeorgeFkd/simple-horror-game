@@ -15,17 +15,7 @@
 // #define DEBUG_DEPTH
 #endif
 
-Model::Model model_from_obj_file(const std::string &obj_file,
-                                 const std::string &label) {
 
-  ObjectLoader::OBJLoader loader;
-  loader.read_from_file(obj_file);
-  std::cout << "For Model " << label << "\n";
-  // loader.debug_dump();
-  std::cout << "---------------------------";
-  auto model = Model::Model(loader, label);
-  return model;
-}
 enum class SurfaceType {
   Floor,
   Ceiling,
@@ -189,9 +179,9 @@ int main() {
 
     Model::Model floor(floor_verts, floor_normals, floor_uvs, floor_indices,"Floor" ,floor_material);
 
-    auto right_light = model_from_obj_file("assets/models/light_sphere.obj", "Sphere");
-    auto overhead_point_light_model = model_from_obj_file("assets/models/light_sphere.obj","Overhead point light");
-    auto right_spot_light_model = model_from_obj_file("assets/models/light_sphere.obj","Right spot light");
+    auto right_light = Model::Model("assets/models/light_sphere.obj", "Sphere");
+    auto overhead_point_light_model = Model::Model("assets/models/light_sphere.obj","Overhead point light");
+    auto right_spot_light_model = Model::Model("assets/models/light_sphere.obj","Right spot light");
     //hi
     Light flashlight(
         LightType::SPOT,
@@ -270,11 +260,11 @@ int main() {
     overhead_point_light.set_direction(overhead_spot_dir);
 
 
-    auto bed = model_from_obj_file("assets/models/SimpleOldTownAssets/Bed01.obj", "Bed");
+    auto bed = Model::Model("assets/models/SimpleOldTownAssets/Bed01.obj", "Bed");
     bed.set_local_transform(bed_offset);
     scene_manager.add_model(bed);
 
-    auto chair = model_from_obj_file(
+    auto chair = Model::Model(
         "assets/models/SimpleOldTownAssets/ChairCafeWhite01.obj",
         "Cafe Chair");
 
@@ -309,7 +299,7 @@ int main() {
     scene_manager.add_model(chair);
 
     glm::mat4 bookcase_offset = glm::translate(glm::mat4(1.0f), bed_position + glm::vec3(0.0f, 0.0f, -6.0f));
-    auto bookcase = model_from_obj_file("assets/models/SimpleOldTownAssets/BookCase01.obj", "Bookcase");
+    auto bookcase = Model::Model("assets/models/SimpleOldTownAssets/BookCase01.obj", "Bookcase");
     bookcase.set_local_transform(bookcase_offset);
     scene_manager.add_model(bookcase);
     //scene_manager.add_light(flashlight);

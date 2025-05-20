@@ -131,9 +131,9 @@ namespace Model{
             const std::string& label,
             const Material& mat = Material());
 
-        Model(const ObjectLoader::OBJLoader& loader);
+        
 
-        Model(const ObjectLoader::OBJLoader& loader,const std::string& label);
+        Model(const std::string& objFile,const std::string& label);
 
         inline std::string_view name() {
             return label;        

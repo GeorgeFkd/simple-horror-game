@@ -16,16 +16,7 @@
 // #define DEBUG_DEPTH
 #endif
 
-Model::Model model_from_obj_file(const std::string &obj_file,
-                                 const std::string &label) {
 
-  ObjectLoader::OBJLoader loader;
-  loader.read_from_file(obj_file);
-  std::cout << "For Model " << label << "\n";
-  std::cout << "---------------------------";
-  auto model = Model::Model(loader, label);
-  return model;
-}
 enum class SurfaceType {
   Floor,
   Ceiling,
@@ -155,9 +146,9 @@ int main() {
   Shader depth_cube = Shader(shader_paths, shader_types, "depth_cube");
 
   auto right_light =
-        model_from_obj_file("assets/models/light_sphere.obj", "Sphere");
+        Model::Model("assets/models/light_sphere.obj", "Sphere");
   auto overhead_light =
-        model_from_obj_file("assets/models/light_sphere.obj", "Overhead light");
+        Model::Model("assets/models/light_sphere.obj", "Overhead light");
   // hi
   Light flashlight(LightType::SPOT,
                    glm::vec3(0.0f),               // position
@@ -200,13 +191,13 @@ int main() {
 
   auto bed_position = glm::vec3(0.25f, 0.0f, 0.25f);
   auto bed =
-      model_from_obj_file("assets/models/SimpleOldTownAssets/Bed01.obj", "Bed");
+      Model::Model("assets/models/SimpleOldTownAssets/Bed01.obj", "Bed");
   scene_manager.add_model(bed);
 
   #define OFFSET(X, Y) glm::translate(glm::mat4(1.0f), X + Y)
 
   glm::mat4 chair1_offset = OFFSET(bed_position, glm::vec3(-0.5f, 0.0f, 1.0f));
-  auto chair1 = model_from_obj_file(
+  auto chair1 = Model::Model(
       "assets/models/SimpleOldTownAssets/ChairCafeWhite01.obj", "Chair 1");
   chair1_offset = glm::rotate(chair1_offset, glm::radians(90.0f),
                               glm::vec3(0, 1, 0)); // rotate around Y-axis
@@ -219,19 +210,19 @@ int main() {
 
   glm::mat4 bookcase_offset =
       OFFSET(bed_position, glm::vec3(1.0f, 0.0f, -3.5f));
-  auto bookcase = model_from_obj_file(bookcase_file, "bookcase1");
+  auto bookcase = Model::Model(bookcase_file, "bookcase1");
   bookcase.set_local_transform(bookcase_offset);
   scene_manager.add_model(bookcase);
 
   glm::mat4 bookcase2_offset =
       OFFSET(bed_position, glm::vec3(-0.20f, 0.0f, -3.5f));
-  auto bookcase2 = model_from_obj_file(bookcase_file, "bookcase");
+  auto bookcase2 = Model::Model(bookcase_file, "bookcase");
   bookcase2.set_local_transform(bookcase2_offset);
   scene_manager.add_model(bookcase2);
 
   glm::mat4 bookcase3_offset =
       OFFSET(bed_position, glm::vec3(-1.4f, 0.0f, -3.5f));
-  auto bookcase3 = model_from_obj_file(bookcase_file, "bookcase");
+  auto bookcase3 = Model::Model(bookcase_file, "bookcase");
   bookcase3.set_local_transform(bookcase3_offset);
   scene_manager.add_model(bookcase3);
 
@@ -239,139 +230,139 @@ int main() {
       OFFSET(bed_position, glm::vec3(1.4f, 0.0f, -2.7f));
   bookcase4_offset = glm::rotate(bookcase4_offset, glm::radians(-90.0f),
                                  glm::vec3(0, 1, 0)); // rotate around Y-axis
-  auto bookcase4 = model_from_obj_file(bookcase_file, "bookcase");
+  auto bookcase4 = Model::Model(bookcase_file, "bookcase");
   bookcase4.set_local_transform(bookcase4_offset);
   scene_manager.add_model(bookcase4);
 
   glm::mat4 table_offset = OFFSET(bed_position, glm::vec3(0.0f, 0.0f, -2.0f));
-  auto table = model_from_obj_file(MODELS_FOLDER + "TableSmall1.obj", "Table");
+  auto table = Model::Model(MODELS_FOLDER + "TableSmall1.obj", "Table");
   table.set_local_transform(table_offset);
   scene_manager.add_model(table);
 
   glm::mat4 tablechair_offset =
       OFFSET(bed_position, glm::vec3(-1.0f, 0.0f, -2.0f));
   auto tablechair =
-      model_from_obj_file(MODELS_FOLDER + "ChairCafeWhite01.obj", "TableChair");
+      Model::Model(MODELS_FOLDER + "ChairCafeWhite01.obj", "TableChair");
   tablechair.set_local_transform(tablechair_offset);
   scene_manager.add_model(tablechair);
 
   auto overhead_light_model =
-      model_from_obj_file("assets/models/light_sphere.obj", "lamp");
+      Model::Model("assets/models/light_sphere.obj", "lamp");
   glm::mat4 overhead_light_offset =
       OFFSET(glm::vec3(0.0f, 0.0f, 0.0f), overhead_light_pos);
   overhead_light_model.set_local_transform(overhead_light_offset);
   scene_manager.add_model(overhead_light_model);
 
   auto rightlight_model =
-      model_from_obj_file("assets/models/light_sphere.obj", "lamp2");
+      Model::Model("assets/models/light_sphere.obj", "lamp2");
   glm::mat4 rightlight_offset =
       OFFSET(glm::vec3(0.0f, 0.0f, -2.0f), right_spotlight_pos);
   rightlight_model.set_local_transform(rightlight_offset);
   scene_manager.add_model(rightlight_model);
 
-  auto carpet = model_from_obj_file(MODELS_FOLDER + "Flokati.obj", "carpet");
+  auto carpet = Model::Model(MODELS_FOLDER + "Flokati.obj", "carpet");
   glm::mat4 carpet_offset =
       OFFSET(glm::vec3(0.0f, 0.0f, -1.85f), glm::vec3(0.0f));
   carpet.set_local_transform(carpet_offset);
   scene_manager.add_model(carpet);
 
   
-  auto pot = model_from_obj_file(MODELS_FOLDER + "PotNtural.obj", "pot");
+  auto pot = Model::Model(MODELS_FOLDER + "PotNtural.obj", "pot");
   glm::mat4 pot_offset = OFFSET(bed_position, glm::vec3(-6.0f, 0, 3.0f));
   pot.set_local_transform(pot_offset);
   scene_manager.add_model(pot);
 
-  auto pot2 = model_from_obj_file(MODELS_FOLDER + "PotNtural.obj", "pot1");
+  auto pot2 = Model::Model(MODELS_FOLDER + "PotNtural.obj", "pot1");
   glm::mat4 pot2_offset = OFFSET(bed_position, glm::vec3(-5.5f, 0, 3.0f));
   pot2.set_local_transform(pot2_offset);
   scene_manager.add_model(pot2);
 
-  auto pot3 = model_from_obj_file(MODELS_FOLDER + "PotNtural.obj", "pot2");
+  auto pot3 = Model::Model(MODELS_FOLDER + "PotNtural.obj", "pot2");
   glm::mat4 pot3_offset = OFFSET(bed_position, glm::vec3(-5.0f, 0, 3.0f));
   pot3.set_local_transform(pot3_offset);
   scene_manager.add_model(pot3);
 
-  auto pot4 = model_from_obj_file(MODELS_FOLDER + "PotNtural.obj", "pot3");
+  auto pot4 = Model::Model(MODELS_FOLDER + "PotNtural.obj", "pot3");
   glm::mat4 pot4_offset = OFFSET(bed_position, glm::vec3(-4.5f, 0, 3.0f));
   pot4.set_local_transform(pot4_offset);
   scene_manager.add_model(pot4);
 
   auto watering_can =
-      model_from_obj_file(MODELS_FOLDER + "watering-can.obj", "watering-can");
+      Model::Model(MODELS_FOLDER + "watering-can.obj", "watering-can");
   glm::mat4 watering_can_offset =
       OFFSET(bed_position, glm::vec3(-4.0f, 0.0f, 3.5f));
   watering_can.set_local_transform(watering_can_offset);
   scene_manager.add_model(watering_can);
 
-  auto plant = model_from_obj_file(MODELS_FOLDER + "leaves.obj", "leaves");
+  auto plant = Model::Model(MODELS_FOLDER + "leaves.obj", "leaves");
   glm::mat4 plant_offset = OFFSET(bed_position, glm::vec3(-4.0f, 0.0f, 3.0f));
   plant.set_local_transform(plant_offset);
   scene_manager.add_model(plant);
 
   auto dining =
-      model_from_obj_file(MODELS_FOLDER + "dining-place.obj", "dining-place");
+      Model::Model(MODELS_FOLDER + "dining-place.obj", "dining-place");
   glm::mat4 dining_offset = OFFSET(bed_position, glm::vec3(-5.5f, 0.0f, -4.5f));
   dining.set_local_transform(dining_offset);
   scene_manager.add_model(dining);
 
-  auto wall_large = model_from_obj_file(
+  auto wall_large = Model::Model(
       MODELS_FOLDER + "OldHouseBrownWallLarge.obj", "wall_large-place");
   glm::mat4 wall_large_offset =
       OFFSET(bed_position, glm::vec3(-3.5f, 0.0f, -6.5f));
   wall_large.set_local_transform(wall_large_offset);
   scene_manager.add_model(wall_large);
-  auto wall2_large = model_from_obj_file(
+  auto wall2_large = Model::Model(
       MODELS_FOLDER + "OldHouseBrownWallLarge.obj", "wall2_large-place");
   glm::mat4 wall2_large_offset =
       OFFSET(bed_position, glm::vec3(-3.5f, 0.0f, 6.5f));
   wall2_large.set_local_transform(wall2_large_offset);
   scene_manager.add_model(wall2_large);
 
-  auto wall3_large = model_from_obj_file(
+  auto wall3_large = Model::Model(
       MODELS_FOLDER + "OldHouseBrownWallLarge.obj", "wall2_large-place");
   glm::mat4 wall3_large_offset =
       OFFSET(bed_position, glm::vec3(-3.5f, 0.0f, 3.5f));
   wall3_large.set_local_transform(wall3_large_offset);
   scene_manager.add_model(wall3_large);
-  auto wall4_large = model_from_obj_file(
+  auto wall4_large = Model::Model(
       MODELS_FOLDER + "OldHouseBrownWallLarge.obj", "wall2_large-place");
   glm::mat4 wall4_large_offset =
       OFFSET(bed_position, glm::vec3(-3.5f, 0.0f, -3.5f));
   wall4_large.set_local_transform(wall4_large_offset);
   scene_manager.add_model(wall4_large);
-  auto wall5_large = model_from_obj_file(
+  auto wall5_large = Model::Model(
       MODELS_FOLDER + "OldHouseBrownWallLarge.obj", "wall2_large-place");
   glm::mat4 wall5_large_offset =
       OFFSET(bed_position, glm::vec3(-3.5f, 0.0f, -1.5f));
   wall5_large.set_local_transform(wall5_large_offset);
   scene_manager.add_model(wall5_large);
 
-  auto wall6_large = model_from_obj_file(
+  auto wall6_large = Model::Model(
       MODELS_FOLDER + "OldHouseBrownWallLarge.obj", "wall_large-place");
   glm::mat4 wall6_large_offset =
       OFFSET(bed_position, glm::vec3(2.5f, 0.0f, -6.5f));
   wall6_large.set_local_transform(wall6_large_offset);
   scene_manager.add_model(wall6_large);
-  auto wall7_large = model_from_obj_file(
+  auto wall7_large = Model::Model(
       MODELS_FOLDER + "OldHouseBrownWallLarge.obj", "wall2_large-place");
   glm::mat4 wall7_large_offset =
       OFFSET(bed_position, glm::vec3(2.5f, 0.0f, 6.5f));
   wall7_large.set_local_transform(wall7_large_offset);
   scene_manager.add_model(wall7_large);
 
-  auto wall8_large = model_from_obj_file(
+  auto wall8_large = Model::Model(
       MODELS_FOLDER + "OldHouseBrownWallLarge.obj", "wall2_large-place");
   glm::mat4 wall8_large_offset =
       OFFSET(bed_position, glm::vec3(2.5f, 0.0f, 3.5f));
   wall8_large.set_local_transform(wall8_large_offset);
   scene_manager.add_model(wall8_large);
-  auto wall9_large = model_from_obj_file(
+  auto wall9_large = Model::Model(
       MODELS_FOLDER + "OldHouseBrownWallLarge.obj", "wall2_large-place");
   glm::mat4 wall9_large_offset =
       OFFSET(bed_position, glm::vec3(2.5f, 0.0f, -3.5f));
   wall9_large.set_local_transform(wall9_large_offset);
   scene_manager.add_model(wall9_large);
-  auto wall10_large = model_from_obj_file(
+  auto wall10_large = Model::Model(
       MODELS_FOLDER + "OldHouseBrownWallLarge.obj", "wall2_large-place");
   glm::mat4 wall10_large_offset =
       OFFSET(bed_position, glm::vec3(2.5f, 0.0f, -1.5f));

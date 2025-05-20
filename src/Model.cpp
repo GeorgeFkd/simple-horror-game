@@ -39,7 +39,13 @@ void Model::Model::move_relative_to(const glm::vec3& direction) {
 
 }
 
-
+// Model::Model::Model(const std::string &obj_file,
+//                                  const std::string &label) {
+//
+//   ObjectLoader::OBJLoader loader;
+//   loader.read_from_file(obj_file);
+//   std::cout << "For Model " << label << "\n";
+// }
 Model::Model::Model(const std::vector<glm::vec3>& positions,
                     const std::vector<glm::vec3>& normals,
                     const std::vector<glm::vec2>& texcoords,
@@ -107,13 +113,17 @@ Model::Model::Model(const std::vector<glm::vec3>& positions,
     GLCall(glBindVertexArray(0));
 }
 
-Model::Model::Model(const ObjectLoader::OBJLoader& loader, const std::string& label)
+Model::Model::Model(const std::string& objFile, const std::string& label)
   : local_transform(1.0f)
   , world_transform(1.0f)
   , localaabbmin(std::numeric_limits<float>::max())
   , localaabbmax(-std::numeric_limits<float>::max())
 , label(label)
 {
+    ObjectLoader::OBJLoader loader;
+    loader.read_from_file(objFile);
+
+
     // build unique_vertices & a cache
     std::unordered_map<Vertex, GLuint, VertexHasher> cache;
     cache.reserve(loader.m_faces.size() * 4);
