@@ -107,7 +107,7 @@ Model::Model repeating_tile(SurfaceType surface, float offset,
   std::vector<glm::vec3> normals(4, normal);
   std::vector<GLuint> indices = {0, 1, 2, 0, 2, 3};
 
-  return Model::Model(verts, normals, uvs, indices, material, label);
+  return Model::Model(verts, normals, uvs, indices,label, material );
 }
 
 

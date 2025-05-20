@@ -35,6 +35,17 @@ namespace SceneManager{
             return models;
         }
 
+        inline void remove_model(Model::Model* model) {
+            //we probably need to switch to a hashmap, this costs O(n)   
+            auto res = std::remove_if(models.begin(),models.end(),[model](auto* m) { return m->name() == model->name();});
+            
+            models.erase(res,models.end());
+        }
+
+        inline void remove_instanced_model_at() {
+
+        }
+
         
 
         Shader* get_shader_by_name(const std::string& shader_name);

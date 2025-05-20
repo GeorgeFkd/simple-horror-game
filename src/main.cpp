@@ -108,7 +108,7 @@ Model::Model repeating_tile(SurfaceType surface, float offset,
   std::vector<glm::vec3> normals(4, normal);
   std::vector<GLuint> indices = {0, 1, 2, 0, 2, 3};
 
-  return Model::Model(verts, normals, uvs, indices, material, label);
+  return Model::Model(verts, normals, uvs, indices,label, material);
 }
 
 
@@ -187,7 +187,7 @@ int main() {
     floor_material.d  = 1.0f;                                  // opacity
     floor_material.illum = 2;                                  // standard Phong
 
-    Model::Model floor(floor_verts, floor_normals, floor_uvs, floor_indices, floor_material);
+    Model::Model floor(floor_verts, floor_normals, floor_uvs, floor_indices,"Floor" ,floor_material);
 
     auto right_light = model_from_obj_file("assets/models/light_sphere.obj", "Sphere");
     auto overhead_point_light_model = model_from_obj_file("assets/models/light_sphere.obj","Overhead point light");
@@ -421,6 +421,11 @@ int main() {
                 bookcase.toggleActive();
               }
 
+              if (keys[SDL_SCANCODE_N]) {
+                std::cout << "Removing bookcase\n";
+                scene_manager.remove_model(&bookcase);
+              }
+
             }
             // feed mouse/window events to the camera
             camera.process_input(ev);
@@ -452,6 +457,8 @@ int main() {
                           model->get_instance_aabb_min(i),
                           model->get_instance_aabb_max(i)) )
                       {
+                        std::cout << "Collision with: " << model->name() << " at:" << i << "\n";
+
                       camera.set_position(last_camera_position);
                       goto collision_done;
                       }
@@ -465,6 +472,7 @@ int main() {
                           model->get_aabbmin(),
                           model->get_aabbmax()) )
                   {
+          std::cout << "Collision with: " << model->name() << "\n";
                       camera.set_position(last_camera_position);
                       break;
                   }

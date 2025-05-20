@@ -127,8 +127,8 @@ namespace Model{
             const std::vector<glm::vec3>& normals,
             const std::vector<glm::vec2>& texcoords,
             const std::vector<GLuint>& indices,
-            const Material& mat = Material(),
-              const std::string& label="");
+            const std::string& label,
+            const Material& mat = Material());
 
         Model(const ObjectLoader::OBJLoader& loader);
 
