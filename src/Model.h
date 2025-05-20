@@ -1,6 +1,7 @@
 #pragma once
 
 #include <GL/glew.h>
+#include <functional>
 #include <glm/glm.hpp>
 #include <glm/gtc/epsilon.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -11,11 +12,10 @@
 #include <unordered_map>
 #include <limits>
 #include <numeric>
-#include "OBJLoader.h"
 #include "SubMesh.h"
 #include "Shader.h"
-
-namespace Model{
+#include "OBJLoader.h"
+namespace Models{
 
     struct Vertex {
         glm::vec3 position;
@@ -56,6 +56,7 @@ namespace Model{
         void compute_aabb();
         void add_child(Model* child);
         void debug_dump() const;
+        void move_relative_to(const glm::vec3& direction);
 
         inline bool intersectAABB(const glm::vec3& minA, const glm::vec3& maxA, const glm::vec3& minB, const glm::vec3& maxB){
             // If one box is completely to the “left” of the other, no collision
@@ -80,7 +81,32 @@ namespace Model{
         inline bool is_instanced() const{
             return is_instanced_;
         }
+        inline void set_interactivity(bool is_interactive) {
+            this->interactable = is_interactive;
+        }
         
+        inline bool can_interact() {
+            return interactable;
+        }
+        
+
+        inline bool isActive() const {
+            return this->active;
+        }
+
+        inline void toggleActive() {
+            active = !active;
+        }
+
+        inline void disable() {
+            this->active = false;
+        }
+
+        inline void enable() {
+            this->active = true;
+        }
+
+
         inline void set_scale(const glm::vec3& s) {
             local_transform = glm::scale(glm::mat4(1.0f), s) * local_transform;
         }
@@ -110,12 +136,14 @@ namespace Model{
             const std::vector<glm::vec3>& normals,
             const std::vector<glm::vec2>& texcoords,
             const std::vector<GLuint>& indices,
-            const Material& mat = Material(),
-              const std::string& label="");
+            const std::string& label,
+            const Material& mat = Material());
 
-        Model(const ObjectLoader::OBJLoader& loader);
+        inline glm::mat4 get_world_transform() {
+            return world_transform;
+        }       
 
-        Model(const ObjectLoader::OBJLoader& loader,const std::string& label);
+        Model(const std::string& objFile,const std::string& label);
 
         inline std::string_view name() {
             return label;        
@@ -148,8 +176,9 @@ namespace Model{
         // 2) World-space AABB (after applying world_transform)
         glm::vec3 aabbmin;
         glm::vec3 aabbmax;
-
-
+        
+        bool interactable = false;
+        bool active = true;
         std::vector<Model*> children; 
     };
 }

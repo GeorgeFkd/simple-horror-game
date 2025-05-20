@@ -3,6 +3,7 @@
 #include <SDL.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <limits>
 #include <vector>
 #include <string>
 #include "Camera.h"
@@ -15,17 +16,7 @@
 // #define DEBUG_DEPTH
 #endif
 
-Model::Model model_from_obj_file(const std::string &obj_file,
-                                 const std::string &label) {
 
-  ObjectLoader::OBJLoader loader;
-  loader.read_from_file(obj_file);
-  std::cout << "For Model " << label << "\n";
-  // loader.debug_dump();
-  std::cout << "---------------------------";
-  auto model = Model::Model(loader, label);
-  return model;
-}
 enum class SurfaceType {
   Floor,
   Ceiling,
@@ -34,7 +25,7 @@ enum class SurfaceType {
   WallLeft,
   WallRight
 };
-Model::Model repeating_tile(SurfaceType surface, float offset,
+Models::Model repeating_tile(SurfaceType surface, float offset,
                             const Material &material,float repeat) {
   constexpr int TILE_WIDTH = 50;
   constexpr int TILE_HEIGHT = 50;
@@ -108,8 +99,13 @@ Model::Model repeating_tile(SurfaceType surface, float offset,
   std::vector<glm::vec3> normals(4, normal);
   std::vector<GLuint> indices = {0, 1, 2, 0, 2, 3};
 
-  return Model::Model(verts, normals, uvs, indices, material, label);
+  return Models::Model(verts, normals, uvs, indices,label, material);
 }
+
+struct State {
+  std::string_view closestModelLabel;
+  float closestModelDistance;
+};
 
 
 int main() {
@@ -187,11 +183,11 @@ int main() {
     floor_material.d  = 1.0f;                                  // opacity
     floor_material.illum = 2;                                  // standard Phong
 
-    Model::Model floor(floor_verts, floor_normals, floor_uvs, floor_indices, floor_material);
+    Models::Model floor(floor_verts, floor_normals, floor_uvs, floor_indices,"Floor" ,floor_material);
 
-    auto right_light = model_from_obj_file("assets/models/light_sphere.obj", "Sphere");
-    auto overhead_point_light_model = model_from_obj_file("assets/models/light_sphere.obj","Overhead point light");
-    auto right_spot_light_model = model_from_obj_file("assets/models/light_sphere.obj","Right spot light");
+    auto right_light = Models::Model("assets/models/light_sphere.obj", "Sphere");
+    auto overhead_point_light_model = Models::Model("assets/models/light_sphere.obj","Overhead point light");
+    auto right_spot_light_model = Models::Model("assets/models/light_sphere.obj","Right spot light");
     //hi
     Light flashlight(
         LightType::SPOT,
@@ -270,48 +266,52 @@ int main() {
     overhead_point_light.set_direction(overhead_spot_dir);
 
 
-    auto bed = model_from_obj_file("assets/models/SimpleOldTownAssets/Bed01.obj", "Bed");
+    auto bed = Models::Model("assets/models/SimpleOldTownAssets/Bed01.obj", "Bed");
     bed.set_local_transform(bed_offset);
+    bed.set_interactivity(true);
     scene_manager.add_model(bed);
 
-    auto chair = model_from_obj_file(
-        "assets/models/SimpleOldTownAssets/ChairCafeWhite01.obj",
-        "Cafe Chair");
 
-    constexpr int chair_count = 1000;
-    chair.init_instancing(chair_count);
-        
-    const int grid_width  = 40; // 40 × 25 = 1000
-    const int grid_height = 25;
-    const float chair_spacing = 2.5f;
-        
-    int placed = 0;
-    for (int row = 0; row < grid_height && placed < chair_count; ++row) {
-        for (int col = 0; col < grid_width && placed < chair_count; ++col) {
-            glm::vec3 offset = bed_position + glm::vec3(
-                (col - grid_width / 2) * chair_spacing,
-                0.0f,
-                (row - grid_height / 2) * chair_spacing
-            );
-        
-            glm::mat4 transform = glm::translate(glm::mat4(1.0f), offset);
-        
-            // Optional: rotate every third chair
-            if ((row + col) % 3 == 0) {
-                transform = glm::rotate(transform, glm::radians(90.0f), glm::vec3(0, 1, 0));
-            }
-        
-            chair.add_instance_transform(transform);
-            ++placed;
-        }
-    }
-    
-    scene_manager.add_model(chair);
+    // auto chair = Model::Model(
+    //     "assets/models/SimpleOldTownAssets/ChairCafeWhite01.obj",
+    //     "Cafe Chair");
+    //
+    // constexpr int chair_count = 1000;
+    // chair.init_instancing(chair_count);
+    //
+    // const int grid_width  = 40; // 40 × 25 = 1000
+    // const int grid_height = 25;
+    // const float chair_spacing = 2.5f;
+    //
+    // int placed = 0;
+    // for (int row = 0; row < grid_height && placed < chair_count; ++row) {
+    //     for (int col = 0; col < grid_width && placed < chair_count; ++col) {
+    //         glm::vec3 offset = bed_position + glm::vec3(
+    //             (col - grid_width / 2) * chair_spacing,
+    //             0.0f,
+    //             (row - grid_height / 2) * chair_spacing
+    //         );
+    //
+    //         glm::mat4 transform = glm::translate(glm::mat4(1.0f), offset);
+    //
+    //         // Optional: rotate every third chair
+    //         if ((row + col) % 3 == 0) {
+    //             transform = glm::rotate(transform, glm::radians(90.0f), glm::vec3(0, 1, 0));
+    //         }
+    //
+    //         chair.add_instance_transform(transform);
+    //         ++placed;
+    //     }
+    // }
+    //
+    // scene_manager.add_model(chair);
 
     glm::mat4 bookcase_offset = glm::translate(glm::mat4(1.0f), bed_position + glm::vec3(0.0f, 0.0f, -6.0f));
-    auto bookcase = model_from_obj_file("assets/models/SimpleOldTownAssets/BookCase01.obj", "Bookcase");
+    auto bookcase = Models::Model("assets/models/SimpleOldTownAssets/BookCase01.obj", "Bookcase");
     bookcase.set_local_transform(bookcase_offset);
+    bookcase.set_interactivity(true);
     scene_manager.add_model(bookcase);
+    scene_manager.on_interaction_with("Bookcase",[](auto sceneMgr) { std::cout << "I live with only a chair on my side\n";});
     //scene_manager.add_light(flashlight);
 
 
@@ -326,10 +326,6 @@ int main() {
   shader_types = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
   Shader depth_debug = Shader(shader_paths, shader_types, "depth_debug");
 #endif
-
-
-
-
 
   Material material;
   {
@@ -367,51 +363,29 @@ int main() {
   glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
                         (void *)(2 * sizeof(float)));
 #endif
-
+  
+  State s; s.closestModelLabel=""; s.closestModelDistance = std::numeric_limits<float>::max();
   // ─── Main loop ───────────────────────────────────────────────────────
   bool running = true;
   Uint64 lastTicks = SDL_GetPerformanceCounter();
-
+  int interactionDistance = 2.0f;
   glm::vec3 last_camera_position;
-  while (running) {
-    // 1) compute Δt
-    Uint64 now = SDL_GetPerformanceCounter();
-    float dt = float(now - lastTicks) / float(SDL_GetPerformanceFrequency());
-    lastTicks = now;
-    // 2) handle all pending SDL events
-    SDL_Event ev;
-    while (SDL_PollEvent(&ev)) {
-      if (ev.type == SDL_QUIT) {
-        running = false;
-      }
-      // feed mouse/window events to the camera
-      camera.process_input(ev);
-      // adjust the GL viewport on resize
-      if (ev.type == SDL_WINDOWEVENT &&
-          ev.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
-        int w = ev.window.data1, h = ev.window.data2;
-        glViewport(0, 0, w, h);
-      }
-    glm::vec3 last_camera_position;
     while (running){
-        // 1) compute Δt
         Uint64 now = SDL_GetPerformanceCounter();
         float dt = float(now - lastTicks) / float(SDL_GetPerformanceFrequency());
         lastTicks = now;
-        // 2) handle all pending SDL events
         SDL_Event ev;
-        while (SDL_PollEvent(&ev))
-        {
+        while (SDL_PollEvent(&ev)) {
             if (ev.type == SDL_QUIT)
             {
                 running = false;
             }
             if(ev.type == SDL_KEYDOWN && ev.key.repeat == 0) {
-            const Uint8 *keys = SDL_GetKeyboardState(nullptr);
-              if (keys[SDL_SCANCODE_L]) {
-                flashlight.toggle_light();
-                std::cout << "Flashlight is now on: " << flashlight.is_turned_on() << "\n";
-              }
+              const Uint8 *keys = SDL_GetKeyboardState(nullptr);
+              // if (keys[SDL_SCANCODE_L]) {
+              //   flashlight.toggle_light();
+              //   std::cout << "Flashlight is now on: " << flashlight.is_turned_on() << "\n";
+              // }
 
               if (keys[SDL_SCANCODE_R]) {
                 flashlight.make_light_red();
@@ -421,7 +395,28 @@ int main() {
                 flashlight.make_light_blue();
               } 
               
+              if (keys[SDL_SCANCODE_T]) {
+                bookcase.toggleActive();
+              }
 
+              if (keys[SDL_SCANCODE_N]) {
+                std::cout << "Removing bookcase\n";
+                scene_manager.remove_model(&bookcase);
+              }
+
+              
+              if(keys[SDL_SCANCODE_K]){
+                scene_manager.move_model_Y(bookcase.name(),1.0f);
+              }
+              if(keys[SDL_SCANCODE_J]) {
+                scene_manager.move_model_Y(bookcase.name(),-1.0f);
+              }
+              if(keys[SDL_SCANCODE_H]) {
+                scene_manager.move_model_X(bookcase.name(),-1.0f);
+              }
+              if(keys[SDL_SCANCODE_L]) {
+                scene_manager.move_model_X(bookcase.name(),1.0f);
+              }
             }
             // feed mouse/window events to the camera
             camera.process_input(ev);
@@ -433,8 +428,6 @@ int main() {
                     h = ev.window.data2;
                 glViewport(0, 0, w, h);
             }
-            
-   
         }
 
         // 3) update camera movement (WASD/etc) once per frame
@@ -442,33 +435,47 @@ int main() {
         camera.update(dt);
         // 3.5) collision test
         #ifndef DEBUG_DEPTH
+        // reset at the start of each loop
+        s.closestModelDistance = std::numeric_limits<float>::max();
         for (auto* model : scene_manager.get_models()) {
-            if (model->is_instanced()) {
-                // loop each instance’s box
-                for (size_t i = 0; i < model->get_instance_count(); ++i) {
-                    if ( camera.intersectSphereAABB(
-                        camera.get_position(),
-                        camera.get_radius(),
-                        model->get_instance_aabb_min(i),
-                        model->get_instance_aabb_max(i)) )
-                    {
-                    camera.set_position(last_camera_position);
-                    goto collision_done;
+              if(!model->isActive()) continue;
+              if (model->is_instanced()) {
+                  // loop each instance’s box
+                  for (size_t i = 0; i < model->get_instance_count(); ++i) {
+                      if ( camera.intersectSphereAABB(
+                          camera.get_position(),
+                          camera.get_radius(),
+                          model->get_instance_aabb_min(i),
+                          model->get_instance_aabb_max(i)) )
+                      {
+                        std::cout << "Collision with: " << model->name() << " at:" << i << "\n";
+
+                      camera.set_position(last_camera_position);
+                      goto collision_done;
+                      }
+                  }
+              }
+              else {
+                  if(model->can_interact() && !model->is_instanced()){
+                    float dist = camera.distanceFromCameraUsingAABB(camera.get_position(), model->get_aabbmin(),model->get_aabbmax());
+                    if(dist < s.closestModelDistance) {
+                      s.closestModelLabel = model->name();
+                      s.closestModelDistance = dist;
                     }
-                }
-            }
-            else {
-                // single AABB path
-                if ( camera.intersectSphereAABB(
-                        camera.get_position(),
-                        camera.get_radius(),
-                        model->get_aabbmin(),
-                        model->get_aabbmax()) )
-                {
-                    camera.set_position(last_camera_position);
-                    break;
-                }
-            }
+                  }
+                  // single AABB path
+                  if ( camera.intersectSphereAABB(
+                          camera.get_position(),
+                          camera.get_radius(),
+                          model->get_aabbmin(),
+                          model->get_aabbmax()) )
+                  {
+                      std::cout << "Collision with: " << model->name() << "\n";
+                      camera.set_position(last_camera_position);
+                      break;
+                  }
+              }
+          
         }
         collision_done:;
         #endif
@@ -499,12 +506,18 @@ int main() {
         glBindVertexArray(0);
     #endif
         scene_manager.render(view, proj);
+        
+        const Uint8 *keys = SDL_GetKeyboardState(nullptr);
+        if(keys[SDL_SCANCODE_I]) {
+          if(!s.closestModelLabel.empty() && s.closestModelDistance < interactionDistance) {
+            scene_manager.run_handler_for(s.closestModelLabel);
+          }
+        }
         // glDisable(GL_BLEND);
         // cube_model.draw(vp);
         SDL_GL_SwapWindow(window);
       }
-    }
-  }   
+    
   // ─── Cleanup ─────────────────────────────────────────────────────────
   SDL_GL_DeleteContext(glCtx);
   SDL_DestroyWindow(window);

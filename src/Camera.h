@@ -25,7 +25,7 @@ namespace Camera{
         // pitch represents how much we are looking up or down 
         float yaw, pitch;
 
-        float collision_radius = 0.3f;    // how “fat” the camera is
+        float collision_radius = 0.6f;    // how “fat” the camera is
 
         Light* flashlight; 
     public: 
@@ -92,14 +92,23 @@ namespace Camera{
         inline float get_radius() const {
             return collision_radius;
         }
+        
+        
+        float distanceFromCameraUsingAABB(const glm::vec3& cen,const glm::vec3& bmin,const glm::vec3& bmax) {
+                
+            // Raise the center to make the "sphere" collision behave taller
+            // Might be used for interaction radius 
+            glm::vec3 convenience_offset = glm::vec3(0.0f,-0.6f,0.0f);
+            glm::vec3 offset_cen = cen + convenience_offset;
+            glm::vec3 closest = glm::clamp(offset_cen, bmin, bmax);
+            float dist2 = glm::length2(closest - offset_cen);
+            return dist2;
+        }
 
         bool intersectSphereAABB(const glm::vec3& cen, float r, const glm::vec3& bmin, const glm::vec3& bmax)
         {
-            // Raise the center to make the "sphere" collision behave taller
-            glm::vec3 offset_cen = cen + glm::vec3(0.0f, -0.6f, 0.0f);
-            glm::vec3 closest = glm::clamp(offset_cen, bmin, bmax);
-            float dist2 = glm::length2(closest - offset_cen);
-            return dist2 <= r * r;
+            
+            return this->distanceFromCameraUsingAABB(cen, bmin, bmax)<= r * r;
         }
 
         void updateCameraVectors();

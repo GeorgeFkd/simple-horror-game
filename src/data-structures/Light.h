@@ -5,6 +5,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <string>
+#include <string_view>
 #include "Shader.h"
 #include "Model.h"
 #include "fwd.hpp"
@@ -38,8 +39,17 @@ public:
         float attenuation_power     = 1.0f,
         float light_power = 1.0f,
         bool is_on = true,
+        std::string_view label = "",
         glm::vec3 color = glm::vec3(1.0f)
     );
+    
+    inline void set_name(std::string_view name) {
+        label = name;
+    }
+
+    inline std::string_view name() {
+        return label;
+    }
 
     inline bool is_turned_on() const {
         return is_on;
@@ -138,7 +148,7 @@ public:
 
     void bind_shadow_map(Shader* shader, const std::string& base, int index) const;
     void draw_lighting(Shader* shader, const std::string& base, int index) const;
-    void draw_depth_pass(Shader* shader, const std::vector<Model::Model*>& models) const;
+    void draw_depth_pass(Shader* shader, const std::vector<Models::Model*>& models) const;
 private:
     LightType type;
     glm::vec3 position;
@@ -165,5 +175,6 @@ private:
     GLuint   depth_map;
 
     bool is_on;
+    std::string_view label;
     glm::vec3 color;
 };
