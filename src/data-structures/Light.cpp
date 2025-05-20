@@ -20,6 +20,7 @@ Light::Light(
     float attenuation_power,
     float light_power,
     bool is_on,
+    std::string_view label,
     glm::vec3 color
 )
     : type(light_type), 
@@ -41,6 +42,7 @@ Light::Light(
       attenuation_power(attenuation_power),
       light_power(light_power),
         is_on(is_on),
+        label(label),
         color(color)
       {
 

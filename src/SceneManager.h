@@ -13,7 +13,12 @@
 namespace SceneManager{
     class SceneManager{
     public: 
-
+        
+        inline void debug_dump_model_names() {
+            for(auto m : models) {
+                std::cout << "Model: " << m->name() << "\n";
+            }
+        }
         inline void add_model(Models::Model& model){
             models.push_back(&model);
         }
@@ -106,9 +111,6 @@ namespace SceneManager{
 
         SceneManager(int width, int height):screen_height(height), screen_width(width){};
         ~SceneManager();
-        
-
-    private:
         inline Models::Model* findModel(Models::Model* model) {
             auto model_pos = std::find_if(models.begin(),models.end(),[model](auto* m) { return m->name() == model->name();});
             return *model_pos;
@@ -116,7 +118,15 @@ namespace SceneManager{
         inline Models::Model* findModel(std::string_view name) {
             auto model_pos = std::find_if(models.begin(),models.end(),[name](auto* m) { return m->name() == name;});
             return *model_pos;
-        } 
+        }
+
+        inline Light* findLight(std::string_view name) {
+            auto light_pos = std::find_if(lights.begin(),lights.end(),[name](auto* l) { return l->name() == name;});
+            return *light_pos;
+        }
+
+    private:
+         
         std::vector<Models::Model*> models;
         std::vector<Light*> lights;
         std::vector<Shader*> shaders;

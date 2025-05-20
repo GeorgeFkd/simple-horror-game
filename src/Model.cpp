@@ -39,13 +39,6 @@ void Models::Model::move_relative_to(const glm::vec3& direction) {
 
 }
 
-// Models::Model::Model(const std::string &obj_file,
-//                                  const std::string &label) {
-//
-//   ObjectLoader::OBJLoader loader;
-//   loader.read_from_file(obj_file);
-//   std::cout << "For Model " << label << "\n";
-// }
 Models::Model::Model(const std::vector<glm::vec3>& positions,
                     const std::vector<glm::vec3>& normals,
                     const std::vector<glm::vec2>& texcoords,
@@ -313,13 +306,13 @@ void Models::Model::draw_instanced(const glm::mat4& view, const glm::mat4& proje
             shader->set_bool("useSpecularMap", false);
         }
 
-        // normal map
-        //if(sm.mat.tex_Bump) {
+        //normal map
+        // if(sm.mat.tex_Bump) {
         //    shader->set_texture("normalMap", sm.mat.tex_Bump, GL_TEXTURE3);
         //    shader->set_bool   ("useNormalMap", true);
-        //} else {
+        // } else {
         //    shader->set_bool("useNormalMap", false);
-        //}
+        // }
 
         void* offsetPtr = (void*)(sm.index_offset * sizeof(GLuint));
         GLCall(glDrawElementsInstanced(
