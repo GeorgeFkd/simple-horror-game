@@ -19,12 +19,16 @@ class GameState {
     // GameState: <Models,Lights,Closest Entity,Camera>
   public:
 
-    GameState(){};
+    GameState(){
+        distanceFromClosestModel = std::numeric_limits<float>::max();
+        closestModelName = "";
+    };
     std::vector<Models::Model*> models;
     std::vector<Light*>         lights;
     float                       distanceFromClosestModel;
     std::string_view            closestModelName;
     // const Camera::CameraObj&           camera;
+    // glm::vec3 last_camera_position;
 
     Models::Model* findModel(Models::Model* model);
     Models::Model* findModel(std::string_view name);
@@ -92,10 +96,14 @@ class SceneManager {
 
     void           render_depth_pass();
     void           render(const glm::mat4& view, const glm::mat4& projection);
+    void render(const Camera::CameraObj& camera);
     Models::Model* findModel(Models::Model* model);
     Models::Model* findModel(std::string_view name);
     Light*         findLight(std::string_view name);
-    void run(GameState initialState);
+    
+    void handleSDLEvents(bool& running,Camera::CameraObj* camera);
+    void run(Camera::CameraObj* camera,const glm::vec3& last_camera_position);
+    void runInteractionHandlers();
   private:
     
     void initialiseOpenGL_SDL();

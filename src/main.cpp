@@ -370,117 +370,15 @@ int main() {
         Uint64 now = SDL_GetPerformanceCounter();
         float dt = float(now - lastTicks) / float(SDL_GetPerformanceFrequency());
         lastTicks = now;
-        SDL_Event ev;
-        while (SDL_PollEvent(&ev)) {
-            if (ev.type == SDL_QUIT)
-            {
-                running = false;
-            }
-            if(ev.type == SDL_KEYDOWN && ev.key.repeat == 0) {
-              const Uint8 *keys = SDL_GetKeyboardState(nullptr);
-              // if (keys[SDL_SCANCODE_L]) {
-              //   flashlight.toggle_light();
-              //   std::cout << "Flashlight is now on: " << flashlight.is_turned_on() << "\n";
-              // }
-
-              if (keys[SDL_SCANCODE_R]) {
-                flashlight.make_light_red();
-              } else if (keys[SDL_SCANCODE_G]) {
-                flashlight.make_light_green();
-              } else if (keys[SDL_SCANCODE_B]) {
-                flashlight.make_light_blue();
-              } 
-              
-              if (keys[SDL_SCANCODE_T]) {
-                bookcase.toggleActive();
-              }
-
-              if (keys[SDL_SCANCODE_N]) {
-                std::cout << "Removing bookcase\n";
-                scene_manager.remove_model(&bookcase);
-              }
-
-              
-              if(keys[SDL_SCANCODE_K]){
-                scene_manager.move_model_Y(bookcase.name(),1.0f);
-              }
-              if(keys[SDL_SCANCODE_J]) {
-                scene_manager.move_model_Y(bookcase.name(),-1.0f);
-              }
-              if(keys[SDL_SCANCODE_H]) {
-                scene_manager.move_model_X(bookcase.name(),-1.0f);
-              }
-              if(keys[SDL_SCANCODE_L]) {
-                scene_manager.move_model_X(bookcase.name(),1.0f);
-              }
-            }
-            // feed mouse/window events to the camera
-            camera.process_input(ev);
-            // adjust the GL viewport on resize
-            if (ev.type == SDL_WINDOWEVENT &&
-                ev.window.event == SDL_WINDOWEVENT_SIZE_CHANGED)
-            {
-                int w = ev.window.data1,
-                    h = ev.window.data2;
-                glViewport(0, 0, w, h);
-            }
-        }
-
+        scene_manager.handleSDLEvents(running,&camera);
         // 3) update camera movement (WASD/etc) once per frame
         last_camera_position = camera.get_position();
         camera.update(dt);
-        // 3.5) collision test
-        #ifndef DEBUG_DEPTH
-        // reset at the start of each loop
-        s.closestModelDistance = std::numeric_limits<float>::max();
-        for (auto* model : scene_manager.get_models()) {
-              if(!model->isActive()) continue;
-              if (model->is_instanced()) {
-                  // loop each instance’s box
-                  for (size_t i = 0; i < model->get_instance_count(); ++i) {
-                      if ( camera.intersectSphereAABB(
-                          camera.get_position(),
-                          camera.get_radius(),
-                          model->get_instance_aabb_min(i),
-                          model->get_instance_aabb_max(i)) )
-                      {
-                        std::cout << "Collision with: " << model->name() << " at:" << i << "\n";
-
-                      camera.set_position(last_camera_position);
-                      goto collision_done;
-                      }
-                  }
-              }
-              else {
-                  if(model->can_interact() && !model->is_instanced()){
-                    float dist = camera.distanceFromCameraUsingAABB(camera.get_position(), model->get_aabbmin(),model->get_aabbmax());
-                    if(dist < s.closestModelDistance) {
-                      s.closestModelLabel = model->name();
-                      s.closestModelDistance = dist;
-                    }
-                  }
-                  // single AABB path
-                  if ( camera.intersectSphereAABB(
-                          camera.get_position(),
-                          camera.get_radius(),
-                          model->get_aabbmin(),
-                          model->get_aabbmax()) )
-                  {
-                      std::cout << "Collision with: " << model->name() << "\n";
-                      camera.set_position(last_camera_position);
-                      break;
-                  }
-              }
-          
-        }
-        collision_done:;
-        #endif
+        // 3.5) loop over models(collision tests, update closest object etc. etc.)
+        scene_manager.run(&camera,last_camera_position);
         // 4) clear and render
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glm::mat4 view = camera.get_view_matrix();
-        glm::mat4 proj = camera.get_projection_matrix();
-        glm::mat4 vp = proj * view;
         //float forward_offset = 0.5f;
         float right_offset = 0.4f;
         //glm::vec3 offset = right_offset * camera.get_right() + forward_offset * camera.get_direction();
@@ -489,7 +387,6 @@ int main() {
         flashlight.set_direction(camera.get_direction());
         // glEnable(GL_BLEND);
         // glBlendFunc(GL_ONE,GL_ONE);
-        scene_manager.render_depth_pass();
     #ifdef DEBUG_DEPTH
         depth_debug.use();
         glActiveTexture(GL_TEXTURE0);
@@ -501,16 +398,9 @@ int main() {
         glDrawArrays(GL_TRIANGLES, 0, 6);
         glBindVertexArray(0);
     #endif
-        scene_manager.render(view, proj);
-        
-        const Uint8 *keys = SDL_GetKeyboardState(nullptr);
-        if(keys[SDL_SCANCODE_I]) {
-          if(!s.closestModelLabel.empty() && s.closestModelDistance < interactionDistance) {
-            scene_manager.run_handler_for(s.closestModelLabel);
-          }
-        }
-        // glDisable(GL_BLEND);
-        // cube_model.draw(vp);
+        //render_depth_pass + render
+        scene_manager.render(camera);
+        scene_manager.runInteractionHandlers();
         SDL_GL_SwapWindow(window);
       }
     

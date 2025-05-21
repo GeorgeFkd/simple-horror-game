@@ -1,4 +1,5 @@
 #include "SceneManager.h"
+#include "Camera.h"
 #include <iostream>
 
 Shader* Game::SceneManager::get_shader_by_name(const std::string& shader_name) {
@@ -53,14 +54,14 @@ Models::Model* Game::SceneManager::findModel(Models::Model* model) {
     return *model_pos;
 }
 Models::Model* Game::SceneManager::findModel(std::string_view name) {
-    auto model_pos =
-        std::find_if(gameState.models.begin(), gameState.models.end(), [name](auto* m) { return m->name() == name; });
+    auto model_pos = std::find_if(gameState.models.begin(), gameState.models.end(),
+                                  [name](auto* m) { return m->name() == name; });
     return *model_pos;
 }
 
 Light* Game::SceneManager::findLight(std::string_view name) {
-    auto light_pos =
-        std::find_if(gameState.lights.begin(), gameState.lights.end(), [name](auto* l) { return l->name() == name; });
+    auto light_pos = std::find_if(gameState.lights.begin(), gameState.lights.end(),
+                                  [name](auto* l) { return l->name() == name; });
     return *light_pos;
 }
 int Game::SceneManager::on_interaction_with(Models::Model*                     m,
@@ -107,6 +108,82 @@ void Game::SceneManager::render_depth_pass() {
             light->draw_depth_pass(depth2D, gameState.models);
         }
     }
+}
+
+void Game::SceneManager::runInteractionHandlers() {
+    constexpr float interactionDistance = 5.0f;
+    const Uint8*    keys                = SDL_GetKeyboardState(nullptr);
+    if (keys[SDL_SCANCODE_I]) {
+        if (!gameState.closestModelName.empty() &&
+            gameState.distanceFromClosestModel < interactionDistance) {
+            run_handler_for(gameState.closestModelName);
+        }
+    }
+}
+
+void Game::SceneManager::handleSDLEvents(bool& running, Camera::CameraObj* camera) {
+    SDL_Event ev;
+    while (SDL_PollEvent(&ev)) {
+        if (ev.type == SDL_QUIT) {
+            running = false;
+        }
+        if (ev.type == SDL_KEYDOWN && ev.key.repeat == 0) {
+            const Uint8* keys = SDL_GetKeyboardState(nullptr);
+        }
+        // feed mouse/window events to the camera
+        camera->process_input(ev);
+        // adjust the GL viewport on resize
+        if (ev.type == SDL_WINDOWEVENT && ev.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
+            int w = ev.window.data1, h = ev.window.data2;
+            glViewport(0, 0, w, h);
+        }
+    }
+}
+
+void Game::SceneManager::run(Camera::CameraObj* camera, const glm::vec3& last_camera_position) {
+    // reset at the start of each loop
+    gameState.distanceFromClosestModel = std::numeric_limits<float>::max();
+    for (auto* model : gameState.get_models()) {
+        if (!model->isActive())
+            continue;
+        if (model->is_instanced()) {
+            // loop each instance’s box
+            for (size_t i = 0; i < model->get_instance_count(); ++i) {
+                if (camera->intersectSphereAABB(camera->get_position(), camera->get_radius(),
+                                                model->get_instance_aabb_min(i),
+                                                model->get_instance_aabb_max(i))) {
+                    std::cout << "Collision with: " << model->name() << " at:" << i << "\n";
+
+                    camera->set_position(last_camera_position);
+                    goto collision_done;
+                }
+            }
+        } else {
+            if (model->can_interact() && !model->is_instanced()) {
+                float dist = camera->distanceFromCameraUsingAABB(
+                    camera->get_position(), model->get_aabbmin(), model->get_aabbmax());
+                if (dist < gameState.distanceFromClosestModel) {
+                    gameState.closestModelName         = model->name();
+                    gameState.distanceFromClosestModel = dist;
+                }
+            }
+            // single AABB path
+            if (camera->intersectSphereAABB(camera->get_position(), camera->get_radius(),
+                                            model->get_aabbmin(), model->get_aabbmax())) {
+                std::cout << "Collision with: " << model->name() << "\n";
+                camera->set_position(last_camera_position);
+                break;
+            }
+        }
+    }
+collision_done:;
+}
+
+void Game::SceneManager::render(const Camera::CameraObj& camera) {
+    render_depth_pass();
+    glm::mat4 view = camera.get_view_matrix();
+    glm::mat4 proj = camera.get_projection_matrix();
+    render(view, proj);
 }
 
 void Game::SceneManager::render(const glm::mat4& view, const glm::mat4& projection) {
