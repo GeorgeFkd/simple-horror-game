@@ -1,15 +1,14 @@
 #include "SceneManager.h"
 #include "Camera.h"
+#include <algorithm>
 #include <iostream>
 
-Shader* Game::SceneManager::get_shader_by_name(const std::string& shader_name) {
-    for (auto shader : shaders) {
-        if (shader->get_shader_name() == shader_name) {
-            return shader;
-        }
-    }
-    std::cout << "Shader was not found: " << shader_name << "\n";
-    assert(false);
+std::shared_ptr<Shader> Game::SceneManager::get_shader_by_name(const std::string& shader_name) {
+    
+    auto shaderPos = std::find_if(shaders.begin(),shaders.end(),[shader_name](std::shared_ptr<Shader> s){ return s->get_shader_name() == shader_name;});
+    
+    assert(shaderPos != shaders.end());
+    return *shaderPos;
 }
 void Game::SceneManager::debug_dump_model_names() {
     for (auto m : gameState.models) {
@@ -181,27 +180,26 @@ void Game::SceneManager::run(float dt) {
 collision_done:;
 }
 
-void Game::SceneManager::initialiseShaders(Shader& blinnphong, Shader& depth_2d,
-                                           Shader& depth_cube) {
-    //   std::vector<std::string> shader_paths = {"assets/shaders/blinnphong.vert",
-    //                                          "assets/shaders/blinnphong.frag"};
-    // std::vector<GLenum> shader_types = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
-    // Shader blinnphong = Shader(shader_paths, shader_types, "blinn-phong");
-    //
-    // shader_paths = {"assets/shaders/depth_2d.vert",
-    //                 "assets/shaders/depth_2d.frag"};
-    // shader_types = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
-    // Shader depth_2d = Shader(shader_paths, shader_types, "depth_2d");
-    //
-    //   #ifdef DEBUG_DEPTH
-    //   shader_paths = {"assets/shaders/depth_debug.vert", "assets/shaders/depth_debug.frag"};
-    //   shader_types = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
-    //   Shader depth_debug = Shader(shader_paths, shader_types, "depth_debug");
-    //   #endif
-    //
-    //   shader_paths = {"assets/shaders/depth_cube.vert", "assets/shaders/depth_cube.geom",
-    //   "assets/shaders/depth_cube.frag"}; shader_types = {GL_VERTEX_SHADER, GL_GEOMETRY_SHADER,
-    //   GL_FRAGMENT_SHADER}; Shader depth_cube = Shader(shader_paths, shader_types, "depth_cube");
+void Game::SceneManager::initialiseShaders() {
+      std::vector<std::string> shader_paths = {"assets/shaders/blinnphong.vert",
+                                             "assets/shaders/blinnphong.frag"};
+    std::vector<GLenum> shader_types = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
+    auto blinnphong = std::make_shared<Shader>(shader_paths, shader_types, "blinn-phong");
+
+    shader_paths = {"assets/shaders/depth_2d.vert",
+                    "assets/shaders/depth_2d.frag"};
+    shader_types = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
+    auto depth_2d = std::make_shared<Shader>(shader_paths, shader_types, "depth_2d");
+
+      #ifdef DEBUG_DEPTH
+      shader_paths = {"assets/shaders/depth_debug.vert", "assets/shaders/depth_debug.frag"};
+      shader_types = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
+      Shader depth_debug = Shader(shader_paths, shader_types, "depth_debug");
+      #endif
+
+      shader_paths = {"assets/shaders/depth_cube.vert", "assets/shaders/depth_cube.geom",
+      "assets/shaders/depth_cube.frag"}; shader_types = {GL_VERTEX_SHADER, GL_GEOMETRY_SHADER,
+      GL_FRAGMENT_SHADER}; auto depth_cube = std::make_shared<Shader>(shader_paths, shader_types, "depth_cube");
 
     add_shader(blinnphong);
     add_shader(depth_2d);
@@ -234,7 +232,7 @@ void Game::SceneManager::render(const glm::mat4& view, const glm::mat4& projecti
     GLCall(glViewport(0, 0, screen_width, screen_height));
     GLCall(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
 
-    Shader* shader = get_shader_by_name("blinn-phong");
+     auto shader = get_shader_by_name("blinn-phong");
 
     shader->use();
     shader->set_int("numLights", (GLint)gameState.lights.size());

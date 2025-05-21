@@ -9,6 +9,7 @@
 #include <glm/gtc/epsilon.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <memory>
 #include <sstream>
 #include <string>
 
@@ -45,9 +46,7 @@ class GameState {
     inline void add_model(Models::Model& model) {
         models.push_back(&model);
     }
-    inline void add_model(Models::Model&& model) {
-        models.push_back(std::move(&model));
-    }
+    
     inline void add_light(Light& light) {
         lights.push_back(&light);
     }
@@ -72,8 +71,8 @@ class SceneManager {
     ~SceneManager();
     void        debug_dump_model_names();
     inline void set_game_state(GameState g) { gameState = g;}
-    inline void add_shader(Shader& shader) {
-        shaders.push_back(&shader);
+    inline void add_shader(std::shared_ptr<Shader> shader) {
+        shaders.push_back(shader);
     }
 
     inline const std::vector<Models::Model*> get_models() const {
@@ -101,7 +100,7 @@ class SceneManager {
     int     on_interaction_with(std::string_view name, std::function<void(SceneManager*)> handler);
     int     run_handler_for(Models::Model* m);
     void    run_handler_for(std::string_view name);
-    Shader* get_shader_by_name(const std::string& shader_name);
+    std::shared_ptr<Shader> get_shader_by_name(const std::string& shader_name);
 
     void           render_depth_pass();
     void           render(const glm::mat4& view, const glm::mat4& projection);
@@ -113,14 +112,14 @@ class SceneManager {
     void handleSDLEvents(bool& running);
     void run(float dt);
     void runInteractionHandlers();
-    void initialiseShaders(Shader& blinnphong,Shader& depth_2d,Shader& depth_cube);
+    void initialiseShaders();
   private:
     
     void initialiseOpenGL_SDL();
     void setupGameState();
 //PreparationSteps: [InitialiseShaders,Setup Models(Instanced and normal ones),Setup Lights,Setup Interaction handlers]
     GameState gameState;
-    std::vector<Shader*>                                                     shaders;
+    std::vector<std::shared_ptr<Shader>>                                                     shaders;
     std::unordered_map<std::string_view, std::function<void(SceneManager*)>> eventHandlers = {};
     int screen_width, screen_height;
     Camera::CameraObj camera;

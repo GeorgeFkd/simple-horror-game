@@ -312,9 +312,7 @@ int main() {
     int                interactionDistance = 2.0f;
     glm::vec3          last_camera_position;
     Game::SceneManager scene_manager(1280, 720, camera,gameState);
-    scene_manager.add_shader(blinnphong);
-    scene_manager.add_shader(depth_2d);
-    scene_manager.add_shader(depth_cube);
+    scene_manager.initialiseShaders();
     scene_manager.on_interaction_with(
         "Bookcase", [](auto sceneMgr) { std::cout << "I live with only a chair on my side\n"; });
     while (running) {
@@ -327,13 +325,6 @@ int main() {
         // 4) clear and render
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        // float forward_offset = 0.5f;
-        // float right_offset = 0.4f;
-        // // glm::vec3 offset = right_offset * camera.get_right() + forward_offset *
-        // // camera.get_direction();
-        // glm::vec3 offset = right_offset * scene_manager.get_camera().get_right();
-        // flashlight.set_position(scene_manager.get_camera().get_position() + offset);
-        // flashlight.set_direction(scene_manager.get_camera().get_direction());
         // glEnable(GL_BLEND);
         // glBlendFunc(GL_ONE,GL_ONE);
 #ifdef DEBUG_DEPTH

@@ -266,7 +266,7 @@ void Models::Model::update_world_transform(const glm::mat4& parent_transform) {
     }
 }
 
-void Models::Model::draw_instanced(const glm::mat4& view, const glm::mat4& projection, Shader* shader) const{
+void Models::Model::draw_instanced(const glm::mat4& view, const glm::mat4& projection, std::shared_ptr<Shader> shader) const{
 
     update_instance_data();
 
@@ -326,7 +326,7 @@ void Models::Model::draw_instanced(const glm::mat4& view, const glm::mat4& proje
     GLCall(glBindVertexArray(0));
 }
 
-void Models::Model::draw(const glm::mat4& view, const glm::mat4& projection, Shader* shader) const{
+void Models::Model::draw(const glm::mat4& view, const glm::mat4& projection, std::shared_ptr<Shader> shader) const{
     // upload matrices
     shader->set_mat4("uView", view);
     shader->set_mat4("uProj", projection);
@@ -379,7 +379,7 @@ void Models::Model::draw(const glm::mat4& view, const glm::mat4& projection, Sha
     GLCall(glBindVertexArray(0));
 }
 
-void Models::Model::draw_depth(Shader* shader) const {
+void Models::Model::draw_depth(std::shared_ptr<Shader> shader) const {
 
     //GLCall(glEnable(GL_CULL_FACE));
     //GLCall(glCullFace(GL_FRONT));
@@ -402,7 +402,7 @@ void Models::Model::draw_depth(Shader* shader) const {
     GLCall(glBindVertexArray(0));
 }
 
-void Models::Model::draw_depth_instanced(Shader* shader) const {
+void Models::Model::draw_depth_instanced(std::shared_ptr<Shader> shader) const {
     update_instance_data();
 
     shader->set_bool("uUseInstancing", true);

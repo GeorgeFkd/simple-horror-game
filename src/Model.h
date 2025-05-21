@@ -6,6 +6,7 @@
 #include <glm/gtc/epsilon.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <memory>
 #include <string> 
 #include <vector>
 #include <cfloat>
@@ -47,10 +48,10 @@ namespace Models{
 
     class Model {
     public:
-        void draw_depth(Shader* shader) const;
-        void draw_depth_instanced(Shader* shader) const;
-        void draw(const glm::mat4& view, const glm::mat4& projection, Shader* shader) const;
-        void draw_instanced(const glm::mat4& view, const glm::mat4& projection, Shader* shader) const;
+        void draw_depth(std::shared_ptr<Shader> shader) const;
+        void draw_depth_instanced(std::shared_ptr<Shader> shader) const;
+        void draw(const glm::mat4& view, const glm::mat4& projection, std::shared_ptr<Shader> shader) const;
+        void draw_instanced(const glm::mat4& view, const glm::mat4& projection, std::shared_ptr<Shader> shader) const;
         void set_local_transform(const glm::mat4& local_transform);
         void update_world_transform(const glm::mat4& parent_transform);
         void compute_aabb();
