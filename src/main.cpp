@@ -8,15 +8,25 @@
 #include <string>
 #include "Camera.h"
 #include "Light.h"
-#include "OBJLoader.h"
 #include "SceneManager.h"
 #include "Shader.h"
 
 #ifndef DEBUG_DEPTH
 // #define DEBUG_DEPTH
 #endif
-
-
+//Todo: Abstractions, Textures,Plot/Game Design/Scenarios
+//Recursively find shaders and models to not have to specify paths just names(with file extension)
+//Models and lights could be maps, for easier access from event handlers etc. etc.
+//Abstraction: (Probably wont make an Entity<Data> abstraction cos i dont wanna mess it up too much)
+//GameState: <Models,Lights,Closest Entity,Camera>
+//SceneManager->Game.run(InitialState<GameState>)
+//PreparationSteps: [InitialiseShaders,Setup Models(Instanced and normal ones),Setup Lights,Setup Interaction handlers]
+//GameLoop: [Keyboard Handlers(Events from SDL),UpdateCamera vectors,Iterate over models(For collisions interactions etc. etc.),Render]
+//In the destructor unbind all the stuff needed from opengl and free memory
+//(Optionals)
+//When i want to make different scenes I can make the Game class abstract<T:GameState> and create different scenes
+//Also I want some things to be easily configurable: Creating a room of size width*height*length
+//Make doors(it is just a model + translation + rotation)
 enum class SurfaceType {
   Floor,
   Ceiling,
@@ -27,14 +37,14 @@ enum class SurfaceType {
 };
 Models::Model repeating_tile(SurfaceType surface, float offset,
                             const Material &material,float repeat) {
+  //might be able to constexpr this
   constexpr int TILE_WIDTH = 50;
   constexpr int TILE_HEIGHT = 50;
   constexpr float half_width = TILE_WIDTH / 2.0f;
   constexpr float half_height = TILE_HEIGHT / 2.0f;
-  // constexpr float repeat = 5.0f;
 
   std::vector<glm::vec3> verts;
-  std::vector<glm::vec2> uvs;
+  std::vector<glm::vec2> texcoords;
   glm::vec3 normal;
   std::string label;
 
@@ -94,12 +104,12 @@ Models::Model repeating_tile(SurfaceType surface, float offset,
     break;
   }
 
-  uvs = {{0, 0}, {0, repeat}, {repeat, repeat}, {repeat, 0}};
+  texcoords = {{0, 0}, {0, repeat}, {repeat, repeat}, {repeat, 0}};
 
   std::vector<glm::vec3> normals(4, normal);
   std::vector<GLuint> indices = {0, 1, 2, 0, 2, 3};
 
-  return Models::Model(verts, normals, uvs, indices,label, material);
+  return Models::Model(verts, normals, texcoords, indices,label, material);
 }
 
 struct State {
@@ -107,7 +117,7 @@ struct State {
   float closestModelDistance;
 };
 
-
+using namespace Game;
 int main() {
   // ─── Initialize SDL + OpenGL ──────────────────────────────────────────
   SDL_Init(SDL_INIT_VIDEO);
@@ -126,14 +136,7 @@ int main() {
   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  // ObjectLoader::OBJLoader cube_loader;
-  // cube_loader.read_from_file("assets/models/test.obj");
-  // ObjectLoader::OBJLoader lederliege;
-  // lederliege.read_from_file("assets/models/lederliege.obj");
-  // ObjectLoader::OBJLoader cottage_loader;
-  // cottage_loader.read_from_file("assets/models/cottage_obj.obj");
-  ObjectLoader::OBJLoader sphere_loader;
-  sphere_loader.read_from_file("assets/models/light_sphere.obj");
+  GameState gameState;
 
   std::vector<std::string> shader_paths = {"assets/shaders/blinnphong.vert",
                                            "assets/shaders/blinnphong.frag"};
@@ -144,9 +147,6 @@ int main() {
                   "assets/shaders/depth_2d.frag"};
   shader_types = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
   Shader depth_2d = Shader(shader_paths, shader_types, "depth_2d");
-    // shader_paths = {"assets/shaders/depth_2d.vert", "assets/shaders/depth_2d.frag"};
-    // shader_types = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
-    // Shader depth_2d = Shader(shader_paths, shader_types, "depth_2d");
 
     #ifdef DEBUG_DEPTH
     shader_paths = {"assets/shaders/depth_debug.vert", "assets/shaders/depth_debug.frag"};
@@ -157,11 +157,6 @@ int main() {
     shader_paths = {"assets/shaders/depth_cube.vert", "assets/shaders/depth_cube.geom", "assets/shaders/depth_cube.frag"};
     shader_types = {GL_VERTEX_SHADER, GL_GEOMETRY_SHADER, GL_FRAGMENT_SHADER};
     Shader depth_cube = Shader(shader_paths, shader_types, "depth_cube");
-
-    //Model::Model cube(cube_loader);
-    //Model::Model couch(lederliege);
-    //Model::Model right_light(sphere_loader);
-    //Model::Model overhead_light(sphere_loader);
 
     std::vector<glm::vec3> floor_verts = {
         {-10.0f, 0.0f, -10.0f},
@@ -243,16 +238,16 @@ int main() {
     floor.set_local_transform(glm::translate(glm::mat4(1.0f), glm::vec3(15.0f, -0.01f, -20.0f)));
 
 
-    SceneManager::SceneManager scene_manager(1280, 720);
+    Game::SceneManager scene_manager(1280, 720);
     scene_manager.add_shader(blinnphong);
     scene_manager.add_shader(depth_2d);
     scene_manager.add_shader(depth_cube);
-    //scene_manager.add_model(overhead_point_light_model);
-    //scene_manager.add_model(right_spot_light_model);
-    scene_manager.add_model(floor);
+    //gameState.add_model(overhead_point_light_model);
+    //gameState.add_model(right_spot_light_model);
+    gameState.add_model(floor);
     //scene_manager.add_light(overhead_point_light);
-    scene_manager.add_light(flashlight);
-    scene_manager.add_light(right_spot_light);
+    gameState.add_light(flashlight);
+    gameState.add_light(right_spot_light);
 
 
     glm::vec3 bed_position = glm::vec3(15.0f, 0.0f, -20.0f);
@@ -269,7 +264,7 @@ int main() {
     auto bed = Models::Model("assets/models/SimpleOldTownAssets/Bed01.obj", "Bed");
     bed.set_local_transform(bed_offset);
     bed.set_interactivity(true);
-    scene_manager.add_model(bed);
+    gameState.add_model(bed);
 
 
     // auto chair = Model::Model(
@@ -304,13 +299,13 @@ int main() {
     //     }
     // }
     //
-    // scene_manager.add_model(chair);
+    // gameState.add_model(chair);
 
     glm::mat4 bookcase_offset = glm::translate(glm::mat4(1.0f), bed_position + glm::vec3(0.0f, 0.0f, -6.0f));
     auto bookcase = Models::Model("assets/models/SimpleOldTownAssets/BookCase01.obj", "Bookcase");
     bookcase.set_local_transform(bookcase_offset);
     bookcase.set_interactivity(true);
-    scene_manager.add_model(bookcase);
+    gameState.add_model(bookcase);
     scene_manager.on_interaction_with("Bookcase",[](auto sceneMgr) { std::cout << "I live with only a chair on my side\n";});
     //scene_manager.add_light(flashlight);
 
@@ -370,6 +365,7 @@ int main() {
   Uint64 lastTicks = SDL_GetPerformanceCounter();
   int interactionDistance = 2.0f;
   glm::vec3 last_camera_position;
+  scene_manager.set_game_state(gameState);
     while (running){
         Uint64 now = SDL_GetPerformanceCounter();
         float dt = float(now - lastTicks) / float(SDL_GetPerformanceFrequency());
