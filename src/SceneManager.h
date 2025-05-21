@@ -13,7 +13,18 @@
 #include <string>
 
 namespace Game {
-
+// Todo: Abstractions, Textures,Plot/Game Design/Scenarios
+// Recursively find shaders and models to not have to specify paths just names(with file extension)
+// Models and lights could be maps, for easier access from event handlers etc. etc.
+// Abstraction: (Probably wont make an Entity<Data> abstraction cos i dont wanna mess it up too much)
+// SceneManager->Game.run(InitialState<GameState>)
+// PreparationSteps: [InitialiseShaders,Setup Models(Instanced and normal ones),Setup Lights,Setup
+// Interaction handlers] GameLoop: [Keyboard Handlers(Events from SDL),UpdateCamera vectors,Iterate
+// over models(For collisions interactions etc. etc.),Render] In the destructor unbind all the stuff
+// needed from opengl and free memory (Optionals) When i want to make different scenes I can make
+// the Game class abstract<T:GameState> and create different scenes Also I want some things to be
+// easily configurable: Creating a room of size width*height*length Make doors(it is just a model +
+// translation + rotation)
 class GameState {
     
     // GameState: <Models,Lights,Closest Entity,Camera>
@@ -27,8 +38,6 @@ class GameState {
     std::vector<Light*>         lights;
     float                       distanceFromClosestModel;
     std::string_view            closestModelName;
-    // const Camera::CameraObj&           camera;
-    // glm::vec3 last_camera_position;
 
     Models::Model* findModel(Models::Model* model);
     Models::Model* findModel(std::string_view name);
@@ -44,10 +53,6 @@ class GameState {
     }
 
     
-    // inline void set_camera(Camera::CameraObj camera) {
-    //     this->camera = camera;
-    // }
-    //
     inline const std::vector<Models::Model*> get_models() const {
         return models;
     }
@@ -63,7 +68,7 @@ class GameState {
 //In the destructor unbind all the stuff needed from opengl and free memory
 class SceneManager {
   public:
-    SceneManager(int width, int height);
+    SceneManager(int width, int height,Camera::CameraObj camera,GameState gameState);
     ~SceneManager();
     void        debug_dump_model_names();
     inline void set_game_state(GameState g) { gameState = g;}
@@ -77,6 +82,10 @@ class SceneManager {
 
     inline std::vector<Light*>& get_lights() {
         return gameState.lights;
+    }
+
+    inline const Camera::CameraObj& get_camera() {
+        return camera;
     }
 
     // i should also write the rotate methods
@@ -96,24 +105,25 @@ class SceneManager {
 
     void           render_depth_pass();
     void           render(const glm::mat4& view, const glm::mat4& projection);
-    void render(const Camera::CameraObj& camera);
+    void render();
     Models::Model* findModel(Models::Model* model);
     Models::Model* findModel(std::string_view name);
     Light*         findLight(std::string_view name);
     
-    void handleSDLEvents(bool& running,Camera::CameraObj* camera);
-    void run(Camera::CameraObj* camera,const glm::vec3& last_camera_position);
+    void handleSDLEvents(bool& running);
+    void run(float dt);
     void runInteractionHandlers();
+    void initialiseShaders(Shader& blinnphong,Shader& depth_2d,Shader& depth_cube);
   private:
     
     void initialiseOpenGL_SDL();
-    void initialiseShaders();
     void setupGameState();
 //PreparationSteps: [InitialiseShaders,Setup Models(Instanced and normal ones),Setup Lights,Setup Interaction handlers]
     GameState gameState;
     std::vector<Shader*>                                                     shaders;
     std::unordered_map<std::string_view, std::function<void(SceneManager*)>> eventHandlers = {};
     int screen_width, screen_height;
+    Camera::CameraObj camera;
 
 };
 

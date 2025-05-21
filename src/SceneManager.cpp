@@ -8,8 +8,8 @@ Shader* Game::SceneManager::get_shader_by_name(const std::string& shader_name) {
             return shader;
         }
     }
-
-    return nullptr;
+    std::cout << "Shader was not found: " << shader_name << "\n";
+    assert(false);
 }
 void Game::SceneManager::debug_dump_model_names() {
     for (auto m : gameState.models) {
@@ -98,8 +98,8 @@ void Game::SceneManager::run_handler_for(std::string_view name) {
     eventHandlers.at(name)(this);
 }
 void Game::SceneManager::render_depth_pass() {
-    auto* depth2D   = get_shader_by_name("depth_2d");
-    auto* depthCube = get_shader_by_name("depth_cube");
+    auto depth2D   = get_shader_by_name("depth_2d");
+    auto depthCube = get_shader_by_name("depth_cube");
 
     for (auto* light : gameState.lights) {
         if (light->get_type() == LightType::POINT) {
@@ -121,7 +121,7 @@ void Game::SceneManager::runInteractionHandlers() {
     }
 }
 
-void Game::SceneManager::handleSDLEvents(bool& running, Camera::CameraObj* camera) {
+void Game::SceneManager::handleSDLEvents(bool& running) {
     SDL_Event ev;
     while (SDL_PollEvent(&ev)) {
         if (ev.type == SDL_QUIT) {
@@ -131,7 +131,7 @@ void Game::SceneManager::handleSDLEvents(bool& running, Camera::CameraObj* camer
             const Uint8* keys = SDL_GetKeyboardState(nullptr);
         }
         // feed mouse/window events to the camera
-        camera->process_input(ev);
+        camera.process_input(ev);
         // adjust the GL viewport on resize
         if (ev.type == SDL_WINDOWEVENT && ev.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
             int w = ev.window.data1, h = ev.window.data2;
@@ -140,8 +140,10 @@ void Game::SceneManager::handleSDLEvents(bool& running, Camera::CameraObj* camer
     }
 }
 
-void Game::SceneManager::run(Camera::CameraObj* camera, const glm::vec3& last_camera_position) {
+void Game::SceneManager::run(float dt) {
     // reset at the start of each loop
+    auto last_camera_position = camera.get_position();
+    camera.update(dt);
     gameState.distanceFromClosestModel = std::numeric_limits<float>::max();
     for (auto* model : gameState.get_models()) {
         if (!model->isActive())
@@ -149,29 +151,29 @@ void Game::SceneManager::run(Camera::CameraObj* camera, const glm::vec3& last_ca
         if (model->is_instanced()) {
             // loop each instance’s box
             for (size_t i = 0; i < model->get_instance_count(); ++i) {
-                if (camera->intersectSphereAABB(camera->get_position(), camera->get_radius(),
-                                                model->get_instance_aabb_min(i),
-                                                model->get_instance_aabb_max(i))) {
+                if (camera.intersectSphereAABB(camera.get_position(), camera.get_radius(),
+                                               model->get_instance_aabb_min(i),
+                                               model->get_instance_aabb_max(i))) {
                     std::cout << "Collision with: " << model->name() << " at:" << i << "\n";
 
-                    camera->set_position(last_camera_position);
+                    camera.set_position(last_camera_position);
                     goto collision_done;
                 }
             }
         } else {
             if (model->can_interact() && !model->is_instanced()) {
-                float dist = camera->distanceFromCameraUsingAABB(
-                    camera->get_position(), model->get_aabbmin(), model->get_aabbmax());
+                float dist = camera.distanceFromCameraUsingAABB(
+                    camera.get_position(), model->get_aabbmin(), model->get_aabbmax());
                 if (dist < gameState.distanceFromClosestModel) {
                     gameState.closestModelName         = model->name();
                     gameState.distanceFromClosestModel = dist;
                 }
             }
             // single AABB path
-            if (camera->intersectSphereAABB(camera->get_position(), camera->get_radius(),
-                                            model->get_aabbmin(), model->get_aabbmax())) {
+            if (camera.intersectSphereAABB(camera.get_position(), camera.get_radius(),
+                                           model->get_aabbmin(), model->get_aabbmax())) {
                 std::cout << "Collision with: " << model->name() << "\n";
-                camera->set_position(last_camera_position);
+                camera.set_position(last_camera_position);
                 break;
             }
         }
@@ -179,7 +181,47 @@ void Game::SceneManager::run(Camera::CameraObj* camera, const glm::vec3& last_ca
 collision_done:;
 }
 
-void Game::SceneManager::render(const Camera::CameraObj& camera) {
+void Game::SceneManager::initialiseShaders(Shader& blinnphong, Shader& depth_2d,
+                                           Shader& depth_cube) {
+    //   std::vector<std::string> shader_paths = {"assets/shaders/blinnphong.vert",
+    //                                          "assets/shaders/blinnphong.frag"};
+    // std::vector<GLenum> shader_types = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
+    // Shader blinnphong = Shader(shader_paths, shader_types, "blinn-phong");
+    //
+    // shader_paths = {"assets/shaders/depth_2d.vert",
+    //                 "assets/shaders/depth_2d.frag"};
+    // shader_types = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
+    // Shader depth_2d = Shader(shader_paths, shader_types, "depth_2d");
+    //
+    //   #ifdef DEBUG_DEPTH
+    //   shader_paths = {"assets/shaders/depth_debug.vert", "assets/shaders/depth_debug.frag"};
+    //   shader_types = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
+    //   Shader depth_debug = Shader(shader_paths, shader_types, "depth_debug");
+    //   #endif
+    //
+    //   shader_paths = {"assets/shaders/depth_cube.vert", "assets/shaders/depth_cube.geom",
+    //   "assets/shaders/depth_cube.frag"}; shader_types = {GL_VERTEX_SHADER, GL_GEOMETRY_SHADER,
+    //   GL_FRAGMENT_SHADER}; Shader depth_cube = Shader(shader_paths, shader_types, "depth_cube");
+
+    add_shader(blinnphong);
+    add_shader(depth_2d);
+    add_shader(depth_cube);
+}
+
+void Game::SceneManager::render() {
+
+    auto flashlight = findLight("flashlight");
+    if (!flashlight) {
+        std::cout << "Light with name: " << "flashlight" << " was not found\n";
+        assert(false);
+    }
+    float right_offset = 0.4f;
+    // glm::vec3 offset = right_offset * camera.get_right() + forward_offset *
+    // camera.get_direction();
+    glm::vec3 offset = right_offset * camera.get_right();
+    flashlight->set_position(camera.get_position() + offset);
+    flashlight->set_direction(camera.get_direction());
+
     render_depth_pass();
     glm::mat4 view = camera.get_view_matrix();
     glm::mat4 proj = camera.get_projection_matrix();
@@ -193,9 +235,6 @@ void Game::SceneManager::render(const glm::mat4& view, const glm::mat4& projecti
     GLCall(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
 
     Shader* shader = get_shader_by_name("blinn-phong");
-    if (!shader) {
-        throw std::runtime_error("Could not find shader blinn-phong\n");
-    }
 
     shader->use();
     shader->set_int("numLights", (GLint)gameState.lights.size());
@@ -221,8 +260,9 @@ void Game::SceneManager::render(const glm::mat4& view, const glm::mat4& projecti
     glUseProgram(0);
 }
 
-Game::SceneManager::SceneManager(int width, int height)
-    : screen_width(width), screen_height(height) {}
+Game::SceneManager::SceneManager(int width, int height, Camera::CameraObj camera,
+                                 GameState gameState)
+    : screen_width(width), screen_height(height), camera(camera), gameState(gameState) {}
 
 Game::SceneManager::~SceneManager() {
     gameState.models.clear();

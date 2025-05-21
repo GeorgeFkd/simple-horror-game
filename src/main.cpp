@@ -1,393 +1,342 @@
 // main.cpp
-#include <GL/glew.h>
-#include <SDL.h>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <limits>
-#include <vector>
-#include <string>
 #include "Camera.h"
 #include "Light.h"
 #include "SceneManager.h"
 #include "Shader.h"
+#include <GL/glew.h>
+#include <SDL.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <string>
+#include <vector>
 
 #ifndef DEBUG_DEPTH
 // #define DEBUG_DEPTH
 #endif
-//Todo: Abstractions, Textures,Plot/Game Design/Scenarios
-//Recursively find shaders and models to not have to specify paths just names(with file extension)
-//Models and lights could be maps, for easier access from event handlers etc. etc.
-//Abstraction: (Probably wont make an Entity<Data> abstraction cos i dont wanna mess it up too much)
-//GameState: <Models,Lights,Closest Entity,Camera>
-//SceneManager->Game.run(InitialState<GameState>)
-//PreparationSteps: [InitialiseShaders,Setup Models(Instanced and normal ones),Setup Lights,Setup Interaction handlers]
-//GameLoop: [Keyboard Handlers(Events from SDL),UpdateCamera vectors,Iterate over models(For collisions interactions etc. etc.),Render]
-//In the destructor unbind all the stuff needed from opengl and free memory
-//(Optionals)
-//When i want to make different scenes I can make the Game class abstract<T:GameState> and create different scenes
-//Also I want some things to be easily configurable: Creating a room of size width*height*length
-//Make doors(it is just a model + translation + rotation)
-enum class SurfaceType {
-  Floor,
-  Ceiling,
-  WallFront,
-  WallBack,
-  WallLeft,
-  WallRight
-};
-Models::Model repeating_tile(SurfaceType surface, float offset,
-                            const Material &material,float repeat) {
-  //might be able to constexpr this
-  constexpr int TILE_WIDTH = 50;
-  constexpr int TILE_HEIGHT = 50;
-  constexpr float half_width = TILE_WIDTH / 2.0f;
-  constexpr float half_height = TILE_HEIGHT / 2.0f;
 
-  std::vector<glm::vec3> verts;
-  std::vector<glm::vec2> texcoords;
-  glm::vec3 normal;
-  std::string label;
+using Models::Model;
 
-  switch (surface) {
-  case SurfaceType::Floor:
-    verts = {{-half_width, offset, -half_height},
-             {-half_width, offset, half_height},
-             {half_width, offset, half_height},
-             {half_width, offset, -half_height}};
-    label = "floor";
-    normal = glm::vec3(0, 1, 0);
-    break;
+enum class SurfaceType { Floor, Ceiling, WallFront, WallBack, WallLeft, WallRight };
+Models::Model repeating_tile(SurfaceType surface, float offset, const Material& material,
+                             float repeat) {
+    // might be able to constexpr this
+    constexpr int   TILE_WIDTH  = 50;
+    constexpr int   TILE_HEIGHT = 50;
+    constexpr float half_width  = TILE_WIDTH / 2.0f;
+    constexpr float half_height = TILE_HEIGHT / 2.0f;
 
-  case SurfaceType::Ceiling:
-    verts = {{-half_width, offset, -half_height},
-             {-half_width, offset, half_height},
-             {half_width, offset, half_height},
-             {half_width, offset, -half_height}};
-    label = "ceiling";
-    normal = glm::vec3(0, -1, 0);
-    break;
+    std::vector<glm::vec3> verts;
+    std::vector<glm::vec2> texcoords;
+    glm::vec3              normal;
+    std::string            label;
 
-  case SurfaceType::WallFront:
-    verts = {{-half_width, -half_height, offset},
-             {-half_width, half_height, offset},
-             {half_width, half_height, offset},
-             {half_width, -half_height, offset}};
-    label = "wallfront";
-    normal = glm::vec3(0, 0, 1);
-    break;
+    switch (surface) {
+    case SurfaceType::Floor:
+        verts  = {{-half_width, offset, -half_height},
+                  {-half_width, offset, half_height},
+                  {half_width, offset, half_height},
+                  {half_width, offset, -half_height}};
+        label  = "floor";
+        normal = glm::vec3(0, 1, 0);
+        break;
 
-  case SurfaceType::WallBack:
-    verts = {{half_width, -half_height, offset},
-             {-half_width, -half_height, offset},
-             {-half_width, half_height, offset},
-             {half_width, half_height, offset}};
-    label = "wallback";
-    normal = glm::vec3(0, 0, -1);
-    break;
+    case SurfaceType::Ceiling:
+        verts  = {{-half_width, offset, -half_height},
+                  {-half_width, offset, half_height},
+                  {half_width, offset, half_height},
+                  {half_width, offset, -half_height}};
+        label  = "ceiling";
+        normal = glm::vec3(0, -1, 0);
+        break;
 
-  case SurfaceType::WallLeft:
-    verts = {{offset, -half_height, half_width},
-             {offset, half_height, half_width},
-             {offset, half_height, -half_width},
-             {offset, -half_height, -half_width}};
-    label = "wallleft";
-    normal = glm::vec3(1, 0, 0);
-    break;
+    case SurfaceType::WallFront:
+        verts  = {{-half_width, -half_height, offset},
+                  {-half_width, half_height, offset},
+                  {half_width, half_height, offset},
+                  {half_width, -half_height, offset}};
+        label  = "wallfront";
+        normal = glm::vec3(0, 0, 1);
+        break;
 
-  case SurfaceType::WallRight:
-    verts = {{offset, -half_height, -half_width},
-             {offset, half_height, -half_width},
-             {offset, half_height, half_width},
-             {offset, -half_height, half_width}};
-    label = "wallright";
-    normal = glm::vec3(-1, 0, 0);
-    break;
-  }
+    case SurfaceType::WallBack:
+        verts  = {{half_width, -half_height, offset},
+                  {-half_width, -half_height, offset},
+                  {-half_width, half_height, offset},
+                  {half_width, half_height, offset}};
+        label  = "wallback";
+        normal = glm::vec3(0, 0, -1);
+        break;
 
-  texcoords = {{0, 0}, {0, repeat}, {repeat, repeat}, {repeat, 0}};
+    case SurfaceType::WallLeft:
+        verts  = {{offset, -half_height, half_width},
+                  {offset, half_height, half_width},
+                  {offset, half_height, -half_width},
+                  {offset, -half_height, -half_width}};
+        label  = "wallleft";
+        normal = glm::vec3(1, 0, 0);
+        break;
 
-  std::vector<glm::vec3> normals(4, normal);
-  std::vector<GLuint> indices = {0, 1, 2, 0, 2, 3};
+    case SurfaceType::WallRight:
+        verts  = {{offset, -half_height, -half_width},
+                  {offset, half_height, -half_width},
+                  {offset, half_height, half_width},
+                  {offset, -half_height, half_width}};
+        label  = "wallright";
+        normal = glm::vec3(-1, 0, 0);
+        break;
+    }
 
-  return Models::Model(verts, normals, texcoords, indices,label, material);
+    texcoords = {{0, 0}, {0, repeat}, {repeat, repeat}, {repeat, 0}};
+
+    std::vector<glm::vec3> normals(4, normal);
+    std::vector<GLuint>    indices = {0, 1, 2, 0, 2, 3};
+
+    return Models::Model(verts, normals, texcoords, indices, label, material);
 }
 
 struct State {
-  std::string_view closestModelLabel;
-  float closestModelDistance;
+    std::string_view closestModelLabel;
+    float            closestModelDistance;
 };
 
 using namespace Game;
 int main() {
-  // ─── Initialize SDL + OpenGL ──────────────────────────────────────────
-  SDL_Init(SDL_INIT_VIDEO);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+    // ─── Initialize SDL + OpenGL ──────────────────────────────────────────
+    SDL_Init(SDL_INIT_VIDEO);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
-  SDL_Window *window = SDL_CreateWindow(
-      "Old room", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720,
-      SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
-  SDL_GLContext glCtx = SDL_GL_CreateContext(window);
+    SDL_Window* window =
+        SDL_CreateWindow("Old room", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720,
+                         SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+    SDL_GLContext glCtx = SDL_GL_CreateContext(window);
 
-  glewInit();
-  glEnable(GL_DEPTH_TEST);
-  glViewport(0, 0, 1280, 720);
-  glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glewInit();
+    glEnable(GL_DEPTH_TEST);
+    glViewport(0, 0, 1280, 720);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  GameState gameState;
+    GameState gameState;
 
-  std::vector<std::string> shader_paths = {"assets/shaders/blinnphong.vert",
-                                           "assets/shaders/blinnphong.frag"};
-  std::vector<GLenum> shader_types = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
-  Shader blinnphong = Shader(shader_paths, shader_types, "blinn-phong");
+    std::vector<std::string> shader_paths = {"assets/shaders/blinnphong.vert",
+                                             "assets/shaders/blinnphong.frag"};
+    std::vector<GLenum>      shader_types = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
+    Shader                   blinnphong   = Shader(shader_paths, shader_types, "blinn-phong");
 
-  shader_paths = {"assets/shaders/depth_2d.vert",
-                  "assets/shaders/depth_2d.frag"};
-  shader_types = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
-  Shader depth_2d = Shader(shader_paths, shader_types, "depth_2d");
+    shader_paths    = {"assets/shaders/depth_2d.vert", "assets/shaders/depth_2d.frag"};
+    shader_types    = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
+    Shader depth_2d = Shader(shader_paths, shader_types, "depth_2d");
 
-    #ifdef DEBUG_DEPTH
-    shader_paths = {"assets/shaders/depth_debug.vert", "assets/shaders/depth_debug.frag"};
-    shader_types = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
+#ifdef DEBUG_DEPTH
+    shader_paths       = {"assets/shaders/depth_debug.vert", "assets/shaders/depth_debug.frag"};
+    shader_types       = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
     Shader depth_debug = Shader(shader_paths, shader_types, "depth_debug");
-    #endif
+#endif
 
-    shader_paths = {"assets/shaders/depth_cube.vert", "assets/shaders/depth_cube.geom", "assets/shaders/depth_cube.frag"};
-    shader_types = {GL_VERTEX_SHADER, GL_GEOMETRY_SHADER, GL_FRAGMENT_SHADER};
+    shader_paths      = {"assets/shaders/depth_cube.vert", "assets/shaders/depth_cube.geom",
+                         "assets/shaders/depth_cube.frag"};
+    shader_types      = {GL_VERTEX_SHADER, GL_GEOMETRY_SHADER, GL_FRAGMENT_SHADER};
     Shader depth_cube = Shader(shader_paths, shader_types, "depth_cube");
 
     std::vector<glm::vec3> floor_verts = {
-        {-10.0f, 0.0f, -10.0f},
-        {-10.0f, 0.0f,  10.0f},
-        { 10.0f, 0.0f,  10.0f},
-        { 10.0f, 0.0f, -10.0f}
-    };
+        {-10.0f, 0.0f, -10.0f}, {-10.0f, 0.0f, 10.0f}, {10.0f, 0.0f, 10.0f}, {10.0f, 0.0f, -10.0f}};
     std::vector<glm::vec3> floor_normals(4, glm::vec3(0, 1, 0));
-    std::vector<glm::vec2> floor_uvs = {
-        {0, 0}, {0, 1}, {1, 1}, {1, 0}
-    };
-    std::vector<GLuint> floor_indices = { 0, 1, 2, 0, 2, 3 };
+    std::vector<glm::vec2> floor_uvs     = {{0, 0}, {0, 1}, {1, 1}, {1, 0}};
+    std::vector<GLuint>    floor_indices = {0, 1, 2, 0, 2, 3};
 
     Material floor_material;
-    floor_material.Ka = glm::vec3(0.15f, 0.07f, 0.02f);         // dark ambient
-    floor_material.Kd = glm::vec3(0.59f, 0.29f, 0.00f);         // brown diffuse
-    floor_material.Ks = glm::vec3(0.05f, 0.04f, 0.03f);         // small specular
-    floor_material.Ns = 16.0f;                                 // shininess
-    floor_material.d  = 1.0f;                                  // opacity
-    floor_material.illum = 2;                                  // standard Phong
+    floor_material.Ka    = glm::vec3(0.15f, 0.07f, 0.02f); // dark ambient
+    floor_material.Kd    = glm::vec3(0.59f, 0.29f, 0.00f); // brown diffuse
+    floor_material.Ks    = glm::vec3(0.05f, 0.04f, 0.03f); // small specular
+    floor_material.Ns    = 16.0f;                          // shininess
+    floor_material.d     = 1.0f;                           // opacity
+    floor_material.illum = 2;                              // standard Phong
 
-    Models::Model floor(floor_verts, floor_normals, floor_uvs, floor_indices,"Floor" ,floor_material);
+    Models::Model floor(floor_verts, floor_normals, floor_uvs, floor_indices, "Floor",
+                        floor_material);
 
     auto right_light = Models::Model("assets/models/light_sphere.obj", "Sphere");
-    auto overhead_point_light_model = Models::Model("assets/models/light_sphere.obj","Overhead point light");
-    auto right_spot_light_model = Models::Model("assets/models/light_sphere.obj","Right spot light");
-    //hi
-    Light flashlight(
-        LightType::SPOT,
-        glm::vec3(0.0f),               // position
-        glm::vec3(0.0f, 0.0f, -1.0f),  // direction
-        glm::vec3(0.1f),               // ambient
-        glm::vec3(1.0f),               // diffuse
-        glm::vec3(1.0f),               // specular
-        glm::cos(glm::radians(10.0f)), // cutoff
-        glm::cos(glm::radians(20.0f)), // outer cutoff
-        1280,
-        720,
-        0.1f,
-        500.0f,
-        10.0f,1.0f, 0.35f,0.44f,1.0f,1.0f);
+    auto overhead_point_light_model =
+        Models::Model("assets/models/light_sphere.obj", "Overhead point light");
+    auto right_spot_light_model =
+        Models::Model("assets/models/light_sphere.obj", "Right spot light");
+    // hi
+    Light flashlight(LightType::SPOT,
+                     glm::vec3(0.0f),               // position
+                     glm::vec3(0.0f, 0.0f, -1.0f),  // direction
+                     glm::vec3(0.1f),               // ambient
+                     glm::vec3(1.0f),               // diffuse
+                     glm::vec3(1.0f),               // specular
+                     glm::cos(glm::radians(10.0f)), // cutoff
+                     glm::cos(glm::radians(20.0f)), // outer cutoff
+                     1280, 720, 0.1f, 500.0f, 10.0f, 1.0f, 0.35f, 0.44f, 1.0f, 1.0f);
+    flashlight.set_name("flashlight");
+    Light right_spot_light(LightType::SPOT, glm::vec3(5.0f, 1.5f, 0.0f), // position: to the right
+                           glm::vec3(1.0f, 0.0f, -1.0f),                 // direction: pointing left
+                           glm::vec3(0.1f), glm::vec3(1.0f), glm::vec3(1.0f),
+                           glm::cos(glm::radians(10.0f)), // inner cone
+                           glm::cos(glm::radians(30.0f)), // outer cone
+                           2048, 2048, 1.0f, 10.0f, 10.0f, 1.0f, 0.35f, 0.44f, 1.0f, 1.0f);
 
-    Light right_spot_light(
-        LightType::SPOT,
-        glm::vec3(5.0f, 1.5f, 0.0f),  // position: to the right
-        glm::vec3(1.0f, 0.0f, -1.0f), // direction: pointing left
-        glm::vec3(0.1f),
-        glm::vec3(1.0f),
-        glm::vec3(1.0f),
-        glm::cos(glm::radians(10.0f)), // inner cone
-        glm::cos(glm::radians(30.0f)), // outer cone
-        2048, 2048,
-        1.0f, 10.0f,
-        10.0f,1.0f,0.35f,0.44f,1.0f,1.0f);
-
-    Light overhead_point_light(
-        LightType::POINT,
-        glm::vec3(0.0f, 5.0f, 0.0f),  // above the object
-        glm::vec3(0.0f, -1.0f, 0.0f), // pointing straight down
-        glm::vec3(0.1f),
-        glm::vec3(1.0f),
-        glm::vec3(1.0f),
-        glm::cos(glm::radians(10.0f)), // inner cone
-        glm::cos(glm::radians(30.0f)), // outer cone
-        2048,  
-        2048, 
-        0.1f, 10.0f,
-        10.0f, 1.0f,0.35f,0.44f,1.0f,1.0f);
-
+    Light overhead_point_light(LightType::POINT, glm::vec3(0.0f, 5.0f, 0.0f), // above the object
+                               glm::vec3(0.0f, -1.0f, 0.0f), // pointing straight down
+                               glm::vec3(0.1f), glm::vec3(1.0f), glm::vec3(1.0f),
+                               glm::cos(glm::radians(10.0f)), // inner cone
+                               glm::cos(glm::radians(30.0f)), // outer cone
+                               2048, 2048, 0.1f, 10.0f, 10.0f, 1.0f, 0.35f, 0.44f, 1.0f, 1.0f);
 
     glm::vec3 overhead_light_spot = glm::vec3(15.0f, 5.0f, -20.0f);
     overhead_point_light.set_position(overhead_light_spot);
-    overhead_point_light_model.set_local_transform(glm::translate(glm::mat4(1.0f), overhead_point_light.get_position()));
+    overhead_point_light_model.set_local_transform(
+        glm::translate(glm::mat4(1.0f), overhead_point_light.get_position()));
 
     glm::vec3 right_light_spot = glm::vec3(15.0f, 2.0f, -25.0f);
     right_spot_light.set_position(right_light_spot);
-    right_spot_light_model.set_local_transform(glm::translate(glm::mat4(1.0f), right_spot_light.get_position()));
+    right_spot_light_model.set_local_transform(
+        glm::translate(glm::mat4(1.0f), right_spot_light.get_position()));
 
     floor.set_local_transform(glm::translate(glm::mat4(1.0f), glm::vec3(15.0f, -0.01f, -20.0f)));
 
-
-    Game::SceneManager scene_manager(1280, 720);
-    scene_manager.add_shader(blinnphong);
-    scene_manager.add_shader(depth_2d);
-    scene_manager.add_shader(depth_cube);
-    //gameState.add_model(overhead_point_light_model);
-    //gameState.add_model(right_spot_light_model);
+    // gameState.add_model(overhead_point_light_model);
+    // gameState.add_model(right_spot_light_model);
     gameState.add_model(floor);
-    //scene_manager.add_light(overhead_point_light);
+    // scene_manager.add_light(overhead_point_light);
     gameState.add_light(flashlight);
     gameState.add_light(right_spot_light);
 
-
     glm::vec3 bed_position = glm::vec3(15.0f, 0.0f, -20.0f);
-    glm::mat4 bed_offset = glm::translate(glm::mat4(1.0f), bed_position);
+    glm::mat4 bed_offset   = glm::translate(glm::mat4(1.0f), bed_position);
 
-    //glm::vec3 right_spot_dir = glm::normalize((bed_position + glm::vec3(0.0f, 0.0f, -6.0f)) - right_spot_light.get_position());
+    // glm::vec3 right_spot_dir = glm::normalize((bed_position + glm::vec3(0.0f, 0.0f, -6.0f)) -
+    // right_spot_light.get_position());
     glm::vec3 right_spot_dir = glm::normalize(bed_position - right_spot_light.get_position());
     right_spot_light.set_direction(right_spot_dir);
 
-    glm::vec3 overhead_spot_dir = glm::normalize(bed_position - overhead_point_light.get_position());
+    glm::vec3 overhead_spot_dir =
+        glm::normalize(bed_position - overhead_point_light.get_position());
     overhead_point_light.set_direction(overhead_spot_dir);
 
-
-    auto bed = Models::Model("assets/models/SimpleOldTownAssets/Bed01.obj", "Bed");
+    auto bed = Model("assets/models/SimpleOldTownAssets/Bed01.obj", "Bed");
     bed.set_local_transform(bed_offset);
     bed.set_interactivity(true);
     gameState.add_model(bed);
 
+    auto chair = Models::Model(
+        "assets/models/SimpleOldTownAssets/ChairCafeWhite01.obj",
+        "Cafe Chair");
 
-    // auto chair = Model::Model(
-    //     "assets/models/SimpleOldTownAssets/ChairCafeWhite01.obj",
-    //     "Cafe Chair");
-    //
-    // constexpr int chair_count = 1000;
-    // chair.init_instancing(chair_count);
-    //
-    // const int grid_width  = 40; // 40 × 25 = 1000
-    // const int grid_height = 25;
-    // const float chair_spacing = 2.5f;
-    //
-    // int placed = 0;
-    // for (int row = 0; row < grid_height && placed < chair_count; ++row) {
-    //     for (int col = 0; col < grid_width && placed < chair_count; ++col) {
-    //         glm::vec3 offset = bed_position + glm::vec3(
-    //             (col - grid_width / 2) * chair_spacing,
-    //             0.0f,
-    //             (row - grid_height / 2) * chair_spacing
-    //         );
-    //
-    //         glm::mat4 transform = glm::translate(glm::mat4(1.0f), offset);
-    //
-    //         // Optional: rotate every third chair
-    //         if ((row + col) % 3 == 0) {
-    //             transform = glm::rotate(transform, glm::radians(90.0f), glm::vec3(0, 1, 0));
-    //         }
-    //
-    //         chair.add_instance_transform(transform);
-    //         ++placed;
-    //     }
-    // }
-    //
-    // gameState.add_model(chair);
+    constexpr int chair_count = 1000;
+    chair.init_instancing(chair_count);
 
-    glm::mat4 bookcase_offset = glm::translate(glm::mat4(1.0f), bed_position + glm::vec3(0.0f, 0.0f, -6.0f));
+    const int grid_width  = 40; // 40 × 25 = 1000
+    const int grid_height = 25;
+    const float chair_spacing = 2.5f;
+
+    int placed = 0;
+    for (int row = 0; row < grid_height && placed < chair_count; ++row) {
+        for (int col = 0; col < grid_width && placed < chair_count; ++col) {
+            glm::vec3 offset = bed_position + glm::vec3(
+                (col - grid_width / 2) * chair_spacing,
+                0.0f,
+                (row - grid_height / 2) * chair_spacing
+            );
+
+            glm::mat4 transform = glm::translate(glm::mat4(1.0f), offset);
+
+            // Optional: rotate every third chair
+            if ((row + col) % 3 == 0) {
+                transform = glm::rotate(transform, glm::radians(90.0f), glm::vec3(0, 1, 0));
+            }
+
+            chair.add_instance_transform(transform);
+            ++placed;
+        }
+    }
+
+    gameState.add_model(chair);
+
+    glm::mat4 bookcase_offset =
+        glm::translate(glm::mat4(1.0f), bed_position + glm::vec3(0.0f, 0.0f, -6.0f));
     auto bookcase = Models::Model("assets/models/SimpleOldTownAssets/BookCase01.obj", "Bookcase");
     bookcase.set_local_transform(bookcase_offset);
     bookcase.set_interactivity(true);
     gameState.add_model(bookcase);
-    scene_manager.on_interaction_with("Bookcase",[](auto sceneMgr) { std::cout << "I live with only a chair on my side\n";});
-    //scene_manager.add_light(flashlight);
-
 
     // ─── Create camera ───────────────────────────────────────────────────
     Camera::CameraObj camera(1280, 720);
-    //camera.set_position(right_spot_light.get_position());
-    //camera.set_direction(right_spot_light.get_direction());
 
 #ifdef DEBUG_DEPTH
-  shader_paths = {"assets/shaders/depth_debug.vert",
-                  "assets/shaders/depth_debug.frag"};
-  shader_types = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
-  Shader depth_debug = Shader(shader_paths, shader_types, "depth_debug");
+    shader_paths       = {"assets/shaders/depth_debug.vert", "assets/shaders/depth_debug.frag"};
+    shader_types       = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
+    Shader depth_debug = Shader(shader_paths, shader_types, "depth_debug");
 #endif
 
-  Material material;
-  {
-    material.Ka = glm::vec3(0.15f, 0.07f, 0.02f);
-    material.Kd = glm::vec3(0.59f, 0.29f, 0.00f);
-    material.Ks = glm::vec3(0.05f, 0.04f, 0.03f);
-    material.Ns = 16.0f;
-    material.d = 1.0f;
-    material.illum = 2;
-    auto texpath = "assets/textures/Wood092_1K-JPG/Wood092_1K-JPG_Color.jpg";
-    GLuint texture = ObjectLoader::load_texture_from_file(texpath);
-    material.map_Kd = texpath;
-    material.tex_Kd = texture;
-  }
-
+    Material material;
+    {
+        material.Ka     = glm::vec3(0.15f, 0.07f, 0.02f);
+        material.Kd     = glm::vec3(0.59f, 0.29f, 0.00f);
+        material.Ks     = glm::vec3(0.05f, 0.04f, 0.03f);
+        material.Ns     = 16.0f;
+        material.d      = 1.0f;
+        material.illum  = 2;
+        auto   texpath  = "assets/textures/Wood092_1K-JPG/Wood092_1K-JPG_Color.jpg";
+        GLuint texture  = ObjectLoader::load_texture_from_file(texpath);
+        material.map_Kd = texpath;
+        material.tex_Kd = texture;
+    }
 
 #ifdef DEBUG_DEPTH
-  float quadVertices[] = {// positions   // texCoords
-                          -1.0f, 1.0f, 0.0f, 1.0f,  -1.0f, -1.0f,
-                          0.0f,  0.0f, 1.0f, -1.0f, 1.0f,  0.0f,
+    float quadVertices[] = {
+        // positions   // texCoords
+        -1.0f, 1.0f, 0.0f, 1.0f, -1.0f, -1.0f, 0.0f, 0.0f, 1.0f, -1.0f, 1.0f, 0.0f,
 
-                          -1.0f, 1.0f, 0.0f, 1.0f,  1.0f,  -1.0f,
-                          1.0f,  0.0f, 1.0f, 1.0f,  1.0f,  1.0f};
+        -1.0f, 1.0f, 0.0f, 1.0f, 1.0f,  -1.0f, 1.0f, 0.0f, 1.0f, 1.0f,  1.0f, 1.0f};
 
-  GLuint quadVAO, quadVBO;
-  glGenVertexArrays(1, &quadVAO);
-  glGenBuffers(1, &quadVBO);
-  glBindVertexArray(quadVAO);
-  glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices,
-               GL_STATIC_DRAW);
-  glEnableVertexAttribArray(0);
-  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)0);
-  glEnableVertexAttribArray(1);
-  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
-                        (void *)(2 * sizeof(float)));
+    GLuint quadVAO, quadVBO;
+    glGenVertexArrays(1, &quadVAO);
+    glGenBuffers(1, &quadVBO);
+    glBindVertexArray(quadVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
 #endif
-  
-  State s; s.closestModelLabel=""; s.closestModelDistance = std::numeric_limits<float>::max();
-  // ─── Main loop ───────────────────────────────────────────────────────
-  bool running = true;
-  Uint64 lastTicks = SDL_GetPerformanceCounter();
-  int interactionDistance = 2.0f;
-  glm::vec3 last_camera_position;
-  scene_manager.set_game_state(gameState);
-    while (running){
+
+    // ─── Main loop ───────────────────────────────────────────────────────
+    bool               running             = true;
+    Uint64             lastTicks           = SDL_GetPerformanceCounter();
+    int                interactionDistance = 2.0f;
+    glm::vec3          last_camera_position;
+    Game::SceneManager scene_manager(1280, 720, camera,gameState);
+    scene_manager.add_shader(blinnphong);
+    scene_manager.add_shader(depth_2d);
+    scene_manager.add_shader(depth_cube);
+    scene_manager.on_interaction_with(
+        "Bookcase", [](auto sceneMgr) { std::cout << "I live with only a chair on my side\n"; });
+    while (running) {
         Uint64 now = SDL_GetPerformanceCounter();
-        float dt = float(now - lastTicks) / float(SDL_GetPerformanceFrequency());
-        lastTicks = now;
-        scene_manager.handleSDLEvents(running,&camera);
-        // 3) update camera movement (WASD/etc) once per frame
-        last_camera_position = camera.get_position();
-        camera.update(dt);
-        // 3.5) loop over models(collision tests, update closest object etc. etc.)
-        scene_manager.run(&camera,last_camera_position);
+        float  dt  = float(now - lastTicks) / float(SDL_GetPerformanceFrequency());
+        lastTicks  = now;
+        scene_manager.handleSDLEvents(running);
+        // 3) update camera movement and loop over models(collision tests, update closest object etc. etc.)
+        scene_manager.run(dt);
         // 4) clear and render
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        //float forward_offset = 0.5f;
-        float right_offset = 0.4f;
-        //glm::vec3 offset = right_offset * camera.get_right() + forward_offset * camera.get_direction();
-        glm::vec3 offset = right_offset * camera.get_right();
-        flashlight.set_position(camera.get_position() + offset);
-        flashlight.set_direction(camera.get_direction());
+        // float forward_offset = 0.5f;
+        // float right_offset = 0.4f;
+        // // glm::vec3 offset = right_offset * camera.get_right() + forward_offset *
+        // // camera.get_direction();
+        // glm::vec3 offset = right_offset * scene_manager.get_camera().get_right();
+        // flashlight.set_position(scene_manager.get_camera().get_position() + offset);
+        // flashlight.set_direction(scene_manager.get_camera().get_direction());
         // glEnable(GL_BLEND);
         // glBlendFunc(GL_ONE,GL_ONE);
-    #ifdef DEBUG_DEPTH
+#ifdef DEBUG_DEPTH
         depth_debug.use();
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, flashlight.get_depth_texture());
@@ -397,17 +346,16 @@ int main() {
         glBindVertexArray(quadVAO);
         glDrawArrays(GL_TRIANGLES, 0, 6);
         glBindVertexArray(0);
-    #endif
-        //render_depth_pass + render
-        scene_manager.render(camera);
+#endif
+        // render_depth_pass + render
+        scene_manager.render();
         scene_manager.runInteractionHandlers();
         SDL_GL_SwapWindow(window);
-      }
-    
-  // ─── Cleanup ─────────────────────────────────────────────────────────
-  SDL_GL_DeleteContext(glCtx);
-  SDL_DestroyWindow(window);
-  SDL_Quit();
-  return 0;
-}
+    }
 
+    // ─── Cleanup ─────────────────────────────────────────────────────────
+    SDL_GL_DeleteContext(glCtx);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
+    return 0;
+}
