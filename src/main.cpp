@@ -101,44 +101,18 @@ struct State {
 
 using namespace Game;
 int main() {
-    // ─── Initialize SDL + OpenGL ──────────────────────────────────────────
-    SDL_Init(SDL_INIT_VIDEO);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+    Camera::CameraObj camera(1280, 720);
+    Game::SceneManager scene_manager(1280, 720, camera);
+    scene_manager.initialiseOpenGL_SDL();
 
-    SDL_Window* window =
-        SDL_CreateWindow("Old room", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720,
-                         SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
-    SDL_GLContext glCtx = SDL_GL_CreateContext(window);
-
-    glewInit();
-    glEnable(GL_DEPTH_TEST);
-    glViewport(0, 0, 1280, 720);
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+    scene_manager.initialiseShaders();
     GameState gameState;
-
-    std::vector<std::string> shader_paths = {"assets/shaders/blinnphong.vert",
-                                             "assets/shaders/blinnphong.frag"};
-    std::vector<GLenum>      shader_types = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
-    Shader                   blinnphong   = Shader(shader_paths, shader_types, "blinn-phong");
-
-    shader_paths    = {"assets/shaders/depth_2d.vert", "assets/shaders/depth_2d.frag"};
-    shader_types    = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
-    Shader depth_2d = Shader(shader_paths, shader_types, "depth_2d");
 
 #ifdef DEBUG_DEPTH
     shader_paths       = {"assets/shaders/depth_debug.vert", "assets/shaders/depth_debug.frag"};
     shader_types       = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
     Shader depth_debug = Shader(shader_paths, shader_types, "depth_debug");
 #endif
-
-    shader_paths      = {"assets/shaders/depth_cube.vert", "assets/shaders/depth_cube.geom",
-                         "assets/shaders/depth_cube.frag"};
-    shader_types      = {GL_VERTEX_SHADER, GL_GEOMETRY_SHADER, GL_FRAGMENT_SHADER};
-    Shader depth_cube = Shader(shader_paths, shader_types, "depth_cube");
 
     std::vector<glm::vec3> floor_verts = {
         {-10.0f, 0.0f, -10.0f}, {-10.0f, 0.0f, 10.0f}, {10.0f, 0.0f, 10.0f}, {10.0f, 0.0f, -10.0f}};
@@ -223,25 +197,22 @@ int main() {
     bed.set_interactivity(true);
     gameState.add_model(bed);
 
-    auto chair = Models::Model(
-        "assets/models/SimpleOldTownAssets/ChairCafeWhite01.obj",
-        "Cafe Chair");
+    auto chair =
+        Models::Model("assets/models/SimpleOldTownAssets/ChairCafeWhite01.obj", "Cafe Chair");
 
     constexpr int chair_count = 1000;
     chair.init_instancing(chair_count);
 
-    const int grid_width  = 40; // 40 × 25 = 1000
-    const int grid_height = 25;
+    const int   grid_width    = 40; // 40 × 25 = 1000
+    const int   grid_height   = 25;
     const float chair_spacing = 2.5f;
 
     int placed = 0;
     for (int row = 0; row < grid_height && placed < chair_count; ++row) {
         for (int col = 0; col < grid_width && placed < chair_count; ++col) {
-            glm::vec3 offset = bed_position + glm::vec3(
-                (col - grid_width / 2) * chair_spacing,
-                0.0f,
-                (row - grid_height / 2) * chair_spacing
-            );
+            glm::vec3 offset =
+                bed_position + glm::vec3((col - grid_width / 2) * chair_spacing, 0.0f,
+                                         (row - grid_height / 2) * chair_spacing);
 
             glm::mat4 transform = glm::translate(glm::mat4(1.0f), offset);
 
@@ -264,14 +235,6 @@ int main() {
     bookcase.set_interactivity(true);
     gameState.add_model(bookcase);
 
-    // ─── Create camera ───────────────────────────────────────────────────
-    Camera::CameraObj camera(1280, 720);
-
-#ifdef DEBUG_DEPTH
-    shader_paths       = {"assets/shaders/depth_debug.vert", "assets/shaders/depth_debug.frag"};
-    shader_types       = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
-    Shader depth_debug = Shader(shader_paths, shader_types, "depth_debug");
-#endif
 
     Material material;
     {
@@ -306,47 +269,11 @@ int main() {
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
 #endif
 
-    // ─── Main loop ───────────────────────────────────────────────────────
-    bool               running             = true;
-    Uint64             lastTicks           = SDL_GetPerformanceCounter();
-    int                interactionDistance = 2.0f;
-    glm::vec3          last_camera_position;
-    Game::SceneManager scene_manager(1280, 720, camera,gameState);
-    scene_manager.initialiseShaders();
+    scene_manager.set_game_state(gameState);
     scene_manager.on_interaction_with(
         "Bookcase", [](auto sceneMgr) { std::cout << "I live with only a chair on my side\n"; });
-    while (running) {
-        Uint64 now = SDL_GetPerformanceCounter();
-        float  dt  = float(now - lastTicks) / float(SDL_GetPerformanceFrequency());
-        lastTicks  = now;
-        scene_manager.handleSDLEvents(running);
-        // 3) update camera movement and loop over models(collision tests, update closest object etc. etc.)
-        scene_manager.run(dt);
-        // 4) clear and render
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        // glEnable(GL_BLEND);
-        // glBlendFunc(GL_ONE,GL_ONE);
-#ifdef DEBUG_DEPTH
-        depth_debug.use();
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, flashlight.get_depth_texture());
-        glUniform1i(depth_debug.get_uniform_location("depthMap"), 0);
-        glUniform1f(depth_debug.get_uniform_location("near_plane"), 1.0f);
-        glUniform1f(depth_debug.get_uniform_location("far_plane"), 100.0f);
-        glBindVertexArray(quadVAO);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-        glBindVertexArray(0);
-#endif
-        // render_depth_pass + render
-        scene_manager.render();
-        scene_manager.runInteractionHandlers();
-        SDL_GL_SwapWindow(window);
-    }
+    scene_manager.runGameLoop();
 
-    // ─── Cleanup ─────────────────────────────────────────────────────────
-    SDL_GL_DeleteContext(glCtx);
-    SDL_DestroyWindow(window);
-    SDL_Quit();
+
     return 0;
 }
