@@ -1,5 +1,6 @@
 #include "Light.h"
 #include <iostream>
+#include <memory>
 Light::Light(
     LightType light_type, 
     const glm::vec3& position, 
@@ -109,7 +110,7 @@ Light::Light(
     GLCall(glBindFramebuffer(GL_FRAMEBUFFER, 0));
 }
 
-void Light::draw_lighting(Shader *shader, const std::string &base, int index) const{
+void Light::draw_lighting(std::shared_ptr<Shader> shader, const std::string &base, int index) const{
     shader->set_vec3(base + "position", position);
     shader->set_float(base + "power", light_power);
     shader->set_vec3(base + "color",color);
@@ -135,7 +136,7 @@ void Light::draw_lighting(Shader *shader, const std::string &base, int index) co
     //shader->set_texture(base + "shadowMap", get_depth_texture(), 5);
 }
 
-void Light::draw_depth_pass(Shader* shader, 
+void Light::draw_depth_pass(std::shared_ptr<Shader> shader, 
                             const std::vector<Models::Model*>& models) const 
 {
     GLCall(glViewport(0, 0, shadow_width, shadow_height));
@@ -221,7 +222,7 @@ void Light::draw_depth_pass(Shader* shader,
     GLCall(glUseProgram(0));
 }
 
-void Light::bind_shadow_map(Shader* shader, const std::string& base, int index) const{
+void Light::bind_shadow_map(std::shared_ptr<Shader> shader, const std::string& base, int index) const{
     // pick the GLSL sampler name and GL bind‐target
     // point lights use a cube‐map
     if (type == LightType::POINT){

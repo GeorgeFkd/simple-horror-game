@@ -26,11 +26,11 @@ void Camera::CameraObj::updateCameraVectors()
 {
     // calculate new front vector
     glm::vec3 f;
-    // contribution on x axis * how much we are rotared on the y
+    // contribution on x axis * how much we are rotated on the y
     f.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
     // contribution on y axis
     f.y = sin(glm::radians(pitch));
-    // contribution on z axis * how much we are rotared on the y
+    // contribution on z axis * how much we are rotated on the y
     f.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
     front = glm::normalize(f);
 

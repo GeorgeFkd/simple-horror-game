@@ -4,6 +4,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <memory>
 #include <string>
 #include <string_view>
 #include "Shader.h"
@@ -146,9 +147,9 @@ public:
     glm::mat4 get_light_view() const;
     std::vector<glm::mat4> get_point_light_views() const;
 
-    void bind_shadow_map(Shader* shader, const std::string& base, int index) const;
-    void draw_lighting(Shader* shader, const std::string& base, int index) const;
-    void draw_depth_pass(Shader* shader, const std::vector<Models::Model*>& models) const;
+    void bind_shadow_map(std::shared_ptr<Shader> shader, const std::string& base, int index) const;
+    void draw_lighting(std::shared_ptr<Shader> shader, const std::string& base, int index) const;
+    void draw_depth_pass(std::shared_ptr<Shader>shader, const std::vector<Models::Model*>& models) const;
 private:
     LightType type;
     glm::vec3 position;

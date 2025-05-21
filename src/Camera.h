@@ -47,16 +47,6 @@ namespace Camera{
         void update(float delta_time);
 
         void process_input(const SDL_Event& event);
-        //inline glm::vec3 getCameraDirection() const{
-        //    return glm::normalize(position - target);
-        //}
-        //inline glm::vec3 getCameraRight() const{
-        //    return glm::normalize(glm::cross(up, getCameraDirection()));
-        //}
-        //inline glm::vec3 getCameraUp() const{
-        //    return glm::cross(getCameraDirection(), getCameraRight());
-        //}
-        // The below captures all of the above functionality
         inline glm::mat4 get_view_matrix() const {
             return glm::lookAt(position, position + front, up);
         }

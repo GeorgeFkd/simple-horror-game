@@ -1,0 +1,44 @@
+# .clang-format
+
+BasedOnStyle: LLVM
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+
+# Braces on the same line (K&R style)
+BreakBeforeBraces: Attach
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: false
+
+# Includes
+IncludeBlocks: Preserve
+IncludeCategories:
+  - Regex:           '^<.*\.h>'
+    Priority:        1
+    SortPriority:    0
+  - Regex:           '^".*\.h"'
+    Priority:        2
+    SortPriority:    1
+SortIncludes: true
+
+# Spaces
+SpaceBeforeParens: ControlStatements
+SpaceInEmptyParentheses: false
+SpacesInAngles: false
+SpacesInContainerLiterals: false
+SpacesInCStyleCastParentheses: false
+SpacesInParentheses: false
+
+# Alignment
+AlignAfterOpenBracket: Align
+AlignOperands: true
+AlignConsecutiveAssignments: true
+AlignConsecutiveDeclarations: true
+
+# Other
+AlwaysBreakTemplateDeclarations: Yes
+ReflowComments: true
+ColumnLimit: 100
+SortUsingDeclarations: true
+Cpp11BracedListStyle: true
+PointerAlignment: Left
