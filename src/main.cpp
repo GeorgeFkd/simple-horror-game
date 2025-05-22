@@ -2,7 +2,7 @@
 #include "Camera.h"
 #include "Light.h"
 #include "SceneManager.h"
-#include "Shader.h"
+#include "fwd.hpp"
 #include <GL/glew.h>
 #include <SDL.h>
 #include <glm/glm.hpp>
@@ -14,11 +14,11 @@
 // #define DEBUG_DEPTH
 #endif
 
-using Models::Model;
+using namespace Game;
+using namespace Models;
 
 enum class SurfaceType { Floor, Ceiling, WallFront, WallBack, WallLeft, WallRight };
-Models::Model repeating_tile(SurfaceType surface, float offset, const Material& material,
-                             float repeat) {
+Model repeating_tile(SurfaceType surface, float offset, const Material& material, float repeat) {
     // might be able to constexpr this
     constexpr int   TILE_WIDTH  = 50;
     constexpr int   TILE_HEIGHT = 50;
@@ -86,12 +86,12 @@ Models::Model repeating_tile(SurfaceType surface, float offset, const Material& 
         break;
     }
 
-    texcoords = {{0, 0}, {0, repeat}, {repeat, repeat}, {repeat, 0}};
+    texcoords = {{0, 0}, {0, 1.0f}, {1.0f, 1.0f}, {1.0f, 0}};
 
     std::vector<glm::vec3> normals(4, normal);
     std::vector<GLuint>    indices = {0, 1, 2, 0, 2, 3};
 
-    return Models::Model(verts, normals, texcoords, indices, label, material);
+    return Model(verts, normals, texcoords, indices, label, material);
 }
 
 struct State {
@@ -99,23 +99,13 @@ struct State {
     float            closestModelDistance;
 };
 
-using namespace Game;
-int main() {
-    Camera::CameraObj camera(1280, 720);
-    Game::SceneManager scene_manager(1280, 720, camera);
-    scene_manager.initialiseOpenGL_SDL();
+Model createFloor(float roomSize) {
 
-    scene_manager.initialiseShaders();
-    GameState gameState;
-
-#ifdef DEBUG_DEPTH
-    shader_paths       = {"assets/shaders/depth_debug.vert", "assets/shaders/depth_debug.frag"};
-    shader_types       = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
-    Shader depth_debug = Shader(shader_paths, shader_types, "depth_debug");
-#endif
-
-    std::vector<glm::vec3> floor_verts = {
-        {-10.0f, 0.0f, -10.0f}, {-10.0f, 0.0f, 10.0f}, {10.0f, 0.0f, 10.0f}, {10.0f, 0.0f, -10.0f}};
+    float                  y           = 0.0f;
+    std::vector<glm::vec3> floor_verts = {{-roomSize, y, -roomSize},
+                                          {-roomSize, y, roomSize},
+                                          {roomSize, y, roomSize},
+                                          {roomSize, y, -roomSize}};
     std::vector<glm::vec3> floor_normals(4, glm::vec3(0, 1, 0));
     std::vector<glm::vec2> floor_uvs     = {{0, 0}, {0, 1}, {1, 1}, {1, 0}};
     std::vector<GLuint>    floor_indices = {0, 1, 2, 0, 2, 3};
@@ -128,15 +118,169 @@ int main() {
     floor_material.d     = 1.0f;                           // opacity
     floor_material.illum = 2;                              // standard Phong
 
-    Models::Model floor(floor_verts, floor_normals, floor_uvs, floor_indices, "Floor",
-                        floor_material);
+    return Model(floor_verts, floor_normals, floor_uvs, floor_indices, "Floor", floor_material);
+}
+int main() {
+    Camera::CameraObj  camera(1280, 720, glm::vec3(0.0f, 0.0f, 3.5f));
+    Game::SceneManager scene_manager(1280, 720, camera);
+    scene_manager.initialiseOpenGL_SDL();
 
-    auto right_light = Models::Model("assets/models/light_sphere.obj", "Sphere");
+    scene_manager.initialiseShaders();
+    GameState gameState;
+
+#ifdef DEBUG_DEPTH
+    shader_paths       = {"assets/shaders/depth_debug.vert", "assets/shaders/depth_debug.frag"};
+    shader_types       = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
+    Shader depth_debug = Shader(shader_paths, shader_types, "depth_debug");
+#endif
+    constexpr float ROOM_HEIGHT = 50.0f;
+    constexpr float ROOM_WIDTH  = 60.0f;
+    constexpr float ROOM_DEPTH  = ROOM_WIDTH;
+
+    auto floor_model = createFloor(ROOM_WIDTH);
+    floor_model.init_instancing(6);
+    struct SurfaceConfig {
+        glm::vec3 position;
+        glm::vec3 rotation_axis;
+        float     rotation_deg;
+    };
+    std::vector<SurfaceConfig> surfaces = {
+        // Floor
+        {{0, 0, 0}, {0, 0, 0}, 0.0f},
+
+        // Ceiling
+        {{0, ROOM_HEIGHT, 0}, {1, 0, 0}, 180.0f},
+
+        // Back Wall
+        {{0, ROOM_HEIGHT / 2, -ROOM_DEPTH / 2}, {1, 0, 0}, 90.0f},
+
+        // Front Wall
+        {{0, ROOM_HEIGHT / 2, ROOM_DEPTH / 2}, {1, 0, 0}, -90.0f},
+
+        // Left Wall
+        {{-ROOM_WIDTH / 2, ROOM_HEIGHT / 2, 0}, {0, 0, 1}, -90.0f},
+
+        // Right Wall
+        {{ROOM_WIDTH / 2, ROOM_HEIGHT / 2, 0}, {0, 0, 1}, 90.0f},
+    };
+
+    for (const auto& face : surfaces) {
+        glm::mat4 tf = glm::translate(glm::mat4(1.0f), face.position);
+        if (glm::length(face.rotation_axis) > 0.0f) {
+            tf = glm::rotate(tf, glm::radians(face.rotation_deg), face.rotation_axis);
+        }
+        floor_model.add_instance_transform(tf);
+    }
+    // floor_model.set_local_transform(glm::translate(glm::mat4(1.0f), glm::vec3(15.0f, -0.01f,
+    // -20.0f)));
+    //
+
+    auto wall = Model("assets/models/SimpleOldTownAssets/OldHouseBrownWallLarge.obj", "Wall");
+    constexpr int   grid_rows                               = 10;
+    constexpr int   grid_columns                            = 7;
+    constexpr float wall_y                                  = 0.0f;
+    const float     spacing_x                               = ROOM_WIDTH / (grid_columns - 1);
+    const float     spacing_z                               = ROOM_DEPTH / (grid_rows - 1);
+    bool            horizontal[grid_rows + 1][grid_columns] = {};
+    bool            vertical[grid_rows][grid_columns + 1]   = {};
+
+    // === Define internal walls ===
+    horizontal[1][1] = true;
+    horizontal[2][1] = true;
+    horizontal[3][1] = true;
+    horizontal[4][1] = true;
+    horizontal[5][1] = true;
+    horizontal[6][1] = true;
+    horizontal[7][1] = true;
+    horizontal[8][1] = true;
+    
+    horizontal[2][2] = true;
+    horizontal[3][2] = true;
+    horizontal[4][2] = true;
+    horizontal[5][2] = true;
+    horizontal[6][2] = true;
+    horizontal[7][2] = true;
+    horizontal[8][2] = true;
+
+    horizontal[2][3] = true;
+    horizontal[3][3] = true;
+    horizontal[4][3] = true;
+    horizontal[5][3] = true;
+    horizontal[6][3] = true;
+    horizontal[7][3] = true;
+    horizontal[8][3] = true;
+    
+    horizontal[2][4] = true;
+    horizontal[3][4] = true;
+    horizontal[4][4] = true;
+    horizontal[5][4] = true;
+    horizontal[6][4] = true;
+    horizontal[7][4] = true;
+    horizontal[8][4] = true;
+
+    horizontal[2][5] = true;
+    horizontal[3][5] = true;
+    horizontal[4][5] = true;
+    horizontal[5][5] = true;
+    horizontal[6][5] = true;
+    horizontal[7][5] = true;
+    horizontal[8][5] = true;
+    horizontal[9][5] = true;
+
+    vertical[8][2] = true;
+    vertical[1][3] = true;
+    vertical[8][4] = true;
+
+
+    wall.init_instancing(grid_rows * grid_columns * 2);
+
+    float half_width  = (grid_columns - 1) * spacing_x / 2.0f;
+    float half_height = (grid_rows - 1) * spacing_z / 2.0f;
+
+    // place horizontal walls (Z-aligned)
+    for (int row = 1; row < grid_rows; ++row) {
+        for (int col = 0; col < grid_columns; ++col) {
+            if (horizontal[row][col]) {
+                float x = col * spacing_x - half_width;
+                float z = (row - 0.5f) * spacing_z - half_height;
+
+                glm::vec3 pos = glm::vec3(x, wall_y, z);
+                glm::mat4 tf  = glm::translate(glm::mat4(1.0f), pos);
+                // tf = glm::scale(glm::mat4(1.0f),{1.0f,1.0f,1.35f}) * tf;
+                std::cout << "[H] Placing wall between row " << (row - 1) << " and " << row
+                          << " at col " << col << " → Position: (" << x << ", " << wall_y << ", "
+                          << z << ")\n";
+
+                wall.add_instance_transform(tf);
+            }
+        }
+    }
+
+    // place vertical walls (X-aligned, rotated)
+    for (int row = 0; row < grid_rows; ++row) {
+        for (int col = 1; col < grid_columns; ++col) {
+            if (vertical[row][col]) {
+                float x = (col - 0.5f) * spacing_x - half_width;
+                float z = row * spacing_z - half_height;
+
+                glm::vec3 pos = glm::vec3(x, wall_y, z);
+                glm::mat4 tf  = glm::translate(glm::mat4(1.0f), pos);
+                tf            = glm::rotate(tf, glm::radians(90.0f), glm::vec3(0, 1, 0));
+                std::cout << "[V] Placing wall between col " << (col - 1) << " and " << col
+                          << " at row " << row << " → Position: (" << x << ", " << wall_y << ", "
+                          << z << ")\n";
+
+                wall.add_instance_transform(tf);
+            }
+        }
+    };
+    
+    gameState.add_model(wall);
+
+    auto right_light = Model("assets/models/light_sphere.obj", "Sphere");
     auto overhead_point_light_model =
-        Models::Model("assets/models/light_sphere.obj", "Overhead point light");
-    auto right_spot_light_model =
-        Models::Model("assets/models/light_sphere.obj", "Right spot light");
-    // hi
+        Model("assets/models/light_sphere.obj", "Overhead point light");
+    auto  right_spot_light_model = Model("assets/models/light_sphere.obj", "Right spot light");
     Light flashlight(LightType::SPOT,
                      glm::vec3(0.0f),               // position
                      glm::vec3(0.0f, 0.0f, -1.0f),  // direction
@@ -147,108 +291,103 @@ int main() {
                      glm::cos(glm::radians(20.0f)), // outer cutoff
                      1280, 720, 0.1f, 500.0f, 10.0f, 1.0f, 0.35f, 0.44f, 1.0f, 1.0f);
     flashlight.set_name("flashlight");
-    Light right_spot_light(LightType::SPOT, glm::vec3(5.0f, 1.5f, 0.0f), // position: to the right
-                           glm::vec3(1.0f, 0.0f, -1.0f),                 // direction: pointing left
-                           glm::vec3(0.1f), glm::vec3(1.0f), glm::vec3(1.0f),
-                           glm::cos(glm::radians(10.0f)), // inner cone
-                           glm::cos(glm::radians(30.0f)), // outer cone
-                           2048, 2048, 1.0f, 10.0f, 10.0f, 1.0f, 0.35f, 0.44f, 1.0f, 1.0f);
-
-    Light overhead_point_light(LightType::POINT, glm::vec3(0.0f, 5.0f, 0.0f), // above the object
-                               glm::vec3(0.0f, -1.0f, 0.0f), // pointing straight down
-                               glm::vec3(0.1f), glm::vec3(1.0f), glm::vec3(1.0f),
-                               glm::cos(glm::radians(10.0f)), // inner cone
-                               glm::cos(glm::radians(30.0f)), // outer cone
-                               2048, 2048, 0.1f, 10.0f, 10.0f, 1.0f, 0.35f, 0.44f, 1.0f, 1.0f);
-
-    glm::vec3 overhead_light_spot = glm::vec3(15.0f, 5.0f, -20.0f);
-    overhead_point_light.set_position(overhead_light_spot);
-    overhead_point_light_model.set_local_transform(
-        glm::translate(glm::mat4(1.0f), overhead_point_light.get_position()));
-
-    glm::vec3 right_light_spot = glm::vec3(15.0f, 2.0f, -25.0f);
-    right_spot_light.set_position(right_light_spot);
-    right_spot_light_model.set_local_transform(
-        glm::translate(glm::mat4(1.0f), right_spot_light.get_position()));
-
-    floor.set_local_transform(glm::translate(glm::mat4(1.0f), glm::vec3(15.0f, -0.01f, -20.0f)));
+    // Light right_spotlight(LightType::SPOT, glm::vec3(5.0f, 1.5f, 0.0f), // position: to the right
+    //                       glm::vec3(1.0f, 0.0f, -1.0f),                 // direction: pointing
+    //                       left glm::vec3(0.1f), glm::vec3(1.0f), glm::vec3(1.0f),
+    //                       glm::cos(glm::radians(10.0f)), // inner cone
+    //                       glm::cos(glm::radians(30.0f)), // outer cone
+    //                       2048, 2048, 1.0f, 10.0f, 10.0f, 1.0f, 0.35f, 0.44f, 1.0f, 1.0f);
+    //
+    // Light overhead_pointlight(LightType::POINT, glm::vec3(0.0f, 5.0f, 0.0f), // above the object
+    //                           glm::vec3(0.0f, -1.0f, 0.0f), // pointing straight down
+    //                           glm::vec3(0.1f), glm::vec3(1.0f), glm::vec3(1.0f),
+    //                           glm::cos(glm::radians(10.0f)), // inner cone
+    //                           glm::cos(glm::radians(30.0f)), // outer cone
+    //                           2048, 2048, 0.1f, 10.0f, 10.0f, 1.0f, 0.35f, 0.44f, 1.0f, 1.0f);
+    //
+    // glm::vec3 overhead_spotlight = glm::vec3(15.0f, 5.0f, -20.0f);
+    // overhead_pointlight.set_position(overhead_spotlight);
+    // overhead_point_light_model.set_local_transform(
+    //     glm::translate(glm::mat4(1.0f), overhead_pointlight.get_position()));
+    //
+    // glm::vec3 right_light_spot = glm::vec3(15.0f, 2.0f, -25.0f);
+    // right_spotlight.set_position(right_light_spot);
+    // right_spot_light_model.set_local_transform(
+    //     glm::translate(glm::mat4(1.0f), right_spotlight.get_position()));
 
     // gameState.add_model(overhead_point_light_model);
     // gameState.add_model(right_spot_light_model);
-    gameState.add_model(floor);
+    gameState.add_model(floor_model);
     // scene_manager.add_light(overhead_point_light);
     gameState.add_light(flashlight);
-    gameState.add_light(right_spot_light);
+    // gameState.add_light(right_spotlight);
 
     glm::vec3 bed_position = glm::vec3(15.0f, 0.0f, -20.0f);
     glm::mat4 bed_offset   = glm::translate(glm::mat4(1.0f), bed_position);
 
     // glm::vec3 right_spot_dir = glm::normalize((bed_position + glm::vec3(0.0f, 0.0f, -6.0f)) -
     // right_spot_light.get_position());
-    glm::vec3 right_spot_dir = glm::normalize(bed_position - right_spot_light.get_position());
-    right_spot_light.set_direction(right_spot_dir);
-
-    glm::vec3 overhead_spot_dir =
-        glm::normalize(bed_position - overhead_point_light.get_position());
-    overhead_point_light.set_direction(overhead_spot_dir);
+    // glm::vec3 right_spot_dir = glm::normalize(bed_position - right_spotlight.get_position());
+    // right_spotlight.set_direction(right_spot_dir);
+    //
+    // glm::vec3 overhead_spot_dir = glm::normalize(bed_position -
+    // overhead_pointlight.get_position()); overhead_pointlight.set_direction(overhead_spot_dir);
 
     auto bed = Model("assets/models/SimpleOldTownAssets/Bed01.obj", "Bed");
     bed.set_local_transform(bed_offset);
     bed.set_interactivity(true);
     gameState.add_model(bed);
 
-    auto chair =
-        Models::Model("assets/models/SimpleOldTownAssets/ChairCafeWhite01.obj", "Cafe Chair");
+    // auto chair = Model("assets/models/SimpleOldTownAssets/ChairCafeWhite01.obj", "Cafe Chair");
+    //
+    // constexpr int chair_count = 250;
+    // chair.init_instancing(chair_count);
+    //
+    // const int   grid_width    = 40; // 40 × 25 = 1000
+    // const int   grid_height   = 25;
+    // const float chair_spacing = 2.5f;
+    //
+    // int placed = 0;
+    // for (int row = 0; row < grid_height && placed < chair_count; ++row) {
+    //     for (int col = 0; col < grid_width && placed < chair_count; ++col) {
+    //         glm::vec3 offset =
+    //             bed_position + glm::vec3((col - grid_width / 2) * chair_spacing, 0.0f,
+    //                                      (row - grid_height / 2) * chair_spacing);
+    //
+    //         glm::mat4 transform = glm::translate(glm::mat4(1.0f), offset);
+    //
+    //         // Optional: rotate every third chair
+    //         if ((row + col) % 3 == 0) {
+    //             transform = glm::rotate(transform, glm::radians(90.0f), glm::vec3(0, 1, 0));
+    //         }
+    //
+    //         chair.add_instance_transform(transform);
+    //         ++placed;
+    //     }
+    // }
 
-    constexpr int chair_count = 1000;
-    chair.init_instancing(chair_count);
-
-    const int   grid_width    = 40; // 40 × 25 = 1000
-    const int   grid_height   = 25;
-    const float chair_spacing = 2.5f;
-
-    int placed = 0;
-    for (int row = 0; row < grid_height && placed < chair_count; ++row) {
-        for (int col = 0; col < grid_width && placed < chair_count; ++col) {
-            glm::vec3 offset =
-                bed_position + glm::vec3((col - grid_width / 2) * chair_spacing, 0.0f,
-                                         (row - grid_height / 2) * chair_spacing);
-
-            glm::mat4 transform = glm::translate(glm::mat4(1.0f), offset);
-
-            // Optional: rotate every third chair
-            if ((row + col) % 3 == 0) {
-                transform = glm::rotate(transform, glm::radians(90.0f), glm::vec3(0, 1, 0));
-            }
-
-            chair.add_instance_transform(transform);
-            ++placed;
-        }
-    }
-
-    gameState.add_model(chair);
+    // gameState.add_model(chair);
 
     glm::mat4 bookcase_offset =
         glm::translate(glm::mat4(1.0f), bed_position + glm::vec3(0.0f, 0.0f, -6.0f));
-    auto bookcase = Models::Model("assets/models/SimpleOldTownAssets/BookCase01.obj", "Bookcase");
+    auto bookcase = Model("assets/models/SimpleOldTownAssets/BookCase01.obj", "Bookcase");
     bookcase.set_local_transform(bookcase_offset);
     bookcase.set_interactivity(true);
     gameState.add_model(bookcase);
 
-
-    Material material;
-    {
-        material.Ka     = glm::vec3(0.15f, 0.07f, 0.02f);
-        material.Kd     = glm::vec3(0.59f, 0.29f, 0.00f);
-        material.Ks     = glm::vec3(0.05f, 0.04f, 0.03f);
-        material.Ns     = 16.0f;
-        material.d      = 1.0f;
-        material.illum  = 2;
-        auto   texpath  = "assets/textures/Wood092_1K-JPG/Wood092_1K-JPG_Color.jpg";
-        GLuint texture  = ObjectLoader::load_texture_from_file(texpath);
-        material.map_Kd = texpath;
-        material.tex_Kd = texture;
-    }
+    // Material material;
+    // {
+    //     material.Ka     = glm::vec3(0.15f, 0.07f, 0.02f);
+    //     material.Kd     = glm::vec3(0.59f, 0.29f, 0.00f);
+    //     material.Ks     = glm::vec3(0.05f, 0.04f, 0.03f);
+    //     material.Ns     = 16.0f;
+    //     material.d      = 1.0f;
+    //     material.illum  = 2;
+    //     auto   texpath  = "assets/textures/Wood092_1K-JPG/Wood092_1K-JPG_Color.jpg";
+    //     GLuint texture  = ObjectLoader::load_texture_from_file(texpath);
+    //     material.map_Kd = texpath;
+    //     material.tex_Kd = texture;
+    // }
 
 #ifdef DEBUG_DEPTH
     float quadVertices[] = {
@@ -273,7 +412,6 @@ int main() {
     scene_manager.on_interaction_with(
         "Bookcase", [](auto sceneMgr) { std::cout << "I live with only a chair on my side\n"; });
     scene_manager.runGameLoop();
-
 
     return 0;
 }

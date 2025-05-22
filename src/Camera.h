@@ -30,19 +30,22 @@ namespace Camera{
         Light* flashlight; 
     public: 
         
-        CameraObj(int window_width, int window_height): 
-        position(0.0f, 0.0f, 3.0f),
-        world_up(0.0f, 1.0f, 0.0f),
+        CameraObj(int window_width, int window_height,glm::vec3 position): 
+        position(position),
+        world_up(0.0f, 3.0f, 0.0f),
         camera_speed(5.0f),
         mouse_sensitivity(0.1f),
         yaw(-90.0f),//import to initialize at -90 to start at 0,0,-1
         pitch(0.0f)
         {
-            aspect = float(window_height)/float(window_height);
+            aspect = float(window_width)/float(window_height);
             updateCameraVectors();
             // cursor is centered
             SDL_SetRelativeMouseMode(SDL_TRUE);
         }
+
+          
+        
 
         void update(float delta_time);
 

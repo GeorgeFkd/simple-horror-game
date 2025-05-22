@@ -9,11 +9,10 @@ void Game::SceneManager::initialiseOpenGL_SDL() {
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
-    //SDL_Window* 
-        window =
-        SDL_CreateWindow("Old room", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720,
-                         SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
-    //SDL_GLContext 
+    // SDL_Window*
+    window = SDL_CreateWindow("Old room", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720,
+                              SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+    // SDL_GLContext
     glCtx = SDL_GL_CreateContext(window);
 
     glewInit();
@@ -23,7 +22,6 @@ void Game::SceneManager::initialiseOpenGL_SDL() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     SDL_SetRelativeMouseMode(SDL_TRUE);
 }
-
 
 void Game::SceneManager::runGameLoop() {
 
@@ -196,13 +194,14 @@ void Game::SceneManager::handleSDLEvents(bool& running) {
         if (ev.type == SDL_KEYDOWN && ev.key.repeat == 0) {
             const Uint8* keys = SDL_GetKeyboardState(nullptr);
         }
-        // feed mouse/window events to the camera
-        camera.process_input(ev);
-        // adjust the GL viewport on resize
+        // TODO(optional) fix resizing
         if (ev.type == SDL_WINDOWEVENT && ev.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
             int w = ev.window.data1, h = ev.window.data2;
             glViewport(0, 0, w, h);
         }
+        // feed mouse/window events to the camera
+        camera.process_input(ev);
+        // adjust the GL viewport on resize
     }
 }
 
@@ -213,13 +212,15 @@ void Game::SceneManager::checkAllModels(float dt) {
         if (!model->isActive())
             continue;
         if (model->is_instanced()) {
+            continue;
             // loop each instance’s box
             for (size_t i = 0; i < model->get_instance_count(); ++i) {
                 if (camera.intersectSphereAABB(camera.get_position(), camera.get_radius(),
                                                model->get_instance_aabb_min(i),
                                                model->get_instance_aabb_max(i))) {
-                    std::cout << "Collision with: " << model->name() << " at:" << i << "\n";
-
+                    if (!model->name().empty()) {
+                        std::cout << "Collision with: " << model->name() << " at:" << i << "\n";
+                    }
                     camera.set_position(last_camera_position);
                     goto collision_done;
                 }
@@ -236,7 +237,9 @@ void Game::SceneManager::checkAllModels(float dt) {
             // single AABB path
             if (camera.intersectSphereAABB(camera.get_position(), camera.get_radius(),
                                            model->get_aabbmin(), model->get_aabbmax())) {
-                std::cout << "Collision with: " << model->name() << "\n";
+                if (!model->name().empty()) {
+                    std::cout << "Collision with: " << model->name() << "\n";
+                }
                 camera.set_position(last_camera_position);
                 break;
             }
@@ -323,8 +326,7 @@ void Game::SceneManager::render(const glm::mat4& view, const glm::mat4& projecti
     glUseProgram(0);
 }
 
-Game::SceneManager::SceneManager(int width, int height, Camera::CameraObj camera
-                                 )
+Game::SceneManager::SceneManager(int width, int height, Camera::CameraObj camera)
     : screen_width(width), screen_height(height), camera(camera) {}
 
 Game::SceneManager::~SceneManager() {

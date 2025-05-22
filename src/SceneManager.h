@@ -45,6 +45,7 @@ class GameState {
         models.push_back(&model);
     }
 
+
     inline void add_light(Light& light) {
         lights.push_back(&light);
     }
