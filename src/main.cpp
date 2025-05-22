@@ -175,6 +175,30 @@ int main() {
     // -20.0f)));
     //
 
+
+    auto scroll = Model("assets/models/scroll.obj","page");
+    scroll.init_instancing(6);
+    glm::vec3 scroll_positions[6];
+    //done
+    scroll_positions[0] = {-29.0f,0.0f,-29.0f};
+
+    //done
+    scroll_positions[1] = {-15.0f,0.f,20.0f};
+    //done 
+    scroll_positions[2] = {-5.0f,0.0f,-20.0f};
+    
+    //done
+    scroll_positions[3] = {5.0f,0.0f,20.0f};
+
+    scroll_positions[4] = {29.0f,0.0f,-29.0f};
+    scroll_positions[5] = {29.0f,0.0f,29.0f};
+
+    scroll.set_interactivity(true);
+    for(int i =0; i < 6; i++) scroll.add_instance_transform(glm::translate(glm::mat4(1.0f),scroll_positions[i]));
+    gameState.add_model(scroll);
+
+
+
     auto wall = Model("assets/models/SimpleOldTownAssets/OldHouseBrownWallLarge.obj", "Wall");
     constexpr int   grid_rows                               = 10;
     constexpr int   grid_columns                            = 7;
@@ -321,73 +345,7 @@ int main() {
     // scene_manager.add_light(overhead_point_light);
     gameState.add_light(flashlight);
     // gameState.add_light(right_spotlight);
-
-    glm::vec3 bed_position = glm::vec3(15.0f, 0.0f, -20.0f);
-    glm::mat4 bed_offset   = glm::translate(glm::mat4(1.0f), bed_position);
-
-    // glm::vec3 right_spot_dir = glm::normalize((bed_position + glm::vec3(0.0f, 0.0f, -6.0f)) -
-    // right_spot_light.get_position());
-    // glm::vec3 right_spot_dir = glm::normalize(bed_position - right_spotlight.get_position());
-    // right_spotlight.set_direction(right_spot_dir);
-    //
-    // glm::vec3 overhead_spot_dir = glm::normalize(bed_position -
-    // overhead_pointlight.get_position()); overhead_pointlight.set_direction(overhead_spot_dir);
-
-    auto bed = Model("assets/models/SimpleOldTownAssets/Bed01.obj", "Bed");
-    bed.set_local_transform(bed_offset);
-    bed.set_interactivity(true);
-    gameState.add_model(bed);
-
-    // auto chair = Model("assets/models/SimpleOldTownAssets/ChairCafeWhite01.obj", "Cafe Chair");
-    //
-    // constexpr int chair_count = 250;
-    // chair.init_instancing(chair_count);
-    //
-    // const int   grid_width    = 40; // 40 × 25 = 1000
-    // const int   grid_height   = 25;
-    // const float chair_spacing = 2.5f;
-    //
-    // int placed = 0;
-    // for (int row = 0; row < grid_height && placed < chair_count; ++row) {
-    //     for (int col = 0; col < grid_width && placed < chair_count; ++col) {
-    //         glm::vec3 offset =
-    //             bed_position + glm::vec3((col - grid_width / 2) * chair_spacing, 0.0f,
-    //                                      (row - grid_height / 2) * chair_spacing);
-    //
-    //         glm::mat4 transform = glm::translate(glm::mat4(1.0f), offset);
-    //
-    //         // Optional: rotate every third chair
-    //         if ((row + col) % 3 == 0) {
-    //             transform = glm::rotate(transform, glm::radians(90.0f), glm::vec3(0, 1, 0));
-    //         }
-    //
-    //         chair.add_instance_transform(transform);
-    //         ++placed;
-    //     }
-    // }
-
-    // gameState.add_model(chair);
-
-    glm::mat4 bookcase_offset =
-        glm::translate(glm::mat4(1.0f), bed_position + glm::vec3(0.0f, 0.0f, -6.0f));
-    auto bookcase = Model("assets/models/SimpleOldTownAssets/BookCase01.obj", "Bookcase");
-    bookcase.set_local_transform(bookcase_offset);
-    bookcase.set_interactivity(true);
-    gameState.add_model(bookcase);
-
-    // Material material;
-    // {
-    //     material.Ka     = glm::vec3(0.15f, 0.07f, 0.02f);
-    //     material.Kd     = glm::vec3(0.59f, 0.29f, 0.00f);
-    //     material.Ks     = glm::vec3(0.05f, 0.04f, 0.03f);
-    //     material.Ns     = 16.0f;
-    //     material.d      = 1.0f;
-    //     material.illum  = 2;
-    //     auto   texpath  = "assets/textures/Wood092_1K-JPG/Wood092_1K-JPG_Color.jpg";
-    //     GLuint texture  = ObjectLoader::load_texture_from_file(texpath);
-    //     material.map_Kd = texpath;
-    //     material.tex_Kd = texture;
-    // }
+     
 
 #ifdef DEBUG_DEPTH
     float quadVertices[] = {
