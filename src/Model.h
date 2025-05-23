@@ -123,6 +123,11 @@ namespace Models{
         const glm::vec3& get_instance_aabb_max(size_t i) const {
             return instance_aabb_max[i];
         }
+    
+        inline void remove_instance_transform(size_t i) {
+            instance_transforms.erase(instance_transforms.begin() + i);
+            update_instance_data();
+        }
 
         inline size_t get_instance_count() const{
             return instance_transforms.size();

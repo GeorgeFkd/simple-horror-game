@@ -1,61 +1,64 @@
 #include "Model.h"
 
-void Models::Model::debug_dump() const {
-    size_t total_indices   = 0;
-    size_t total_triangles = 0;
-    for (auto const& sm : submeshes) {
-        total_indices   += sm.index_count;
-        total_triangles += sm.index_count / 3;
-    }
+static void print_vec3(glm::vec3 v) {
+    std::cout << "(" << v.x << "," << v.y << "," << v.z << ")\n";
+}
 
-    std::cout 
-      << "  >>> Model built: "
-      << unique_vertices.size() << " unique vertices, "
-      << total_triangles         << " triangles, "
-      << total_indices           << " indices total\n"
-      << "      Submeshes: "     << submeshes.size() << "\n"
-      << "      AABB local min = ("
-         << localaabbmin.x << ", "
-         << localaabbmin.y << ", "
-         << localaabbmin.z << ")\n"
-      << "      AABB local max = ("
-         << localaabbmax.x << ", "
-         << localaabbmax.y << ", "
-         << localaabbmax.z << ")" << std::endl;
+void Models::Model::debug_dump() const {
+    if (is_instanced()) {
+        for (size_t i = 0; i < instance_transforms.size(); i++) {
+            std::cout << "===" << i << "====\n";
+            print_vec3(instance_aabb_min[i]);
+            print_vec3(instance_aabb_max[i]);
+        }
+    }
+    // size_t total_indices   = 0;
+    // size_t total_triangles = 0;
+    // for (auto const& sm : submeshes) {
+    //     total_indices   += sm.index_count;
+    //     total_triangles += sm.index_count / 3;
+    // }
+    //
+    // std::cout
+    //   << "  >>> Model built: "
+    //   << unique_vertices.size() << " unique vertices, "
+    //   << total_triangles         << " triangles, "
+    //   << total_indices           << " indices total\n"
+    //   << "      Submeshes: "     << submeshes.size() << "\n"
+    //   << "      AABB local min = ("
+    //      << localaabbmin.x << ", "
+    //      << localaabbmin.y << ", "
+    //      << localaabbmin.z << ")\n"
+    //   << "      AABB local max = ("
+    //      << localaabbmax.x << ", "
+    //      << localaabbmax.y << ", "
+    //      << localaabbmax.z << ")" << std::endl;
 }
 
 void Models::Model::move_relative_to(const glm::vec3& direction) {
-    
+
     glm::mat4 tf = local_transform;
 
-    glm::vec3 forward = glm::normalize(glm::vec3(tf[2]));  // local Z
-    glm::vec3 right   = glm::normalize(glm::vec3(tf[0]));  // local X
-    glm::vec3 up      = glm::normalize(glm::vec3(tf[1]));  // local Y
+    glm::vec3 forward = glm::normalize(glm::vec3(tf[2])); // local Z
+    glm::vec3 right   = glm::normalize(glm::vec3(tf[0])); // local X
+    glm::vec3 up      = glm::normalize(glm::vec3(tf[1])); // local Y
 
     glm::vec3 move = direction.x * right + direction.y * up - direction.z * forward;
 
     tf = glm::translate(tf, move);
     this->set_local_transform(tf);
-
 }
 
-Models::Model::Model(const std::vector<glm::vec3>& positions,
-                    const std::vector<glm::vec3>& normals,
-                    const std::vector<glm::vec2>& texcoords,
-                    const std::vector<GLuint>& indices,
-                    const std::string& label,
-                    const Material& mat)
-    : local_transform(1.0f),
-      world_transform(1.0f),
-      localaabbmin(std::numeric_limits<float>::max()),
-      localaabbmax(-std::numeric_limits<float>::lowest()),
-      label(label)
-{
+Models::Model::Model(const std::vector<glm::vec3>& positions, const std::vector<glm::vec3>& normals,
+                     const std::vector<glm::vec2>& texcoords, const std::vector<GLuint>& indices,
+                     const std::string& label, const Material& mat)
+    : local_transform(1.0f), world_transform(1.0f), localaabbmin(std::numeric_limits<float>::max()),
+      localaabbmax(-std::numeric_limits<float>::lowest()), label(label) {
     // Build unique vertex array
     for (size_t i = 0; i < positions.size(); ++i) {
         Vertex vert;
         vert.position = positions[i];
-        vert.normal   = (i < normals.size())   ? normals[i]   : glm::vec3(0, 1, 0);
+        vert.normal   = (i < normals.size()) ? normals[i] : glm::vec3(0, 1, 0);
         vert.texcoord = (i < texcoords.size()) ? texcoords[i] : glm::vec2(0, 0);
         unique_vertices.push_back(vert);
 
@@ -66,7 +69,7 @@ Models::Model::Model(const std::vector<glm::vec3>& positions,
 
     // Single submesh
     SubMesh sm;
-    sm.mat = mat;
+    sm.mat          = mat;
     sm.index_offset = 0;
     sm.index_count  = static_cast<GLuint>(indices.size());
     submeshes.push_back(sm);
@@ -79,43 +82,31 @@ Models::Model::Model(const std::vector<glm::vec3>& positions,
     GLCall(glBindVertexArray(vao));
 
     GLCall(glBindBuffer(GL_ARRAY_BUFFER, vbo));
-    GLCall(glBufferData(GL_ARRAY_BUFFER,
-                 unique_vertices.size() * sizeof(Vertex),
-                 unique_vertices.data(),
-                 GL_STATIC_DRAW));
+    GLCall(glBufferData(GL_ARRAY_BUFFER, unique_vertices.size() * sizeof(Vertex),
+                        unique_vertices.data(), GL_STATIC_DRAW));
 
     GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo));
-    GLCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                 indices.size() * sizeof(GLuint),
-                 indices.data(),
-                 GL_STATIC_DRAW));
+    GLCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(GLuint), indices.data(),
+                        GL_STATIC_DRAW));
 
     GLCall(glEnableVertexAttribArray(0));
-    GLCall(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
-                          sizeof(Vertex),
-                          (void*)offsetof(Vertex, position)));
+    GLCall(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                                 (void*)offsetof(Vertex, position)));
     GLCall(glEnableVertexAttribArray(1));
-    GLCall(glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE,
-                          sizeof(Vertex),
-                          (void*)offsetof(Vertex, texcoord)));
+    GLCall(glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                                 (void*)offsetof(Vertex, texcoord)));
     GLCall(glEnableVertexAttribArray(2));
-    GLCall(glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE,
-                          sizeof(Vertex),
-                          (void*)offsetof(Vertex, normal)));
+    GLCall(glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                                 (void*)offsetof(Vertex, normal)));
 
     GLCall(glBindVertexArray(0));
 }
 
 Models::Model::Model(const std::string& objFile, const std::string& label)
-  : local_transform(1.0f)
-  , world_transform(1.0f)
-  , localaabbmin(std::numeric_limits<float>::max())
-  , localaabbmax(-std::numeric_limits<float>::max())
-, label(label)
-{
+    : local_transform(1.0f), world_transform(1.0f), localaabbmin(std::numeric_limits<float>::max()),
+      localaabbmax(-std::numeric_limits<float>::max()), label(label) {
     ObjectLoader::OBJLoader loader;
     loader.read_from_file(objFile);
-
 
     // build unique_vertices & a cache
     std::unordered_map<Vertex, GLuint, VertexHasher> cache;
@@ -141,7 +132,7 @@ Models::Model::Model(const std::string& objFile, const std::string& label)
 
         auto [it, inserted] = cache.emplace(vert, (GLuint)unique_vertices.size());
         if (inserted) {
-          unique_vertices.push_back(vert);
+            unique_vertices.push_back(vert);
         }
         return it->second;
     };
@@ -170,17 +161,15 @@ Models::Model::Model(const std::string& objFile, const std::string& label)
 
     // flatten buckets → one big index array, record submeshes
     std::vector<GLuint> all_indices;
-    all_indices.reserve(
-      std::accumulate(buckets.begin(), buckets.end(), 0u,
-                      [](auto sum, auto &p){ return sum + p.second.size(); })
-    );
+    all_indices.reserve(std::accumulate(buckets.begin(), buckets.end(), 0u,
+                                        [](auto sum, auto& p) { return sum + p.second.size(); }));
 
-    for (auto & [material_id, indexes] : buckets) {
+    for (auto& [material_id, indexes] : buckets) {
         SubMesh sm;
-        if (material_id>= 0) {
-          sm.mat = loader.m_materials[material_id];  // assumes same Material layout
+        if (material_id >= 0) {
+            sm.mat = loader.m_materials[material_id]; // assumes same Material layout
         } else {
-          sm.mat = Material{};
+            sm.mat = Material{};
         }
         sm.index_offset = (GLuint)all_indices.size();
         sm.index_count  = (GLuint)indexes.size();
@@ -189,7 +178,7 @@ Models::Model::Model(const std::string& objFile, const std::string& label)
         submeshes.push_back(sm);
     }
 
-    //create & upload VAO/VBO/EBO
+    // create & upload VAO/VBO/EBO
     GLCall(glGenVertexArrays(1, &vao));
     GLCall(glGenBuffers(1, &vbo));
     GLCall(glGenBuffers(1, &ebo));
@@ -198,31 +187,24 @@ Models::Model::Model(const std::string& objFile, const std::string& label)
 
     // VBO
     GLCall(glBindBuffer(GL_ARRAY_BUFFER, vbo));
-    GLCall(glBufferData(GL_ARRAY_BUFFER,
-                 unique_vertices.size() * sizeof(Vertex),
-                 unique_vertices.data(),
-                 GL_STATIC_DRAW));
+    GLCall(glBufferData(GL_ARRAY_BUFFER, unique_vertices.size() * sizeof(Vertex),
+                        unique_vertices.data(), GL_STATIC_DRAW));
 
     // EBO
     GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo));
-    GLCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                 all_indices.size() * sizeof(GLuint),
-                 all_indices.data(),
-                 GL_STATIC_DRAW));
+    GLCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER, all_indices.size() * sizeof(GLuint),
+                        all_indices.data(), GL_STATIC_DRAW));
 
     // attributes (pos, tex, norm) …
     GLCall(glEnableVertexAttribArray(0));
-    GLCall(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
-                          sizeof(Vertex),
-                          (void*)offsetof(Vertex, position)));
+    GLCall(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                                 (void*)offsetof(Vertex, position)));
     GLCall(glEnableVertexAttribArray(1));
-    GLCall(glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE,
-                          sizeof(Vertex),
-                          (void*)offsetof(Vertex, texcoord)));
+    GLCall(glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                                 (void*)offsetof(Vertex, texcoord)));
     GLCall(glEnableVertexAttribArray(2));
-    GLCall(glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE,
-                          sizeof(Vertex),
-                          (void*)offsetof(Vertex, normal)));
+    GLCall(glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                                 (void*)offsetof(Vertex, normal)));
 
     GLCall(glBindVertexArray(0));
 
@@ -233,7 +215,7 @@ Models::Model::Model(const std::string& objFile, const std::string& label)
     }
 }
 
-Models::Model::~Model(){
+Models::Model::~Model() {
     // Tear down GL objects in reverse order of creation:
     if (ebo) {
         GLCall(glDeleteBuffers(1, &ebo));
@@ -249,16 +231,16 @@ Models::Model::~Model(){
     }
 }
 
-void Models::Model::add_child(Model* child){
+void Models::Model::add_child(Model* child) {
     children.push_back(child);
 }
 
-void Models::Model::set_local_transform(const glm::mat4& local_transform){
+void Models::Model::set_local_transform(const glm::mat4& local_transform) {
     this->local_transform = local_transform;
 }
 
 void Models::Model::update_world_transform(const glm::mat4& parent_transform) {
-    world_transform =  parent_transform * local_transform;
+    world_transform = parent_transform * local_transform;
 
     compute_aabb();
     for (Model* child : children) {
@@ -266,7 +248,8 @@ void Models::Model::update_world_transform(const glm::mat4& parent_transform) {
     }
 }
 
-void Models::Model::draw_instanced(const glm::mat4& view, const glm::mat4& projection, std::shared_ptr<Shader> shader) const{
+void Models::Model::draw_instanced(const glm::mat4& view, const glm::mat4& projection,
+                                   std::shared_ptr<Shader> shader) const {
 
     update_instance_data();
 
@@ -285,48 +268,44 @@ void Models::Model::draw_instanced(const glm::mat4& view, const glm::mat4& proje
         shader->set_int("material.illumModel", sm.mat.illum);
         shader->set_float("material.ior", sm.mat.Ni);
 
-        if(sm.mat.tex_Ka) {
+        if (sm.mat.tex_Ka) {
             shader->set_texture("ambientMap", sm.mat.tex_Ka, GL_TEXTURE1);
-            shader->set_bool   ("useAmbientMap", true);
+            shader->set_bool("useAmbientMap", true);
         } else {
             shader->set_bool("useAmbientMap", false);
         }
 
-        if(sm.mat.tex_Kd) {
+        if (sm.mat.tex_Kd) {
             shader->set_texture("diffuseMap", sm.mat.tex_Kd, GL_TEXTURE0);
-            shader->set_bool   ("useDiffuseMap", true);
+            shader->set_bool("useDiffuseMap", true);
         } else {
             shader->set_bool("useDiffuseMap", false);
         }
 
-        if(sm.mat.tex_Ks) {
+        if (sm.mat.tex_Ks) {
             shader->set_texture("specularMap", sm.mat.tex_Ks, GL_TEXTURE2);
-            shader->set_bool   ("useSpecularMap", true);
+            shader->set_bool("useSpecularMap", true);
         } else {
             shader->set_bool("useSpecularMap", false);
         }
 
-        //normal map
-        // if(sm.mat.tex_Bump) {
-        //    shader->set_texture("normalMap", sm.mat.tex_Bump, GL_TEXTURE3);
-        //    shader->set_bool   ("useNormalMap", true);
-        // } else {
-        //    shader->set_bool("useNormalMap", false);
-        // }
+        // normal map
+        //  if(sm.mat.tex_Bump) {
+        //     shader->set_texture("normalMap", sm.mat.tex_Bump, GL_TEXTURE3);
+        //     shader->set_bool   ("useNormalMap", true);
+        //  } else {
+        //     shader->set_bool("useNormalMap", false);
+        //  }
 
         void* offsetPtr = (void*)(sm.index_offset * sizeof(GLuint));
-        GLCall(glDrawElementsInstanced(
-            GL_TRIANGLES,
-            sm.index_count,
-            GL_UNSIGNED_INT,
-            offsetPtr,
-            instance_transforms.size()
-        ));
+        GLCall(glDrawElementsInstanced(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT, offsetPtr,
+                                       instance_transforms.size()));
     }
     GLCall(glBindVertexArray(0));
 }
 
-void Models::Model::draw(const glm::mat4& view, const glm::mat4& projection, std::shared_ptr<Shader> shader) const{
+void Models::Model::draw(const glm::mat4& view, const glm::mat4& projection,
+                         std::shared_ptr<Shader> shader) const {
     // upload matrices
     shader->set_mat4("uView", view);
     shader->set_mat4("uProj", projection);
@@ -344,23 +323,23 @@ void Models::Model::draw(const glm::mat4& view, const glm::mat4& projection, std
         shader->set_int("material.illumModel", sm.mat.illum);
         shader->set_float("material.ior", sm.mat.Ni);
 
-        if(sm.mat.tex_Ka) {
+        if (sm.mat.tex_Ka) {
             shader->set_texture("ambientMap", sm.mat.tex_Ka, GL_TEXTURE1);
-            shader->set_bool   ("useAmbientMap", true);
+            shader->set_bool("useAmbientMap", true);
         } else {
             shader->set_bool("useAmbientMap", false);
         }
 
-        if(sm.mat.tex_Kd) {
+        if (sm.mat.tex_Kd) {
             shader->set_texture("diffuseMap", sm.mat.tex_Kd, GL_TEXTURE0);
-            shader->set_bool   ("useDiffuseMap", true);
+            shader->set_bool("useDiffuseMap", true);
         } else {
             shader->set_bool("useDiffuseMap", false);
         }
 
-        if(sm.mat.tex_Ks) {
+        if (sm.mat.tex_Ks) {
             shader->set_texture("specularMap", sm.mat.tex_Ks, GL_TEXTURE2);
-            shader->set_bool   ("useSpecularMap", true);
+            shader->set_bool("useSpecularMap", true);
         } else {
             shader->set_bool("useSpecularMap", false);
         }
@@ -381,24 +360,19 @@ void Models::Model::draw(const glm::mat4& view, const glm::mat4& projection, std
 
 void Models::Model::draw_depth(std::shared_ptr<Shader> shader) const {
 
-    //GLCall(glEnable(GL_CULL_FACE));
-    //GLCall(glCullFace(GL_FRONT));
-    //GLCall(glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE));
+    // GLCall(glEnable(GL_CULL_FACE));
+    // GLCall(glCullFace(GL_FRONT));
+    // GLCall(glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE));
 
     shader->set_mat4("uModel", world_transform);
     shader->set_bool("uUseInstancing", false);
     GLCall(glBindVertexArray(vao));
     for (auto const& sm : submeshes) {
         void* offset_ptr = (void*)(sm.index_offset * sizeof(GLuint));
-        GLCall(glDrawElements(
-            GL_TRIANGLES,
-            sm.index_count,
-            GL_UNSIGNED_INT,
-            offset_ptr
-        ));
+        GLCall(glDrawElements(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT, offset_ptr));
     }
-    //GLCall(glCullFace(GL_BACK));
-    //GLCall(glColorMask(GL_TRUE,  GL_TRUE,  GL_TRUE,  GL_TRUE));
+    // GLCall(glCullFace(GL_BACK));
+    // GLCall(glColorMask(GL_TRUE,  GL_TRUE,  GL_TRUE,  GL_TRUE));
     GLCall(glBindVertexArray(0));
 }
 
@@ -408,31 +382,25 @@ void Models::Model::draw_depth_instanced(std::shared_ptr<Shader> shader) const {
     shader->set_bool("uUseInstancing", true);
     GLCall(glBindVertexArray(vao));
 
-
     for (auto const& sm : submeshes) {
         void* offset_ptr = (void*)(sm.index_offset * sizeof(GLuint));
-        GLCall(glDrawElementsInstanced(
-            GL_TRIANGLES,
-            sm.index_count,
-            GL_UNSIGNED_INT,
-            offset_ptr,
-            static_cast<GLsizei>(instance_transforms.size())
-        ));
+        GLCall(glDrawElementsInstanced(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT, offset_ptr,
+                                       static_cast<GLsizei>(instance_transforms.size())));
     }
     GLCall(glBindVertexArray(0));
 }
 
 void Models::Model::compute_aabb() {
     // 1) Initialize to extreme opposites
-    glm::vec3 world_min(  FLT_MAX );
-    glm::vec3 world_max( -FLT_MAX );
+    glm::vec3 world_min(FLT_MAX);
+    glm::vec3 world_max(-FLT_MAX);
 
     // 2) Transform each unique-vertex into world space and accumulate
     for (auto const& v : unique_vertices) {
         glm::vec4 wc = world_transform * glm::vec4(v.position, 1.0f);
         glm::vec3 w  = glm::vec3(wc);
-        world_min = glm::min(world_min, w);
-        world_max = glm::max(world_max, w);
+        world_min    = glm::min(world_min, w);
+        world_max    = glm::max(world_max, w);
     }
 
     // 3) If truly planar (min == max in Y), pad by a tiny ε so your sphere
@@ -448,30 +416,24 @@ void Models::Model::compute_aabb() {
     aabbmax = world_max;
 }
 
-static void compute_transformed_aabb(
-    const glm::vec3& local_min,
-    const glm::vec3& local_max,
-    const glm::mat4& xf,
-    glm::vec3& out_min,
-    glm::vec3& out_max)
-{
+static void compute_transformed_aabb(const glm::vec3& local_min, const glm::vec3& local_max,
+                                     const glm::mat4& xf, glm::vec3& out_min, glm::vec3& out_max) {
     // all 8 corners of the local box
     glm::vec3 corners[8] = {
-        {local_min.x, local_min.y, local_min.z},
-        {local_max.x, local_min.y, local_min.z},
-        {local_min.x, local_max.y, local_min.z},
-        {local_min.x, local_min.y, local_max.z},
-        {local_max.x, local_max.y, local_min.z},
-        {local_min.x, local_max.y, local_max.z},
-        {local_max.x, local_min.y, local_max.z},
-        {local_max.x, local_max.y, local_max.z},
+        {local_min.x, local_min.y, local_min.z}, {local_max.x, local_min.y, local_min.z},
+        {local_min.x, local_max.y, local_min.z}, {local_min.x, local_min.y, local_max.z},
+        {local_max.x, local_max.y, local_min.z}, {local_min.x, local_max.y, local_max.z},
+        {local_max.x, local_min.y, local_max.z}, {local_max.x, local_max.y, local_max.z},
     };
 
-    out_min = glm::vec3( FLT_MAX);
+    out_min = glm::vec3(FLT_MAX);
     out_max = glm::vec3(-FLT_MAX);
 
-    for (auto &c : corners) {
+    for (auto& c : corners) {
         glm::vec3 w = glm::vec3(xf * glm::vec4(c, 1.0f));
+        if (glm::any(glm::isinf(w))) {
+            std::cout << "⚠️ Bad transformed corner: " << w.x << "," << w.y << "," << w.z << "\n";
+        }
         out_min = glm::min(out_min, w);
         out_max = glm::max(out_max, w);
     }
@@ -483,22 +445,16 @@ void Models::Model::init_instancing(size_t max_instances) {
     GLCall(glBindVertexArray(vao));
     GLCall(glBindBuffer(GL_ARRAY_BUFFER, instance_vbo));
     // allocate enough space for max_instances matrices
-    GLCall(glBufferData(GL_ARRAY_BUFFER,
-                 max_instances * sizeof(glm::mat4),
-                 nullptr,
-                 GL_DYNAMIC_DRAW));
+    GLCall(
+        glBufferData(GL_ARRAY_BUFFER, max_instances * sizeof(glm::mat4), nullptr, GL_DYNAMIC_DRAW));
 
     // Set up the four vec4 attributes (one per column of the mat4)
     constexpr GLuint loc = 3; // choose free attribute locations
     for (int i = 0; i < 4; ++i) {
         GLuint attrib = loc + i;
         GLCall(glEnableVertexAttribArray(attrib));
-        GLCall(glVertexAttribPointer(attrib,
-                              4,
-                              GL_FLOAT,
-                              GL_FALSE,
-                              sizeof(glm::mat4),
-                              (void*)(sizeof(glm::vec4) * i)));
+        GLCall(glVertexAttribPointer(attrib, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4),
+                                     (void*)(sizeof(glm::vec4) * i)));
         // tell GL this is per-instance, not per-vertex:
         GLCall(glVertexAttribDivisor(attrib, 1));
     }
@@ -506,13 +462,11 @@ void Models::Model::init_instancing(size_t max_instances) {
     GLCall(glBindVertexArray(0));
 }
 
-void Models::Model::update_instance_data() const{
+void Models::Model::update_instance_data() const {
     // Map & write only the portion we need (could also use glBufferSubData)
     GLCall(glBindBuffer(GL_ARRAY_BUFFER, instance_vbo));
     void* ptr = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
-    memcpy(ptr,
-        instance_transforms.data(),
-        instance_transforms.size() * sizeof(glm::mat4));
+    memcpy(ptr, instance_transforms.data(), instance_transforms.size() * sizeof(glm::mat4));
     GLCall(glUnmapBuffer(GL_ARRAY_BUFFER));
 }
 

@@ -33,7 +33,7 @@ namespace Camera{
         CameraObj(int window_width, int window_height,glm::vec3 position): 
         position(position),
         world_up(0.0f, 3.0f, 0.0f),
-        camera_speed(5.0f),
+        camera_speed(10.0f),
         mouse_sensitivity(0.1f),
         yaw(-90.0f),//import to initialize at -90 to start at 0,0,-1
         pitch(0.0f)

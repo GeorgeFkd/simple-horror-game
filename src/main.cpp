@@ -121,7 +121,7 @@ Model createFloor(float roomSize) {
     return Model(floor_verts, floor_normals, floor_uvs, floor_indices, "Floor", floor_material);
 }
 int main() {
-    Camera::CameraObj  camera(1280, 720, glm::vec3(0.0f, 0.0f, 3.5f));
+    Camera::CameraObj  camera(1280, 720, glm::vec3(0.0f, 10.0f, 3.5f));
     Game::SceneManager scene_manager(1280, 720, camera);
     scene_manager.initialiseOpenGL_SDL();
 
@@ -138,39 +138,41 @@ int main() {
     constexpr float ROOM_DEPTH  = ROOM_WIDTH;
 
     auto floor_model = createFloor(ROOM_WIDTH);
-    floor_model.init_instancing(6);
-    struct SurfaceConfig {
-        glm::vec3 position;
-        glm::vec3 rotation_axis;
-        float     rotation_deg;
-    };
-    std::vector<SurfaceConfig> surfaces = {
-        // Floor
-        {{0, 0, 0}, {0, 0, 0}, 0.0f},
-
-        // Ceiling
-        {{0, ROOM_HEIGHT, 0}, {1, 0, 0}, 180.0f},
-
-        // Back Wall
-        {{0, ROOM_HEIGHT / 2, -ROOM_DEPTH / 2}, {1, 0, 0}, 90.0f},
-
-        // Front Wall
-        {{0, ROOM_HEIGHT / 2, ROOM_DEPTH / 2}, {1, 0, 0}, -90.0f},
-
-        // Left Wall
-        {{-ROOM_WIDTH / 2, ROOM_HEIGHT / 2, 0}, {0, 0, 1}, -90.0f},
-
-        // Right Wall
-        {{ROOM_WIDTH / 2, ROOM_HEIGHT / 2, 0}, {0, 0, 1}, 90.0f},
-    };
-
-    for (const auto& face : surfaces) {
-        glm::mat4 tf = glm::translate(glm::mat4(1.0f), face.position);
-        if (glm::length(face.rotation_axis) > 0.0f) {
-            tf = glm::rotate(tf, glm::radians(face.rotation_deg), face.rotation_axis);
-        }
-        floor_model.add_instance_transform(tf);
-    }
+    // floor_model.init_instancing(6);
+    // struct SurfaceConfig {
+    //     glm::vec3 position;
+    //     glm::vec3 rotation_axis;
+    //     float     rotation_deg;
+    // };
+    // std::vector<SurfaceConfig> surfaces = {
+    //     // Floor
+    //     {{0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, 0.0f},
+    //
+    //     //Ceiling
+    //     {{0.0f, ROOM_HEIGHT, 0.0f}, {1.0f, 0.0f, 0.0f}, 180.0f},
+    //
+    //     // Back Wall
+    //     {{0.0f, ROOM_HEIGHT / 2, -ROOM_DEPTH / 2}, {1.0f, 0.0f, 0.0f}, 90.0f},
+    //
+    //     // Front Wall
+    //     {{0.0f, ROOM_HEIGHT / 2, ROOM_DEPTH / 2}, {1.0f, 0.0f, 0.0f}, -90.0f},
+    //
+    //     // Left Wall
+    //     {{-ROOM_WIDTH / 2, ROOM_HEIGHT / 2, 0.0f}, {0.0f, 0.0f, 1.0f}, -90.0f},
+    //
+    //     // Right Wall
+    //     {{ROOM_WIDTH / 2, ROOM_HEIGHT / 2, 0.0f}, {0.0f, 0.0f, 1.0f}, 90.0f},
+    // };
+    //
+    // for (const auto& face : surfaces) {
+    //     glm::mat4 tf = glm::translate(glm::mat4(1.0f), face.position);
+    //     if (glm::length(face.rotation_axis) > 0.0f) {
+    //         tf = glm::rotate(tf, glm::radians(face.rotation_deg), face.rotation_axis);
+    //     }
+    //     floor_model.add_instance_transform(tf);
+    // }
+    //
+    // floor_model.debug_dump();
     // floor_model.set_local_transform(glm::translate(glm::mat4(1.0f), glm::vec3(15.0f, -0.01f,
     // -20.0f)));
     //
@@ -369,6 +371,14 @@ int main() {
     scene_manager.set_game_state(gameState);
     scene_manager.on_interaction_with(
         "Bookcase", [](auto sceneMgr) { std::cout << "I live with only a chair on my side\n"; });
+    scene_manager.on_interaction_with_instance("page", 0,[](auto sceneMgr) {std::cout << "You found page 1\n";} );
+
+scene_manager.on_interaction_with_instance("page", 1,[](auto sceneMgr) {std::cout << "You found page 2\n";} );
+scene_manager.on_interaction_with_instance("page", 2,[](auto sceneMgr) {std::cout << "You found page 3\n";} );
+
+scene_manager.on_interaction_with_instance("page", 3,[](auto sceneMgr) {std::cout << "You found page 4\n";} );
+scene_manager.on_interaction_with_instance("page", 4,[](auto sceneMgr) {std::cout << "You found page 5\n";} );
+scene_manager.on_interaction_with_instance("page",5,[](auto sceneMgr) {std::cout << "You found page 6\n";} );
     scene_manager.runGameLoop();
 
     return 0;
