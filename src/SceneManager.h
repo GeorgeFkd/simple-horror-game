@@ -10,6 +10,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
 
@@ -25,18 +26,44 @@ namespace Game {
 // (Optionals) When i want to make different scenes I can make the Game class abstract<T:GameState>
 // and create different scenes Also I want some things to be easily configurable: Creating a room of
 // size width*height*length Make doors(it is just a model + translation + rotation)
-class GameState {
 
+typedef std::tuple<std::string_view,std::optional<size_t>> ModelInstance;
+struct ModelInstanceHasher {
+    size_t operator()(const ModelInstance& m) const {
+        size_t seed = 0;
+        const auto& str = std::get<0>(m);
+        const auto& opt = std::get<1>(m);
+
+        // Combine hash of string_view
+        seed ^= std::hash<std::string_view>{}(str) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+
+        // Combine hash of optional<size_t>
+        if (opt.has_value()) {
+            seed ^= std::hash<size_t>{}(*opt) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+        }
+
+        return seed;
+    }
+};
+
+
+class GameState {
+    
     // GameState: <Models,Lights,Closest Entity,Camera>
   public:
     GameState() {
         distanceFromClosestModel = std::numeric_limits<float>::max();
-        closestModelName         = "";
+        closestModel = std::make_tuple("",-1);
+        // closestModelName         = "";
+        // closestModelInstance     = -1;
     };
     std::vector<Models::Model*> models;
     std::vector<Light*>         lights;
     float                       distanceFromClosestModel;
-    std::string_view            closestModelName;
+    ModelInstance closestModel;
+
+    //-1 represents non instanced model
+    // std::optional<size_t> closestModelInstance;
 
     Models::Model* findModel(Models::Model* model);
     Models::Model* findModel(std::string_view name);
@@ -58,11 +85,7 @@ class GameState {
     }
 };
 
-// SceneManager->Game.run(InitialState<GameState>)
-// PreparationSteps: [InitialiseShaders,Setup Models(Instanced and normal ones),Setup Lights,Setup
-// Interaction handlers] GameLoop: [Keyboard Handlers(Events from SDL),UpdateCamera vectors,Iterate
-// over models(For collisions interactions etc. etc.),Render] In the destructor unbind all the stuff
-// needed from opengl and free memory
+
 class SceneManager {
   public:
     SceneManager(int width, int height, Camera::CameraObj camera);
@@ -95,11 +118,15 @@ class SceneManager {
     void move_model_Z(std::string_view name, float z);
 
     void remove_model(Models::Model* model);
-    void remove_instanced_model_at();
+    void remove_instanced_model_at(Models::Model* m, size_t instancePos);
     int  on_interaction_with(Models::Model* m, std::function<void(SceneManager*)> handler);
     int  on_interaction_with(std::string_view name, std::function<void(SceneManager*)> handler);
+    int on_interaction_with_instance(std::string_view name, size_t instancePos, std::function<void(SceneManager*)> handler);
     int  run_handler_for(Models::Model* m);
-    void run_handler_for(std::string_view name);
+
+
+    void run_handler_for(const ModelInstance& m);
+    void run_handler_for_instance(std::string_view name,size_t instancePos);
     std::shared_ptr<Shader> get_shader_by_name(const std::string& shader_name);
 
     void           render_depth_pass();
@@ -117,9 +144,9 @@ class SceneManager {
     void initialiseOpenGL_SDL();
 
   private:
-    GameState                                                                gameState;
-    std::vector<std::shared_ptr<Shader>>                                     shaders;
-    std::unordered_map<std::string_view, std::function<void(SceneManager*)>> eventHandlers = {};
+    GameState                            gameState;
+    std::vector<std::shared_ptr<Shader>> shaders;
+    std::unordered_map<ModelInstance,std::function<void(SceneManager*)>,ModelInstanceHasher> eventHandlers;
     int               screen_width, screen_height;
     Camera::CameraObj camera;
     glm::vec3         last_camera_position;
