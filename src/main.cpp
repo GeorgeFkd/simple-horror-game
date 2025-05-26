@@ -18,7 +18,8 @@ using namespace Game;
 using namespace Models;
 
 enum class SurfaceType { Floor, Ceiling, WallFront, WallBack, WallLeft, WallRight };
-Model repeating_tile(SurfaceType surface, float offset, const Material& material, float repeat) {
+struct
+Model repeating_tile(SurfaceType surface, float offset, const Material& material) {
     // might be able to constexpr this
     constexpr int   TILE_WIDTH  = 50;
     constexpr int   TILE_HEIGHT = 50;
@@ -91,7 +92,7 @@ Model repeating_tile(SurfaceType surface, float offset, const Material& material
     std::vector<glm::vec3> normals(4, normal);
     std::vector<GLuint>    indices = {0, 1, 2, 0, 2, 3};
 
-    return Model(verts, normals, texcoords, indices, label, material);
+    return Model(verts, normals, texcoords, indices, std::move(label), material);
 }
 
 struct State {
@@ -118,7 +119,7 @@ Model createFloor(float roomSize) {
     floor_material.d     = 1.0f;                           // opacity
     floor_material.illum = 2;                              // standard Phong
 
-    return Model(floor_verts, floor_normals, floor_uvs, floor_indices, "Floor", floor_material);
+    return Model(floor_verts, floor_normals, floor_uvs, floor_indices, std::move("Floor"), floor_material);
 }
 int main() {
     Camera::CameraObj  camera(1280, 720, glm::vec3(0.0f, 10.0f, 3.5f));
@@ -148,58 +149,57 @@ int main() {
     //     // Floor
     //     {{0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, 0.0f},
     //
-    //     //Ceiling
-    //     {{0.0f, ROOM_HEIGHT, 0.0f}, {1.0f, 0.0f, 0.0f}, 180.0f},
-    //
-    //     // Back Wall
-    //     {{0.0f, ROOM_HEIGHT / 2, -ROOM_DEPTH / 2}, {1.0f, 0.0f, 0.0f}, 90.0f},
-    //
-    //     // Front Wall
-    //     {{0.0f, ROOM_HEIGHT / 2, ROOM_DEPTH / 2}, {1.0f, 0.0f, 0.0f}, -90.0f},
-    //
-    //     // Left Wall
-    //     {{-ROOM_WIDTH / 2, ROOM_HEIGHT / 2, 0.0f}, {0.0f, 0.0f, 1.0f}, -90.0f},
-    //
-    //     // Right Wall
-    //     {{ROOM_WIDTH / 2, ROOM_HEIGHT / 2, 0.0f}, {0.0f, 0.0f, 1.0f}, 90.0f},
+    //     // //Ceiling
+    //     // {{0.0f, ROOM_HEIGHT, 0.0f}, {1.0f, 0.0f, 0.0f}, 180.0f},
+    //     //
+    //     // // Back Wall
+    //     // {{0.0f, ROOM_HEIGHT / 2, -ROOM_DEPTH / 2}, {1.0f, 0.0f, 0.0f}, 90.0f},
+    //     //
+    //     // // Front Wall
+    //     // {{0.0f, ROOM_HEIGHT / 2, ROOM_DEPTH / 2}, {1.0f, 0.0f, 0.0f}, -90.0f},
+    //     //
+    //     // // Left Wall
+    //     // {{-ROOM_WIDTH / 2, ROOM_HEIGHT / 2, 0.0f}, {0.0f, 0.0f, 1.0f}, -90.0f},
+    //     //
+    //     // // Right Wall
+    //     // {{ROOM_WIDTH / 2, ROOM_HEIGHT / 2, 0.0f}, {0.0f, 0.0f, 1.0f}, 90.0f},
     // };
     //
     // for (const auto& face : surfaces) {
     //     glm::mat4 tf = glm::translate(glm::mat4(1.0f), face.position);
-    //     if (glm::length(face.rotation_axis) > 0.0f) {
-    //         tf = glm::rotate(tf, glm::radians(face.rotation_deg), face.rotation_axis);
-    //     }
+    //     // if (glm::length(face.rotation_axis) > 0.0f) {
+    //     //     tf = glm::rotate(tf, glm::radians(face.rotation_deg), face.rotation_axis);
+    //     // }
     //     floor_model.add_instance_transform(tf);
     // }
-    //
-    // floor_model.debug_dump();
+
+    floor_model.debug_dump();
     // floor_model.set_local_transform(glm::translate(glm::mat4(1.0f), glm::vec3(15.0f, -0.01f,
     // -20.0f)));
     //
 
-
-    auto scroll = Model("assets/models/scroll.obj","page");
+    auto scroll = Model("assets/models/scroll.obj", "page");
     scroll.init_instancing(6);
     glm::vec3 scroll_positions[6];
-    //done
-    scroll_positions[0] = {-29.0f,0.0f,-29.0f};
+    // done
+    scroll_positions[0] = {-29.0f, 0.0f, -29.0f};
 
-    //done
-    scroll_positions[1] = {-15.0f,0.f,20.0f};
-    //done 
-    scroll_positions[2] = {-5.0f,0.0f,-20.0f};
-    
-    //done
-    scroll_positions[3] = {5.0f,0.0f,20.0f};
+    // done
+    scroll_positions[1] = {-15.0f, 0.f, 20.0f};
+    // done
+    scroll_positions[2] = {-5.0f, 0.0f, -20.0f};
 
-    scroll_positions[4] = {29.0f,0.0f,-29.0f};
-    scroll_positions[5] = {29.0f,0.0f,29.0f};
+    // done
+    scroll_positions[3] = {5.0f, 0.0f, 20.0f};
+
+    scroll_positions[4] = {29.0f, 0.0f, -29.0f};
+    scroll_positions[5] = {29.0f, 0.0f, 29.0f};
 
     scroll.set_interactivity(true);
-    for(int i =0; i < 6; i++) scroll.add_instance_transform(glm::translate(glm::mat4(1.0f),scroll_positions[i]));
+    for (int i = 0; i < 6; i++)
+        scroll.add_instance_transform(glm::translate(glm::mat4(1.0f), scroll_positions[i]));
+    scroll.debug_dump();
     gameState.add_model(scroll);
-
-
 
     auto wall = Model("assets/models/SimpleOldTownAssets/OldHouseBrownWallLarge.obj", "Wall");
     constexpr int   grid_rows                               = 10;
@@ -219,7 +219,7 @@ int main() {
     horizontal[6][1] = true;
     horizontal[7][1] = true;
     horizontal[8][1] = true;
-    
+
     horizontal[2][2] = true;
     horizontal[3][2] = true;
     horizontal[4][2] = true;
@@ -235,7 +235,7 @@ int main() {
     horizontal[6][3] = true;
     horizontal[7][3] = true;
     horizontal[8][3] = true;
-    
+
     horizontal[2][4] = true;
     horizontal[3][4] = true;
     horizontal[4][4] = true;
@@ -257,7 +257,6 @@ int main() {
     vertical[1][3] = true;
     vertical[8][4] = true;
 
-
     wall.init_instancing(grid_rows * grid_columns * 2);
 
     float half_width  = (grid_columns - 1) * spacing_x / 2.0f;
@@ -274,7 +273,7 @@ int main() {
                 glm::mat4 tf  = glm::translate(glm::mat4(1.0f), pos);
                 // tf = glm::scale(glm::mat4(1.0f),{1.0f,1.0f,1.35f}) * tf;
                 std::cout << "[H] Placing wall between row " << (row - 1) << " and " << row
-                          << " at col " << col << " → Position: (" << x << ", " << wall_y << ", "
+                          << " at col " << col << " -> Position: (" << x << ", " << wall_y << ", "
                           << z << ")\n";
 
                 wall.add_instance_transform(tf);
@@ -293,14 +292,14 @@ int main() {
                 glm::mat4 tf  = glm::translate(glm::mat4(1.0f), pos);
                 tf            = glm::rotate(tf, glm::radians(90.0f), glm::vec3(0, 1, 0));
                 std::cout << "[V] Placing wall between col " << (col - 1) << " and " << col
-                          << " at row " << row << " → Position: (" << x << ", " << wall_y << ", "
+                          << " at row " << row << " -> Position: (" << x << ", " << wall_y << ", "
                           << z << ")\n";
 
                 wall.add_instance_transform(tf);
             }
         }
     };
-    
+
     gameState.add_model(wall);
 
     auto right_light = Model("assets/models/light_sphere.obj", "Sphere");
@@ -347,7 +346,6 @@ int main() {
     // scene_manager.add_light(overhead_point_light);
     gameState.add_light(flashlight);
     // gameState.add_light(right_spotlight);
-     
 
 #ifdef DEBUG_DEPTH
     float quadVertices[] = {
@@ -371,14 +369,14 @@ int main() {
     scene_manager.set_game_state(gameState);
     scene_manager.on_interaction_with(
         "Bookcase", [](auto sceneMgr) { std::cout << "I live with only a chair on my side\n"; });
-    scene_manager.on_interaction_with_instance("page", 0,[](auto sceneMgr) {std::cout << "You found page 1\n";} );
 
-scene_manager.on_interaction_with_instance("page", 1,[](auto sceneMgr) {std::cout << "You found page 2\n";} );
-scene_manager.on_interaction_with_instance("page", 2,[](auto sceneMgr) {std::cout << "You found page 3\n";} );
-
-scene_manager.on_interaction_with_instance("page", 3,[](auto sceneMgr) {std::cout << "You found page 4\n";} );
-scene_manager.on_interaction_with_instance("page", 4,[](auto sceneMgr) {std::cout << "You found page 5\n";} );
-scene_manager.on_interaction_with_instance("page",5,[](auto sceneMgr) {std::cout << "You found page 6\n";} );
+    for (size_t i = 0; i < 6; i++) {
+        scene_manager.on_interaction_with_instance("page", i, [i](SceneManager* sceneMgr) {
+            std::cout << "You found page: " << i << "\n";
+            auto m = sceneMgr->findModel("page");
+            sceneMgr->remove_instanced_model_at(m, i);
+        });
+    }
     scene_manager.runGameLoop();
 
     return 0;

@@ -5,10 +5,13 @@ static void print_vec3(glm::vec3 v) {
 }
 
 void Models::Model::debug_dump() const {
+    std::cout << "Transforms for: " << label << "\n";
     if (is_instanced()) {
         for (size_t i = 0; i < instance_transforms.size(); i++) {
             std::cout << "===" << i << "====\n";
+            std::cout << "Min: ";
             print_vec3(instance_aabb_min[i]);
+            std::cout << "Max: ";
             print_vec3(instance_aabb_max[i]);
         }
     }
@@ -51,9 +54,9 @@ void Models::Model::move_relative_to(const glm::vec3& direction) {
 
 Models::Model::Model(const std::vector<glm::vec3>& positions, const std::vector<glm::vec3>& normals,
                      const std::vector<glm::vec2>& texcoords, const std::vector<GLuint>& indices,
-                     const std::string& label, const Material& mat)
+                     std::string label, const Material& mat)
     : local_transform(1.0f), world_transform(1.0f), localaabbmin(std::numeric_limits<float>::max()),
-      localaabbmax(-std::numeric_limits<float>::lowest()), label(label) {
+      localaabbmax(-std::numeric_limits<float>::lowest()), label(std::move(label)) {
     // Build unique vertex array
     for (size_t i = 0; i < positions.size(); ++i) {
         Vertex vert;
@@ -416,14 +419,20 @@ void Models::Model::compute_aabb() {
     aabbmax = world_max;
 }
 
-static void compute_transformed_aabb(const glm::vec3& local_min, const glm::vec3& local_max,
+//It should be an object method
+void Models::Model::compute_transformed_aabb(
                                      const glm::mat4& xf, glm::vec3& out_min, glm::vec3& out_max) {
     // all 8 corners of the local box
     glm::vec3 corners[8] = {
-        {local_min.x, local_min.y, local_min.z}, {local_max.x, local_min.y, local_min.z},
-        {local_min.x, local_max.y, local_min.z}, {local_min.x, local_min.y, local_max.z},
-        {local_max.x, local_max.y, local_min.z}, {local_min.x, local_max.y, local_max.z},
-        {local_max.x, local_min.y, local_max.z}, {local_max.x, local_max.y, local_max.z},
+            {localaabbmin.x, localaabbmin.y, localaabbmin.z},
+            {localaabbmin.x, localaabbmin.y, localaabbmax.z},
+            {localaabbmin.x, localaabbmax.y, localaabbmin.z},
+            {localaabbmin.x, localaabbmax.y, localaabbmax.z},
+
+            {localaabbmax.x, localaabbmin.y, localaabbmin.z},
+            {localaabbmax.x, localaabbmin.y, localaabbmax.z},
+            {localaabbmax.x, localaabbmax.y, localaabbmin.z},
+            {localaabbmax.x, localaabbmax.y, localaabbmax.z},
     };
 
     out_min = glm::vec3(FLT_MAX);
@@ -431,11 +440,14 @@ static void compute_transformed_aabb(const glm::vec3& local_min, const glm::vec3
 
     for (auto& c : corners) {
         glm::vec3 w = glm::vec3(xf * glm::vec4(c, 1.0f));
-        if (glm::any(glm::isinf(w))) {
-            std::cout << "⚠️ Bad transformed corner: " << w.x << "," << w.y << "," << w.z << "\n";
-        }
         out_min = glm::min(out_min, w);
         out_max = glm::max(out_max, w);
+    }
+
+    const float eps = 0.001f;
+    if (glm::epsilonEqual(out_min.y, out_max.y, glm::epsilon<float>())) {
+        out_min.y -= eps;
+        out_max.y += eps;
     }
 }
 
@@ -474,7 +486,7 @@ void Models::Model::add_instance_transform(const glm::mat4& xf) {
     instance_transforms.push_back(xf);
 
     glm::vec3 wmin, wmax;
-    compute_transformed_aabb(localaabbmin, localaabbmax, xf, wmin, wmax);
+    compute_transformed_aabb(xf, wmin, wmax);
 
     instance_aabb_min.push_back(wmin);
     instance_aabb_max.push_back(wmax);

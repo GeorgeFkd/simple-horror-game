@@ -126,7 +126,9 @@ namespace Models{
     
         inline void remove_instance_transform(size_t i) {
             instance_transforms.erase(instance_transforms.begin() + i);
-            update_instance_data();
+            instance_aabb_max.erase(instance_aabb_max.begin() + i);
+            instance_aabb_min.erase(instance_aabb_min.begin() + i);
+            std::cout << "After removal: " << instance_transforms.size() << "\n";
         }
 
         inline size_t get_instance_count() const{
@@ -134,7 +136,8 @@ namespace Models{
         }
 
         void add_instance_transform(const glm::mat4& transform);
-
+        void compute_transformed_aabb(
+                                             const glm::mat4& xf, glm::vec3& out_min, glm::vec3& out_max);
         void init_instancing(size_t max_instances);
         void update_instance_data() const;
 
@@ -142,7 +145,7 @@ namespace Models{
             const std::vector<glm::vec3>& normals,
             const std::vector<glm::vec2>& texcoords,
             const std::vector<GLuint>& indices,
-            const std::string& label,
+            std::string label,
             const Material& mat = Material());
 
         inline glm::mat4 get_world_transform() {
@@ -159,7 +162,7 @@ namespace Models{
     private: 
         std::vector<Vertex> unique_vertices;
         std::vector<SubMesh> submeshes;
-        std::string_view label;
+        std::string label;
         // where the model is located 
         // relative to its parent
         glm::mat4 local_transform; 

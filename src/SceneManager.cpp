@@ -167,7 +167,6 @@ int Game::SceneManager::run_handler_for(Models::Model* m) {
 }
 
 void Game::SceneManager::run_handler_for(const ModelInstance& m) {
-    std::cout << "fuck me in the ass this runs\n";
     std::cout << "Run handler for: " << std::get<std::string_view>(m) << " at " << std::get<1>(m).value() << "\n";
     auto key = m;
     std::cout << "Keys: " << eventHandlers.count(key) << "\n";
@@ -192,13 +191,13 @@ void Game::SceneManager::runInteractionHandlers() {
     const Uint8*    keys                = SDL_GetKeyboardState(nullptr);
     auto            name                = std::get<std::string_view>(gameState.closestModel);
     if (!name.empty()) {
-        std::cout << "At interaction distance: " << name << "\n";
+        // std::cout << "At interaction distance: " << name << "\n";
         if (keys[SDL_SCANCODE_I]) {
             std::cout << "user is interacting with: " << name << "at: " << std::get<1>(gameState.closestModel).value() << "\n";
             //something wrong is in that logic
-            // if (gameState.distanceFromClosestModel < interactionDistance) {
+            if (gameState.distanceFromClosestModel < interactionDistance) {
                 run_handler_for(gameState.closestModel);
-            // }
+            }
         }
     }
 }
@@ -244,7 +243,7 @@ void Game::SceneManager::checkAllModels(float dt) {
                                                model->get_instance_aabb_min(i),
                                                model->get_instance_aabb_max(i))) {
                     if (!model->name().empty()) {
-                        // std::cout << "Collision with: " << model->name() << " at:" << i << "\n";
+                        std::cout << "Collision with: " << model->name() << " at:" << i << "\n";
                     }
                     camera.set_position(last_camera_position);
                     goto collision_done;
