@@ -16,6 +16,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <algorithm>
 namespace Models {
 
 struct Vertex {
@@ -104,6 +105,10 @@ class Model {
         this->active = false;
     }
 
+    inline std::string instance_name(size_t i) {
+        return label + instance_suffixes[i];
+    }
+
     inline void enable() {
         this->active = true;
     }
@@ -124,18 +129,33 @@ class Model {
         return instance_aabb_max[i];
     }
 
-    inline void remove_instance_transform(size_t i) {
+    inline void remove_instance_transform(const std::string& suffix) {
+        auto it = std::find(instance_suffixes.begin(), instance_suffixes.end(), suffix);
+        if (it == instance_suffixes.end()) {
+            std::cerr << "Instance suffix not found: " << suffix << "\n";
+            return;
+        }
+
+        size_t i = std::distance(instance_suffixes.begin(), it);
+
+        // Remove the suffix and matching transform/AABBs
+        instance_suffixes.erase(instance_suffixes.begin() + i);
         instance_transforms.erase(instance_transforms.begin() + i);
-        instance_aabb_max.erase(instance_aabb_max.begin() + i);
         instance_aabb_min.erase(instance_aabb_min.begin() + i);
+        instance_aabb_max.erase(instance_aabb_max.begin() + i);
+
         std::cout << "After removal: " << instance_transforms.size() << "\n";
+        // instance_transforms.erase(instance_transforms.begin() + i);
+        // instance_aabb_max.erase(instance_aabb_max.begin() + i);
+        // instance_aabb_min.erase(instance_aabb_min.begin() + i);
+        // std::cout << "After removal: " << instance_transforms.size() << "\n";
     }
 
     inline size_t get_instance_count() const {
         return instance_transforms.size();
     }
 
-    void add_instance_transform(const glm::mat4& transform);
+    void add_instance_transform(const glm::mat4& transform,std::string suffix);
     void compute_transformed_aabb(const glm::mat4& xf, glm::vec3& out_min, glm::vec3& out_max);
     void init_instancing(size_t max_instances);
     void update_instance_data() const;
@@ -150,7 +170,7 @@ class Model {
 
     Model(const std::string& objFile, const std::string& label);
 
-    inline std::string_view name() {
+    inline const std::string& name() {
         return label;
     }
 
@@ -166,10 +186,12 @@ class Model {
     // where the model is actually placed
     // in the world after applying all parent transforms
     glm::mat4              world_transform;
+
+    std::vector<std::string> instance_suffixes;
     std::vector<glm::mat4> instance_transforms;
     std::vector<glm::vec3> instance_aabb_min;
     std::vector<glm::vec3> instance_aabb_max;
-void draw_instanced(const glm::mat4& view, const glm::mat4& projection,
+    void draw_instanced(const glm::mat4& view, const glm::mat4& projection,
                         std::shared_ptr<Shader> shader) const;
 
     GLuint instance_vbo  = 0;

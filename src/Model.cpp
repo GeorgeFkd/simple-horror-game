@@ -487,7 +487,7 @@ void Models::Model::update_instance_data() const {
     GLCall(glUnmapBuffer(GL_ARRAY_BUFFER));
 }
 
-void Models::Model::add_instance_transform(const glm::mat4& xf) {
+void Models::Model::add_instance_transform(const glm::mat4& xf,std::string suffix) {
     instance_transforms.push_back(xf);
 
     glm::vec3 wmin, wmax;
@@ -495,4 +495,5 @@ void Models::Model::add_instance_transform(const glm::mat4& xf) {
 
     instance_aabb_min.push_back(wmin);
     instance_aabb_max.push_back(wmax);
+    instance_suffixes.push_back(std::move(suffix));
 }

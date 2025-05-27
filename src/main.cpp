@@ -125,9 +125,9 @@ int main() {
     Camera::CameraObj  camera(1280, 720, glm::vec3(0.0f, 10.0f, 3.5f));
     Game::SceneManager scene_manager(1280, 720, camera);
 
-    scene_manager.initialiseOpenGL_SDL();
+    scene_manager.initialise_opengl_sdl();
 
-    scene_manager.initialiseShaders();
+    scene_manager.initialise_shaders();
     GameState gameState;
 
 #ifdef DEBUG_DEPTH
@@ -190,7 +190,7 @@ int main() {
 
     scroll.set_interactivity(true);
     for (int i = 0; i < 6; i++)
-        scroll.add_instance_transform(glm::translate(glm::mat4(1.0f), scroll_positions[i]));
+        scroll.add_instance_transform(glm::translate(glm::mat4(1.0f), scroll_positions[i]),"-" + std::to_string(i));
     scroll.debug_dump();
     gameState.add_model(scroll);
 
@@ -269,7 +269,7 @@ int main() {
                           << " at col " << col << " -> Position: (" << x << ", " << wall_y << ", "
                           << z << ")\n";
 
-                wall.add_instance_transform(tf);
+                wall.add_instance_transform(tf,"-h-" + std::to_string(row) + "-" + std::to_string(col));
             }
         }
     }
@@ -288,7 +288,8 @@ int main() {
                           << " at row " << row << " -> Position: (" << x << ", " << wall_y << ", "
                           << z << ")\n";
 
-                wall.add_instance_transform(tf);
+                wall.add_instance_transform(tf,"-v-" + std::to_string(row) + "-" + std::to_string(col));
+
             }
         }
     };
@@ -363,13 +364,13 @@ int main() {
         "Bookcase", [](auto sceneMgr) { std::cout << "I live with only a chair on my side\n"; });
 
     for (size_t i = 0; i < 6; i++) {
-        scene_manager.on_interaction_with_instance("page", i, [i](SceneManager* sceneMgr) {
+        scene_manager.on_interaction_with("page-" + std::to_string(i), [i](SceneManager* sceneMgr) {
             std::cout << "You found page: " << i << "\n";
             auto m = sceneMgr->get_game_state()->findModel("page");
-            sceneMgr->remove_instanced_model_at(m, i);
+            sceneMgr->remove_instanced_model_at(m, "-" + std::to_string(i));
         });
     }
-    scene_manager.runGameLoop();
+    scene_manager.run_game_loop();
 
     return 0;
 }
