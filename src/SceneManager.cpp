@@ -1,10 +1,34 @@
 #include "SceneManager.h"
 #include "Camera.h"
+#include <SDL_timer.h>
 #include <algorithm>
 #include <iostream>
 #include <tuple>
-#define TUPLE(x) std::make_tuple(x)
-void Game::SceneManager::initialiseOpenGL_SDL() {
+// GameState methods
+Models::Model* Game::GameState::findModel(Models::Model* model) {
+    auto model_pos = std::find_if(models.begin(), models.end(),
+                                  [model](auto* m) { return m->name() == model->name(); });
+    return *model_pos;
+}
+Models::Model* Game::GameState::findModel(std::string_view name) {
+    auto model_pos =
+        std::find_if(models.begin(), models.end(), [name](auto* m) { return m->name() == name; });
+    return *model_pos;
+}
+void Game::GameState::remove_model(Models::Model* model) {
+    // we probably need to switch to a hashmap, this costs O(n)
+    auto res = std::remove_if(models.begin(), models.end(),
+                              [model](auto* m) { return m->name() == model->name(); });
+    models.erase(res, models.end());
+}
+Light* Game::GameState::findLight(std::string_view name) {
+    auto light_pos =
+        std::find_if(lights.begin(), lights.end(), [name](auto* l) { return l->name() == name; });
+    return *light_pos;
+}
+
+// Scene Manager methods
+void Game::SceneManager::initialise_opengl_sdl() {
     SDL_Init(SDL_INIT_VIDEO);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
@@ -24,7 +48,7 @@ void Game::SceneManager::initialiseOpenGL_SDL() {
     SDL_SetRelativeMouseMode(SDL_TRUE);
 }
 
-void Game::SceneManager::runGameLoop() {
+void Game::SceneManager::run_game_loop() {
 
 #ifdef DEBUG_DEPTH
     shader_paths       = {"assets/shaders/depth_debug.vert", "assets/shaders/depth_debug.frag"};
@@ -34,16 +58,21 @@ void Game::SceneManager::runGameLoop() {
     bool   running             = true;
     Uint64 lastTicks           = SDL_GetPerformanceCounter();
     int    interactionDistance = 2.0f;
+    // float  elapsedTime         = 0.0f;
     while (running) {
         Uint64 now = SDL_GetPerformanceCounter();
         float  dt  = float(now - lastTicks) / float(SDL_GetPerformanceFrequency());
-        lastTicks  = now;
-        handleSDLEvents(running);
-        // 3) update camera movement and loop over models(collision tests, update closest object
+        // elapsedTime += dt;
+        // if (elapsedTime > 1.0f) {
+        //     // std::cout << "This should run every 1second\n";
+        //     elapsedTime -= 1.0f;
+        // }
+        lastTicks = now;
+        handle_sdl_events(running);
         last_camera_position = camera.get_position();
+        // loop over models(collision tests, update closest object
         camera.update(dt);
-        checkAllModels(dt);
-        // 4) clear and render
+        check_all_models(dt);
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         // glEnable(GL_BLEND);
@@ -59,10 +88,24 @@ void Game::SceneManager::runGameLoop() {
         glDrawArrays(GL_TRIANGLES, 0, 6);
         glBindVertexArray(0);
 #endif
-        // render_depth_pass + render
-        render();
 
-        runInteractionHandlers();
+        auto flashlight = gameState.findLight("flashlight");
+        if (!flashlight) {
+            std::cout << "Light with name: " << "flashlight" << " was not found\n";
+            assert(false);
+        }
+
+        float     right_offset = 0.4f;
+        glm::vec3 offset =
+            right_offset * camera.get_right(); // + forward_offset * camera.get_direction()
+        flashlight->set_position(camera.get_position() + offset);
+        flashlight->set_direction(camera.get_direction());
+
+        render_depth_pass();
+        glm::mat4 view = camera.get_view_matrix();
+        glm::mat4 proj = camera.get_projection_matrix();
+        render(view, proj);
+        run_interaction_handlers();
         SDL_GL_SwapWindow(window);
     }
 }
@@ -78,18 +121,18 @@ std::shared_ptr<Shader> Game::SceneManager::get_shader_by_name(const std::string
     return *shaderPos;
 }
 void Game::SceneManager::debug_dump_model_names() {
-    for (auto m : gameState.models) {
+    for (auto m : gameState.get_models()) {
         std::cout << "Model: " << m->name() << "\n";
     }
 }
 
 void Game::SceneManager::move_model(Models::Model* model, const glm::vec3& direction) {
-    auto model_pos = findModel(model);
+    auto model_pos = gameState.findModel(model);
     model_pos->move_relative_to(direction);
 }
 
 void Game::SceneManager::move_model(std::string_view name, const glm::vec3& direction) {
-    auto model_pos = findModel(name);
+    auto model_pos = gameState.findModel(name);
     model_pos->move_relative_to(direction);
 }
 
@@ -104,97 +147,67 @@ void Game::SceneManager::move_model_Y(std::string_view name, float y) {
 void Game::SceneManager::move_model_Z(std::string_view name, float z) {
     move_model(name, glm::vec3(0.0f, 0.0f, z));
 }
-void Game::SceneManager::remove_model(Models::Model* model) {
-    // we probably need to switch to a hashmap, this costs O(n)
-    auto res = std::remove_if(gameState.models.begin(), gameState.models.end(),
-                              [model](auto* m) { return m->name() == model->name(); });
-    gameState.models.erase(res, gameState.models.end());
+
+void Game::SceneManager::remove_instanced_model_at(Models::Model* model, const std::string& suffix) {
+    //assumes impl detail that instance names are created by model->name() + suffix
+    auto it = eventHandlers.find(model->name() + suffix);
+    if (it != eventHandlers.end()) {
+        eventHandlers.erase(it);
+        model->remove_instance_transform(suffix);
+    }
 }
 
-void Game::SceneManager::remove_instanced_model_at(Models::Model* model, size_t instancePosition) {
-    model->remove_instance_transform(instancePosition);
-}
-Models::Model* Game::SceneManager::findModel(Models::Model* model) {
-    auto model_pos = std::find_if(gameState.models.begin(), gameState.models.end(),
-                                  [model](auto* m) { return m->name() == model->name(); });
-    return *model_pos;
-}
-Models::Model* Game::SceneManager::findModel(std::string_view name) {
-    auto model_pos = std::find_if(gameState.models.begin(), gameState.models.end(),
-                                  [name](auto* m) { return m->name() == name; });
-    return *model_pos;
+void Game::SceneManager::remove_model(Models::Model* m) {
+    auto it = eventHandlers.find(m->name());
+    if (it != eventHandlers.end()) {
+        eventHandlers.erase(it);
+        gameState.remove_model(m);
+    }
 }
 
-Light* Game::SceneManager::findLight(std::string_view name) {
-    auto light_pos = std::find_if(gameState.lights.begin(), gameState.lights.end(),
-                                  [name](auto* l) { return l->name() == name; });
-    return *light_pos;
-}
-int Game::SceneManager::on_interaction_with(Models::Model*                     m,
+int Game::SceneManager::on_interaction_with(std::string_view                        instanceName,
                                             std::function<void(SceneManager*)> handler) {
-#if 1
-    std::cout << m->name() << "-> " << sizeof(handler) << "\n";
-#endif
-    auto key           = std::make_tuple(m->name(), std::nullopt);
-    eventHandlers[key] = handler;
+    std::string keyStr(instanceName); // Make a copy to store
+    eventHandlers.insert({keyStr, handler});
     return 0;
 }
 
-int Game::SceneManager::on_interaction_with_instance(
-    std::string_view name, size_t instancePos, std::function<void(Game::SceneManager*)> handler) {
-    std::cout << "Adding interaction rule for: " << name << " at instance: " << instancePos << "\n";
-    eventHandlers.insert({std::make_tuple(name, instancePos), handler});
-
-    return 0;
+void Game::SceneManager::run_handler_for(const std::string& m) {
+    std::cout << "Keys: " << eventHandlers.count(m) << "\n";
+    std::cout << m << "\n";
+    auto it = eventHandlers.find(m);
+    if (it != eventHandlers.end()) {
+        it->second(this);
+    } else {
+        std::cerr << "No handler for instance: " << m << "\n";
+    }
 }
 
-int Game::SceneManager::on_interaction_with(std::string_view                   name,
-                                            std::function<void(SceneManager*)> handler) {
-#if 1
-    std::cout << name << "-> " << sizeof(handler) << "\n";
-#endif
-    eventHandlers.insert({std::make_tuple(name, std::nullopt), handler});
-    return 0;
-}
-
-int Game::SceneManager::run_handler_for(Models::Model* m) {
-    std::cout << "Run handler for: " << m->name() << "\n";
-    auto key = std::make_tuple(m->name(), std::nullopt);
-    std::cout << "Keys: " << eventHandlers.count(key) << "\n";
-    assert(eventHandlers.find(key) != eventHandlers.end());
-    eventHandlers.at(key)(this);
-    return 0;
-}
-
-void Game::SceneManager::run_handler_for(const ModelInstance& m) {
-    std::cout << "Run handler for: " << std::get<std::string_view>(m) << " at " << std::get<1>(m).value() << "\n";
-    auto key = m;
-    std::cout << "Keys: " << eventHandlers.count(key) << "\n";
-    assert(eventHandlers.find(key) != eventHandlers.end());
-    eventHandlers.at(key)(this);
-}
 void Game::SceneManager::render_depth_pass() {
     auto depth2D   = get_shader_by_name("depth_2d");
     auto depthCube = get_shader_by_name("depth_cube");
 
-    for (auto* light : gameState.lights) {
+    for (auto* light : gameState.get_lights()) {
+        std::shared_ptr<Shader> sh;
         if (light->get_type() == LightType::POINT) {
-            light->draw_depth_pass(depthCube, gameState.models);
+            sh = depthCube;
         } else {
-            light->draw_depth_pass(depth2D, gameState.models);
+            sh = depth2D;
         }
+        light->draw_depth_pass(sh, gameState.get_models());
     }
 }
 
-void Game::SceneManager::runInteractionHandlers() {
-    constexpr float interactionDistance = 5.0f;
+void Game::SceneManager::run_interaction_handlers() {
+    constexpr float interactionDistance = 8.0f;
+    std::cout << "After the render Loop sees: " << gameState.closestModel << "\n";
     const Uint8*    keys                = SDL_GetKeyboardState(nullptr);
-    auto            name                = std::get<std::string_view>(gameState.closestModel);
-    if (!name.empty()) {
-        // std::cout << "At interaction distance: " << name << "\n";
+    std::cout << "Can interact with: " << gameState.closestModel << "\n";
+    if (!gameState.closestModel.empty()) {
         if (keys[SDL_SCANCODE_I]) {
-            std::cout << "user is interacting with: " << name << "at: " << std::get<1>(gameState.closestModel).value() << "\n";
-            //something wrong is in that logic
+            std::cout << "user is interacting with: " <<  gameState.closestModel
+                      << "\n";
+
             if (gameState.distanceFromClosestModel < interactionDistance) {
                 run_handler_for(gameState.closestModel);
             }
@@ -202,15 +215,14 @@ void Game::SceneManager::runInteractionHandlers() {
     }
 }
 
-void Game::SceneManager::handleSDLEvents(bool& running) {
+void Game::SceneManager::handle_sdl_events(bool& running) {
     SDL_Event ev;
     while (SDL_PollEvent(&ev)) {
         if (ev.type == SDL_QUIT) {
             running = false;
         }
         if (ev.type == SDL_KEYDOWN && ev.key.repeat == 0) {
-            // const Uint8* keys = SDL_GetKeyboardState(nullptr);
-            runInteractionHandlers();
+            // interaction handlers run after the render
         }
         // TODO(optional) fix resizing
         if (ev.type == SDL_WINDOWEVENT && ev.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
@@ -223,7 +235,7 @@ void Game::SceneManager::handleSDLEvents(bool& running) {
     }
 }
 
-void Game::SceneManager::checkAllModels(float dt) {
+void Game::SceneManager::check_all_models(float dt) {
     // reset at the start of each loop
     gameState.distanceFromClosestModel = std::numeric_limits<float>::max();
     for (auto* model : gameState.get_models()) {
@@ -233,37 +245,37 @@ void Game::SceneManager::checkAllModels(float dt) {
             for (size_t i = 0; i < model->get_instance_count(); ++i) {
                 if (model->can_interact()) {
                     float dist = camera.distanceFromCameraUsingAABB(
-                        camera.get_position(), model->get_instance_aabb_min(i), model->get_instance_aabb_max(i));
+                        camera.get_position(), model->get_instance_aabb_min(i),
+                        model->get_instance_aabb_max(i));
                     if (dist < gameState.distanceFromClosestModel) {
-                        gameState.closestModel             = std::make_tuple(model->name(), std::optional<size_t>(i));
+                        gameState.closestModel =
+                            model->instance_name(i);
                         gameState.distanceFromClosestModel = dist;
                     }
                 }
                 if (camera.intersectSphereAABB(camera.get_position(), camera.get_radius(),
                                                model->get_instance_aabb_min(i),
                                                model->get_instance_aabb_max(i))) {
-                    if (!model->name().empty()) {
-                        std::cout << "Collision with: " << model->name() << " at:" << i << "\n";
-                    }
+
                     camera.set_position(last_camera_position);
                     goto collision_done;
                 }
             }
         } else {
-            if (model->can_interact() ) {
+            if (model->can_interact()) {
                 float dist = camera.distanceFromCameraUsingAABB(
                     camera.get_position(), model->get_aabbmin(), model->get_aabbmax());
                 if (dist < gameState.distanceFromClosestModel) {
-                    gameState.closestModel = std::make_tuple(model->name(), std::nullopt);
+                    gameState.closestModel = model->name();
                     gameState.distanceFromClosestModel = dist;
                 }
             }
             // single AABB path
             if (camera.intersectSphereAABB(camera.get_position(), camera.get_radius(),
                                            model->get_aabbmin(), model->get_aabbmax())) {
-                std::cout << "Non instanced Intersection\n";
+                // std::cout << "Non instanced Intersection\n";
                 if (!model->name().empty()) {
-                    std::cout << "Collision with: " << model->name() << "\n";
+                    // std::cout << "Collision with: " << model->name() << "\n";
                 }
                 camera.set_position(last_camera_position);
                 break;
@@ -273,7 +285,7 @@ void Game::SceneManager::checkAllModels(float dt) {
 collision_done:;
 }
 
-void Game::SceneManager::initialiseShaders() {
+void Game::SceneManager::initialise_shaders() {
     std::vector<std::string> shader_paths = {"assets/shaders/blinnphong.vert",
                                              "assets/shaders/blinnphong.frag"};
     std::vector<GLenum>      shader_types = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
@@ -299,26 +311,6 @@ void Game::SceneManager::initialiseShaders() {
     add_shader(depth_cube);
 }
 
-void Game::SceneManager::render() {
-
-    auto flashlight = findLight("flashlight");
-    if (!flashlight) {
-        std::cout << "Light with name: " << "flashlight" << " was not found\n";
-        assert(false);
-    }
-    float right_offset = 0.4f;
-    // glm::vec3 offset = right_offset * camera.get_right() + forward_offset *
-    // camera.get_direction();
-    glm::vec3 offset = right_offset * camera.get_right();
-    flashlight->set_position(camera.get_position() + offset);
-    flashlight->set_direction(camera.get_direction());
-
-    render_depth_pass();
-    glm::mat4 view = camera.get_view_matrix();
-    glm::mat4 proj = camera.get_projection_matrix();
-    render(view, proj);
-}
-
 void Game::SceneManager::render(const glm::mat4& view, const glm::mat4& projection) {
 
     // Optional: reset viewport to screen size
@@ -328,23 +320,20 @@ void Game::SceneManager::render(const glm::mat4& view, const glm::mat4& projecti
     auto shader = get_shader_by_name("blinn-phong");
 
     shader->use();
-    shader->set_int("numLights", (GLint)gameState.lights.size());
+    shader->set_int("numLights", (GLint)gameState.get_lights().size());
 
-    for (size_t i = 0; i < gameState.lights.size(); ++i) {
-        const Light* light = gameState.lights[i];
+    for (size_t i = 0; i < gameState.get_lights().size(); ++i) {
+        const Light* light = gameState.get_lights()[i];
         std::string  base  = "lights[" + std::to_string(i) + "].";
         light->draw_lighting(shader, base, i);
         light->bind_shadow_map(shader, base, i);
     }
 
-    for (auto const& model : gameState.models) {
+    for (auto const& model : gameState.get_models()) {
         if (model->isActive()) {
             model->update_world_transform(glm::mat4(1.0f));
-            if (model->is_instanced()) {
-                model->draw_instanced(view, projection, shader);
-            } else {
-                model->draw(view, projection, shader);
-            }
+            // instancing is an impl detail
+            model->draw(view, projection, shader);
         }
     }
 
@@ -360,7 +349,7 @@ Game::SceneManager::~SceneManager() {
     SDL_GL_DeleteContext(glCtx);
     SDL_DestroyWindow(window);
     SDL_Quit();
-    gameState.models.clear();
+    gameState.get_models().clear();
     shaders.clear();
-    gameState.lights.clear();
+    gameState.get_lights().clear();
 }
