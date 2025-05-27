@@ -124,6 +124,7 @@ Model createFloor(float roomSize) {
 int main() {
     Camera::CameraObj  camera(1280, 720, glm::vec3(0.0f, 10.0f, 3.5f));
     Game::SceneManager scene_manager(1280, 720, camera);
+
     scene_manager.initialiseOpenGL_SDL();
 
     scene_manager.initialiseShaders();
@@ -145,53 +146,45 @@ int main() {
     //     glm::vec3 rotation_axis;
     //     float     rotation_deg;
     // };
+    // //all of the walls walls face the same problem
     // std::vector<SurfaceConfig> surfaces = {
     //     // Floor
     //     {{0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, 0.0f},
     //
     //     // //Ceiling
-    //     // {{0.0f, ROOM_HEIGHT, 0.0f}, {1.0f, 0.0f, 0.0f}, 180.0f},
+    //     {{0.0f, ROOM_HEIGHT, 0.0f}, {1.0f, 0.0f, 0.0f}, 180.0f},
     //     //
     //     // // Back Wall
-    //     // {{0.0f, ROOM_HEIGHT / 2, -ROOM_DEPTH / 2}, {1.0f, 0.0f, 0.0f}, 90.0f},
+    //     {{0.0f, ROOM_HEIGHT / 2, -ROOM_DEPTH / 2}, {1.0f, 0.0f, 0.0f}, 90.0f},
     //     //
     //     // // Front Wall
-    //     // {{0.0f, ROOM_HEIGHT / 2, ROOM_DEPTH / 2}, {1.0f, 0.0f, 0.0f}, -90.0f},
+    //     {{0.0f, ROOM_HEIGHT / 2, ROOM_DEPTH / 2}, {1.0f, 0.0f, 0.0f}, -90.0f},
     //     //
     //     // // Left Wall
-    //     // {{-ROOM_WIDTH / 2, ROOM_HEIGHT / 2, 0.0f}, {0.0f, 0.0f, 1.0f}, -90.0f},
+    //     {{-ROOM_WIDTH / 2, ROOM_HEIGHT / 2, 0.0f}, {0.0f, 0.0f, 1.0f}, -90.0f},
     //     //
     //     // // Right Wall
-    //     // {{ROOM_WIDTH / 2, ROOM_HEIGHT / 2, 0.0f}, {0.0f, 0.0f, 1.0f}, 90.0f},
+    //     {{ROOM_WIDTH / 2, ROOM_HEIGHT / 2, 0.0f}, {0.0f, 0.0f, 1.0f}, 90.0f},
     // };
     //
     // for (const auto& face : surfaces) {
     //     glm::mat4 tf = glm::translate(glm::mat4(1.0f), face.position);
-    //     // if (glm::length(face.rotation_axis) > 0.0f) {
-    //     //     tf = glm::rotate(tf, glm::radians(face.rotation_deg), face.rotation_axis);
-    //     // }
+    //     if (glm::length(face.rotation_axis) > 0.0f) {
+    //         tf = glm::rotate(tf, glm::radians(face.rotation_deg), face.rotation_axis);
+    //     }
     //     floor_model.add_instance_transform(tf);
     // }
 
     floor_model.debug_dump();
-    // floor_model.set_local_transform(glm::translate(glm::mat4(1.0f), glm::vec3(15.0f, -0.01f,
-    // -20.0f)));
-    //
+    gameState.add_model(floor_model);
 
     auto scroll = Model("assets/models/scroll.obj", "page");
     scroll.init_instancing(6);
     glm::vec3 scroll_positions[6];
-    // done
     scroll_positions[0] = {-29.0f, 0.0f, -29.0f};
-
-    // done
     scroll_positions[1] = {-15.0f, 0.f, 20.0f};
-    // done
     scroll_positions[2] = {-5.0f, 0.0f, -20.0f};
-
-    // done
     scroll_positions[3] = {5.0f, 0.0f, 20.0f};
-
     scroll_positions[4] = {29.0f, 0.0f, -29.0f};
     scroll_positions[5] = {29.0f, 0.0f, 29.0f};
 
@@ -342,7 +335,6 @@ int main() {
 
     // gameState.add_model(overhead_point_light_model);
     // gameState.add_model(right_spot_light_model);
-    gameState.add_model(floor_model);
     // scene_manager.add_light(overhead_point_light);
     gameState.add_light(flashlight);
     // gameState.add_light(right_spotlight);
@@ -373,7 +365,7 @@ int main() {
     for (size_t i = 0; i < 6; i++) {
         scene_manager.on_interaction_with_instance("page", i, [i](SceneManager* sceneMgr) {
             std::cout << "You found page: " << i << "\n";
-            auto m = sceneMgr->findModel("page");
+            auto m = sceneMgr->get_game_state()->findModel("page");
             sceneMgr->remove_instanced_model_at(m, i);
         });
     }

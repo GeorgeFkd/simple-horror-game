@@ -250,7 +250,8 @@ void Models::Model::update_world_transform(const glm::mat4& parent_transform) {
         child->update_world_transform(world_transform);
     }
 }
-
+//I could remove this from the public API
+//and have it be an impl detail, as both draws are called with the same params
 void Models::Model::draw_instanced(const glm::mat4& view, const glm::mat4& projection,
                                    std::shared_ptr<Shader> shader) const {
 
@@ -310,6 +311,11 @@ void Models::Model::draw_instanced(const glm::mat4& view, const glm::mat4& proje
 void Models::Model::draw(const glm::mat4& view, const glm::mat4& projection,
                          std::shared_ptr<Shader> shader) const {
     // upload matrices
+    if(is_instanced_) {
+        draw_instanced(view,projection,shader);
+        return;
+    }
+
     shader->set_mat4("uView", view);
     shader->set_mat4("uProj", projection);
     shader->set_mat4("uModel", world_transform);
@@ -419,7 +425,6 @@ void Models::Model::compute_aabb() {
     aabbmax = world_max;
 }
 
-//It should be an object method
 void Models::Model::compute_transformed_aabb(
                                      const glm::mat4& xf, glm::vec3& out_min, glm::vec3& out_max) {
     // all 8 corners of the local box
