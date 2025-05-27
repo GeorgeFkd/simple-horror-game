@@ -105,20 +105,7 @@ void Game::SceneManager::run_game_loop() {
         glm::mat4 view = camera.get_view_matrix();
         glm::mat4 proj = camera.get_projection_matrix();
         render(view, proj);
-        std::cout << "After the render Loop sees: " << gameState.closestModel << "\n";
-        const Uint8*    keys                = SDL_GetKeyboardState(nullptr);
-        std::cout << "Can interact with: " << gameState.closestModel << "\n";
-        if (!gameState.closestModel.empty()) {
-            if (keys[SDL_SCANCODE_I]) {
-                std::cout << "user is interacting with: " <<  gameState.closestModel
-                          << "\n";
-
-                if (gameState.distanceFromClosestModel < interactionDistance) {
-                    run_handler_for(gameState.closestModel);
-                }
-            }
-        }
-        // run_interaction_handlers();
+        run_interaction_handlers();
         SDL_GL_SwapWindow(window);
     }
 }
@@ -162,22 +149,21 @@ void Game::SceneManager::move_model_Z(std::string_view name, float z) {
 }
 
 void Game::SceneManager::remove_instanced_model_at(Models::Model* model, const std::string& suffix) {
-    model->remove_instance_transform(suffix);
-    // auto key = std::make_tuple(model->name(),instancePosition);
-    // eventHandlers.erase(key);
+    //assumes impl detail that instance names are created by model->name() + suffix
+    auto it = eventHandlers.find(model->name() + suffix);
+    if (it != eventHandlers.end()) {
+        eventHandlers.erase(it);
+        model->remove_instance_transform(suffix);
+    }
 }
 
 void Game::SceneManager::remove_model(Models::Model* m) {
-    // auto key = std::make_tuple(m->name(),std::nullopt);
-    // eventHandlers.erase(key);
-    gameState.remove_model(m);
+    auto it = eventHandlers.find(m->name());
+    if (it != eventHandlers.end()) {
+        eventHandlers.erase(it);
+        gameState.remove_model(m);
+    }
 }
-
-// int Game::SceneManager::on_interaction_with_instance(
-//     std::string_view name, size_t instancePos, std::function<void(Game::SceneManager*)> handler)
-//     { std::cout << "Adding interaction rule for: " << name << " at instance: " << instancePos <<
-//     "\n"; eventHandlers.insert({std::make_tuple(, std::nullopt), handler}); return 0;
-// }
 
 int Game::SceneManager::on_interaction_with(std::string_view                        instanceName,
                                             std::function<void(SceneManager*)> handler) {
@@ -187,9 +173,6 @@ int Game::SceneManager::on_interaction_with(std::string_view                    
 }
 
 void Game::SceneManager::run_handler_for(const std::string& m) {
-    // std::cout << "Run handler for: " << std::get<std::string_view>(m) << " at "
-    //           << std::get<1>(m).value() << "\n";
-    // auto key = ModelInstance{std::get<0>(m), std::nullopt};;
     std::cout << "Keys: " << eventHandlers.count(m) << "\n";
     std::cout << m << "\n";
     auto it = eventHandlers.find(m);
@@ -197,12 +180,7 @@ void Game::SceneManager::run_handler_for(const std::string& m) {
         it->second(this);
     } else {
         std::cerr << "No handler for instance: " << m << "\n";
-        assert(false);
     }
-
-    // assert(eventHandlers.find(key) != eventHandlers.end());
-
-    eventHandlers.at(m)(this);
 }
 
 void Game::SceneManager::render_depth_pass() {
@@ -221,22 +199,20 @@ void Game::SceneManager::render_depth_pass() {
 }
 
 void Game::SceneManager::run_interaction_handlers() {
-    // constexpr float interactionDistance = 5.0f;
-    // const Uint8*    keys                = SDL_GetKeyboardState(nullptr);
-    // // here the gameState gets messed up
-    // std::cout << "Can interact with: " << std::get<0>(gameState.closestModel) << "\n";
-    // if (!std::get<0>(gameState.closestModel).empty()) {
-    //     if (keys[SDL_SCANCODE_I]) {
-    //         std::cout << "user is interacting with: " << std::get<0>(gameState.closestModel)
-    //                   << "\n";
-    //         if (std::get<1>(gameState.closestModel).has_value()) {
-    //             std::cout << "For instance: " << std::get<1>(gameState.closestModel).value();
-    //         }
-    //         if (gameState.distanceFromClosestModel < interactionDistance) {
-    //             run_handler_for(gameState.closestModel);
-    //         }
-    //     }
-    // }
+    constexpr float interactionDistance = 8.0f;
+    std::cout << "After the render Loop sees: " << gameState.closestModel << "\n";
+    const Uint8*    keys                = SDL_GetKeyboardState(nullptr);
+    std::cout << "Can interact with: " << gameState.closestModel << "\n";
+    if (!gameState.closestModel.empty()) {
+        if (keys[SDL_SCANCODE_I]) {
+            std::cout << "user is interacting with: " <<  gameState.closestModel
+                      << "\n";
+
+            if (gameState.distanceFromClosestModel < interactionDistance) {
+                run_handler_for(gameState.closestModel);
+            }
+        }
+    }
 }
 
 void Game::SceneManager::handle_sdl_events(bool& running) {
@@ -272,20 +248,15 @@ void Game::SceneManager::check_all_models(float dt) {
                         camera.get_position(), model->get_instance_aabb_min(i),
                         model->get_instance_aabb_max(i));
                     if (dist < gameState.distanceFromClosestModel) {
-                        // std::cout << "Instance now closer is: " << model->instance_name(i) << "\n";
                         gameState.closestModel =
                             model->instance_name(i);
-                        // std::cout << "Gamestate sees: " << std::get<0>(gameState.closestModel)
-                        //           << "\n";
                         gameState.distanceFromClosestModel = dist;
                     }
                 }
                 if (camera.intersectSphereAABB(camera.get_position(), camera.get_radius(),
                                                model->get_instance_aabb_min(i),
                                                model->get_instance_aabb_max(i))) {
-                    if (!model->name().empty()) {
-                        // std::cout << "Collision with: " << model->name() << " at:" << i << "\n";
-                    }
+
                     camera.set_position(last_camera_position);
                     goto collision_done;
                 }

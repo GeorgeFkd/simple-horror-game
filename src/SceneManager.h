@@ -16,24 +16,6 @@
 // REWRITE 1: Use instance suffix-based identification for interaction
 // This avoids incorrect handler dispatch after vector shifts due to instance removal
 namespace Game {
-    using ModelInstance = std::tuple<std::string, std::optional<size_t>>;
-
-    struct ModelInstanceHasher {
-        size_t operator()(const ModelInstance& m) const {
-            size_t seed = 0;
-            const auto& str = std::get<0>(m);
-            const auto& opt = std::get<1>(m);
-
-            seed ^= std::hash<std::string>{}(str) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-
-            if (opt) {
-                seed ^= std::hash<size_t>{}(*opt) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-            }
-
-            return seed;
-        }
-    };
-
     class GameState {
     public:
         GameState()
@@ -100,8 +82,6 @@ namespace Game {
         void remove_instanced_model_at(Models::Model* m, const std::string& suffix);
 
         int on_interaction_with(std::string_view name, std::function<void(SceneManager*)> handler);
-        int on_interaction_with_instance(std::string_view instanceName,
-                                         std::function<void(SceneManager*)> handler);
 
         void initialise_shaders();
         void run_game_loop();
