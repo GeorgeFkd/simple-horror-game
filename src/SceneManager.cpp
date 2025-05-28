@@ -3,6 +3,7 @@
 #include <SDL_timer.h>
 #include <algorithm>
 #include <iostream>
+#include <random>
 // GameState methods
 Models::Model* Game::GameState::findModel(Models::Model* model) {
     auto model_pos = std::find_if(models.begin(), models.end(),
@@ -64,7 +65,9 @@ void Game::SceneManager::run_game_loop() {
     monster = gameState.findModel("monster");
     monster->set_local_transform(last_monster_transform);
     monster->update_world_transform(glm::mat4(1.0f));
-
+    std::random_device r;
+    std::default_random_engine el;
+    std::uniform_real_distribution<> uniform_rand(0,1);
     bool   running             = true;
     Uint64 lastTicks           = SDL_GetPerformanceCounter();
     int    interactionDistance = 2.0f;
@@ -73,15 +76,20 @@ void Game::SceneManager::run_game_loop() {
         std::cout << "Light with name: " << "flashlight" << " was not found\n";
         assert(false);
     }
-    // float  elapsedTime         = 0.0f;
+    float  elapsedTime         = 0.0f;
+    int secondsForMonsterAppearance = 10;
     while (running) {
         Uint64 now = SDL_GetPerformanceCounter();
         float  dt  = float(now - lastTicks) / float(SDL_GetPerformanceFrequency());
-        // elapsedTime += dt;
-        // if (elapsedTime > 1.0f) {
-        //     // std::cout << "This should @un every 1second\n";
-        //     elapsedTime -= 1.0f;
-        // }
+        elapsedTime += dt;
+        if (elapsedTime > secondsForMonsterAppearance * 1.0f) {
+            std::cout << "This should run every 10 seconds\n";
+            float randNum = uniform_rand(el);
+            if(randNum > 0.5) {
+                monster->toggleActive();
+            }
+            elapsedTime -= secondsForMonsterAppearance * 1.0f;
+        }
         lastTicks = now;
         handle_sdl_events(running);
         last_camera_position   = camera.get_position();
