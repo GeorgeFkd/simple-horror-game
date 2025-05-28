@@ -7,6 +7,24 @@
 #include "Light.h"
 
 namespace Camera{
+
+    inline float distance_from_using_aabb(const glm::vec3& cen,const glm::vec3& bmin,const glm::vec3& bmax) {
+                
+            // Raise the center to make the "sphere" collision behave taller
+            // Might be used for interaction radius 
+            glm::vec3 convenience_offset = glm::vec3(0.0f,-0.6f,0.0f);
+            glm::vec3 offset_cen = cen + convenience_offset;
+            glm::vec3 closest = glm::clamp(offset_cen, bmin, bmax);
+            float dist2 = glm::length2(closest - offset_cen);
+            return dist2;
+    }
+
+    inline bool intersects_sphere_aabb(const glm::vec3& cen, float r, const glm::vec3& bmin, const glm::vec3& bmax)
+        {
+            
+            return distance_from_using_aabb(cen, bmin, bmax)<= r * r;
+        }
+
     class CameraObj{
     private: 
         glm::vec3 position;
@@ -87,7 +105,7 @@ namespace Camera{
         }
         
         
-        float distanceFromCameraUsingAABB(const glm::vec3& cen,const glm::vec3& bmin,const glm::vec3& bmax) {
+        float distance_from_camera_using_AABB(const glm::vec3& cen,const glm::vec3& bmin,const glm::vec3& bmax) {
                 
             // Raise the center to make the "sphere" collision behave taller
             // Might be used for interaction radius 
@@ -98,10 +116,10 @@ namespace Camera{
             return dist2;
         }
 
-        bool intersectSphereAABB(const glm::vec3& cen, float r, const glm::vec3& bmin, const glm::vec3& bmax)
+        bool intersect_sphere_aabb(const glm::vec3& cen, float r, const glm::vec3& bmin, const glm::vec3& bmax)
         {
             
-            return this->distanceFromCameraUsingAABB(cen, bmin, bmax)<= r * r;
+            return this->distance_from_camera_using_AABB(cen, bmin, bmax)<= r * r;
         }
 
         void updateCameraVectors();

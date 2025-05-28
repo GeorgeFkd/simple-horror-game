@@ -74,6 +74,10 @@ class Model {
         this->local_transform = std::move(local_transform);
     }
 
+    inline glm::mat4 get_local_transform() {
+        return local_transform;
+    }
+
     inline glm::vec3 get_aabbmin() const {
         return aabbmin;
     }

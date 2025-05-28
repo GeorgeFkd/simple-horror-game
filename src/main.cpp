@@ -124,7 +124,6 @@ Model createFloor(float roomSize) {
 int main() {
     Camera::CameraObj  camera(1280, 720, glm::vec3(0.0f, 10.0f, 3.5f));
     Game::SceneManager scene_manager(1280, 720, camera);
-
     scene_manager.initialise_opengl_sdl();
 
     scene_manager.initialise_shaders();
