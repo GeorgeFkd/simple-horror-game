@@ -49,6 +49,7 @@ void Game::SceneManager::initialise_opengl_sdl() {
 }
 
 void Game::SceneManager::run_game_loop() {
+#define printv3(v) std::cout << v.x << "," << v.y << "," << v.z << "\n";
 
 #ifdef DEBUG_DEPTH
     shader_paths       = {"assets/shaders/depth_debug.vert", "assets/shaders/depth_debug.frag"};
@@ -56,59 +57,120 @@ void Game::SceneManager::run_game_loop() {
     Shader depth_debug = Shader(shader_paths, shader_types, "depth_debug");
 #endif
 
-    float follow_distance = 10.0f;
-    float follow_speed    = 7.5f;
-    last_monster_transform = glm::translate(glm::mat4(1.0f), glm::vec3(5.0f, 0.0f, 5.0f));
-    auto monster_init      = Models::Model("assets/models/monster.obj", "monster");
+    float monster_follow_distance                          = 10.0f;
+    float monster_follow_speed                             = 7.5f;
+    float monster_time_looking_at_it                       = 0.0f;
+    float monster_time_not_looking_at_it                   = 0.0f;
+    int   monster_seconds_per_coinflip                     = 20;
+    float monster_random_dissapear_probability             = 0.35f;
+    float monster_dissapear_probability_when_looking_at_it = 0.75f;
+    float monster_seconds_to_look_at_it_for_coinflip       = 5.0f;
+    float monster_seconds_looking_at_it_for_death          = 7.0f;
+    float monster_seconds_not_looking_at_it_for_death      = 10.0f;
+    // glm::dot(camera_dir,monster), -1 looking away from monster, 1 looking it directly
+    float monster_view_dir         = 0.0f;
+    auto  monster_initial_position = glm::vec3(5.0f, 0.0f, 5.0f);
+    last_monster_transform         = glm::translate(glm::mat4(1.0f), monster_initial_position);
+    auto monster_init              = Models::Model("assets/models/monster.obj", "monster");
     std::cout << "Run game loop runs\n";
     gameState.add_model(monster_init);
     monster = gameState.findModel("monster");
     monster->set_local_transform(last_monster_transform);
     monster->update_world_transform(glm::mat4(1.0f));
-    std::random_device r;
-    std::default_random_engine el;
-    std::uniform_real_distribution<> uniform_rand(0,1);
-    bool   running             = true;
-    Uint64 lastTicks           = SDL_GetPerformanceCounter();
-    int    interactionDistance = 2.0f;
-    auto   flashlight          = gameState.findLight("flashlight");
+    std::random_device               r;
+    std::default_random_engine       el;
+    std::uniform_real_distribution<> uniform_rand(0, 1);
+    bool                             running             = true;
+    Uint64                           lastTicks           = SDL_GetPerformanceCounter();
+    int                              interactionDistance = 2.0f;
+    auto                             flashlight          = gameState.findLight("flashlight");
     if (!flashlight) {
         std::cout << "Light with name: " << "flashlight" << " was not found\n";
         assert(false);
     }
-    float  elapsedTime         = 0.0f;
-    int secondsForMonsterAppearance = 10;
+    float elapsedTime = 0.0f;
     while (running) {
         Uint64 now = SDL_GetPerformanceCounter();
         float  dt  = float(now - lastTicks) / float(SDL_GetPerformanceFrequency());
         elapsedTime += dt;
-        if (elapsedTime > secondsForMonsterAppearance * 1.0f) {
-            std::cout << "This should run every 10 seconds\n";
+        if (elapsedTime > monster_seconds_per_coinflip * 1.0f) {
             float randNum = uniform_rand(el);
-            if(randNum > 0.5) {
+            float probs   = 0.0f;
+            if (monster->isActive()) {
+                probs = monster_random_dissapear_probability;
+            } else {
+                probs = 1 - monster_random_dissapear_probability;
+            }
+            if (randNum < probs) {
                 monster->toggleActive();
             }
-            elapsedTime -= secondsForMonsterAppearance * 1.0f;
+            elapsedTime -= monster_seconds_per_coinflip * 1.0f;
         }
         lastTicks = now;
         handle_sdl_events(running);
         last_camera_position   = camera.get_position();
         last_monster_transform = monster->get_local_transform();
         camera.update(dt);
+        // std::cout << "Last camera position and current: \n";
         auto camera_dir = glm::normalize(camera.get_direction());
-        auto target_pos = camera.get_position() + camera_dir * follow_distance;
-        auto new_monster_pos =
-            glm::mix(glm::vec3(last_monster_transform[3]), target_pos, follow_speed * dt);
-        new_monster_pos.y = 0.0f;
-        auto  forward     = glm::normalize(glm::vec3(camera_dir.x, 0.0f, camera_dir.z));
-        float angle       = glm::atan(forward.x, forward.z);
+        auto towards_monster =
+            glm::normalize(glm::vec3(last_monster_transform[3]) - camera.get_position());
+        monster_view_dir = glm::dot(camera_dir, towards_monster);
+        std::cout << "View with monster is: " << monster_view_dir << "\n";
+        if (monster->isActive()) {
+            std::cout << "Time is ticking\n";
+            if (monster_view_dir > 0) {
+                monster_time_looking_at_it += dt;
+                monster_time_not_looking_at_it = 0;
+            } else {
+                monster_time_not_looking_at_it += dt;
+                monster_time_looking_at_it = 0;
+            }
+            if (monster_time_looking_at_it > monster_seconds_looking_at_it_for_death) {
+                float randNum = uniform_rand(el);
+                if (randNum < 0.65f) {
+                    std::cout << "You died cause you looked at it too long\n";
+                    flashlight->set_turned_on(false);
+                    running = false;
+                }
+            }
 
-        auto tf = glm::translate(glm::mat4(1.0f), new_monster_pos);
-        tf      = glm::rotate(tf, angle, glm::vec3(0.0f, 1.0f, 0.0f));
+            if (monster_time_not_looking_at_it > monster_seconds_not_looking_at_it_for_death) {
+                float randNum = uniform_rand(el);
+                if (randNum < 0.65f) {
+                    std::cout << "You died cause you didn't look at it\n";
+                    flashlight->set_turned_on(false);
+                    running = false;
+                }
+            }
 
-        monster->set_local_transform(tf);
+            if (monster_time_looking_at_it > monster_seconds_to_look_at_it_for_coinflip * 1.0f) {
+                float randNum = uniform_rand(el);
+                if (randNum < 0.25f) {
+                    monster->toggleActive();
+                }
+            }
+        } else {
+            // everytime it dissappears reset these
+            monster_time_looking_at_it     = 0.0f;
+            monster_time_not_looking_at_it = 0.0f;
+        }
+
+        // if you dont move the monster does not move, but can dissappear
+        if (last_camera_position != camera.get_position()) {
+            auto target_pos      = camera.get_position() - camera_dir * monster_follow_distance;
+            auto new_monster_pos = glm::mix(glm::vec3(last_monster_transform[3]), target_pos,
+                                            monster_follow_speed * dt);
+            new_monster_pos.y    = 0.0f;
+            auto  forward        = glm::normalize(glm::vec3(camera_dir.x, 0.0f, camera_dir.z));
+            float angle          = glm::atan(forward.x, forward.z);
+
+            auto tf = glm::translate(glm::mat4(1.0f), new_monster_pos);
+            tf      = glm::rotate(tf, angle, glm::vec3(0.0f, 1.0f, 0.0f));
+            monster->set_local_transform(tf);
+        }
+
         // loop over models(collision tests, update closest object
-
         check_all_models(dt);
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -232,12 +294,10 @@ void Game::SceneManager::render_depth_pass() {
 
 void Game::SceneManager::run_interaction_handlers() {
     constexpr float interactionDistance = 8.0f;
-    std::cout << "After the render Loop sees: " << gameState.closestModel << "\n";
-    const Uint8* keys = SDL_GetKeyboardState(nullptr);
-    std::cout << "Can interact with: " << gameState.closestModel << "\n";
+    const Uint8*    keys                = SDL_GetKeyboardState(nullptr);
     if (!gameState.closestModel.empty()) {
         if (keys[SDL_SCANCODE_I]) {
-            std::cout << "user is interacting with: " << gameState.closestModel << "\n";
+            // std::cout << "user is interacting with: " << gameState.closestModel << "\n";
 
             if (gameState.distanceFromClosestModel < interactionDistance) {
                 run_handler_for(gameState.closestModel);
@@ -274,8 +334,8 @@ void Game::SceneManager::check_all_models(float dt) {
         if (!model->isActive())
             continue;
         auto monster_center = 0.5f * (monster->get_aabbmin() + monster->get_aabbmax());
-        std::cout << "Monster center is: " << monster_center.x << "," << monster_center.y << ","
-                  << monster_center.z << "\n";
+        // std::cout << "Monster center is: " << monster_center.x << "," << monster_center.y << ","
+        //           << monster_center.z << "\n";
         if (model->is_instanced()) {
             for (size_t i = 0; i < model->get_instance_count(); ++i) {
                 if (model->can_interact()) {

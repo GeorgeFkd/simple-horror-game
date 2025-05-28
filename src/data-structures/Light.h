@@ -51,7 +51,10 @@ public:
     inline std::string_view name() {
         return label;
     }
-
+    
+    inline void set_turned_on(bool on) {
+        is_on = on;
+    }
     inline bool is_turned_on() const {
         return is_on;
     };
