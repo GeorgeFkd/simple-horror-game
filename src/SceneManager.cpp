@@ -1,5 +1,7 @@
 #include "SceneManager.h"
 #include "Camera.h"
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_mixer.h>
 #include <SDL_timer.h>
 #include <algorithm>
 #include <iostream>
@@ -29,7 +31,18 @@ Light* Game::GameState::findLight(std::string_view name) {
 
 // Scene Manager methods
 void Game::SceneManager::initialise_opengl_sdl() {
-    SDL_Init(SDL_INIT_VIDEO);
+
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) == -1) {
+        std::cerr << "Something went wrong when initialising SDL\n";
+        return;
+    }
+
+    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 4, 2048) < 0) {
+        std::cerr << "SDL_mixer could not initialize! SDL_mixer Error: " << Mix_GetError()
+                  << std::endl;
+        return;
+    }
+
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
@@ -56,6 +69,14 @@ void Game::SceneManager::run_game_loop() {
     shader_types       = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
     Shader depth_debug = Shader(shader_paths, shader_types, "depth_debug");
 #endif
+
+    Mix_Music* horrorMusic = Mix_LoadMUS("assets/audio/scary.mp3");
+    if (!horrorMusic) {
+        std::cerr << "Failed to load music: " << Mix_GetError() << std::endl;
+        return;
+    }
+
+    Mix_Chunk* footstepsMusic = Mix_LoadWAV("assets/audio/footsteps.mp3");
 
     float monster_follow_distance                          = 10.0f;
     float monster_follow_speed                             = 7.5f;
@@ -106,6 +127,8 @@ void Game::SceneManager::run_game_loop() {
             }
             elapsedTime -= monster_seconds_per_coinflip * 1.0f;
         }
+        
+
         lastTicks = now;
         handle_sdl_events(running);
         last_camera_position   = camera.get_position();
@@ -155,7 +178,18 @@ void Game::SceneManager::run_game_loop() {
             monster_time_looking_at_it     = 0.0f;
             monster_time_not_looking_at_it = 0.0f;
         }
+        if (monster->isActive()) {
+            if (Mix_PlayingMusic() == 0) {
+                Mix_PlayMusic(horrorMusic, -1); // -1 = loop forever
+                Mix_PlayChannel(-1,footstepsMusic,-1);//-1 as channel means that sdl allocates it
+            }
 
+        } else {
+            if (Mix_PlayingMusic()) {
+                Mix_HaltMusic();
+                Mix_HaltChannel(-1);
+            }
+        }
         // if you dont move the monster does not move, but can dissappear
         if (last_camera_position != camera.get_position()) {
             auto target_pos      = camera.get_position() - camera_dir * monster_follow_distance;
@@ -201,6 +235,8 @@ void Game::SceneManager::run_game_loop() {
         run_interaction_handlers();
         SDL_GL_SwapWindow(window);
     }
+    Mix_FreeChunk(footstepsMusic);
+    Mix_FreeMusic(horrorMusic);
 }
 
 std::shared_ptr<Shader> Game::SceneManager::get_shader_by_name(const std::string& shader_name) {
@@ -469,6 +505,7 @@ Game::SceneManager::SceneManager(int width, int height, Camera::CameraObj camera
 Game::SceneManager::~SceneManager() {
     SDL_GL_DeleteContext(glCtx);
     SDL_DestroyWindow(window);
+    Mix_CloseAudio();
     SDL_Quit();
     gameState.get_models().clear();
     shaders.clear();

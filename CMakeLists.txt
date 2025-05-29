@@ -27,6 +27,12 @@ find_package(GLEW REQUIRED)
 find_package(glm REQUIRED)
 find_package(Catch2)
 find_package(TIFF REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(SDL2_mixer REQUIRED SDL2_mixer)
+
+if(NOT SDL2_mixer_FOUND) 
+    message(FATAL "Did not find sdl2 mixer")
+endif()
 
 if (NOT TIFF_FOUND)
     message(STATUS "Did not find TIFF, .tiff files wont load properly")
@@ -64,6 +70,7 @@ add_executable(opengl_app ${SOURCES})
 target_include_directories(opengl_app PRIVATE
     ${OPENGL_INCLUDE_DIR}
     ${SDL2_INCLUDE_DIRS}
+    ${SDL2_mixer_INCLUDE_DIRS}
     ${GLEW_INCLUDE_DIRS}
     /usr/include/glm
     ${CMAKE_CURRENT_SOURCE_DIR}/src   # So headers like Renderer.h and OBJLoader.h are found
@@ -74,6 +81,7 @@ target_include_directories(opengl_app PRIVATE
 target_link_libraries(opengl_app PRIVATE
     ${OPENGL_LIBRARIES}
     ${SDL2_LIBRARIES}
+    ${SDL2_mixer_LIBRARIES}
     TIFF::TIFF
     GLEW::glew
     glm::glm
@@ -110,7 +118,6 @@ target_compile_definitions(obj_loader PRIVATE DEBUG_OBJLOADER)
 # Set shader source and destination dirs
 set(SHADER_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/assets/shaders")
 set(SHADER_DST_DIR "${CMAKE_CURRENT_BINARY_DIR}/assets/shaders")
-
 # Collect all shader files (.vert, .frag, etc.)
 file(GLOB SHADERS "${SHADER_SRC_DIR}/*.*")
 
@@ -146,6 +153,20 @@ file(GLOB_RECURSE ALL_TEXTURE_FILES
     "${TEXTURES_SRC_DIR}/*.jpg"
 )
 
+set(MUSIC_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/assets/audio")
+set(MUSIC_DST_DIR "${CMAKE_CURRENT_BINARY_DIR}/assets/audio")
+
+file(GLOB_RECURSE ALL_AUDIO_FILES
+    "${MUSIC_SRC_DIR}/*.mp3"
+)
+
+add_custom_target(copy_audio ALL
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${MUSIC_DST_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${MUSIC_SRC_DIR}" "${MUSIC_DST_DIR}"
+
+)
+
+
 add_custom_target(copy_textures ALL
     COMMAND ${CMAKE_COMMAND} -E make_directory "${TEXTURES_DST_DIR}"
     COMMAND ${CMAKE_COMMAND} -E copy_directory "${TEXTURES_SRC_DIR}" "${TEXTURES_DST_DIR}"
@@ -155,6 +176,7 @@ add_custom_target(copy_textures ALL
 
 add_dependencies(opengl_app copy_models)
 add_dependencies(opengl_app copy_textures)
+add_dependencies(opengl_app copy_audio)
 
 
 set(SCENE1_SOURCES
