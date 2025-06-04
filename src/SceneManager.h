@@ -12,10 +12,12 @@
 #include <memory>
 #include <optional>
 #include <sstream>
+#include "TextRenderer.h"
 #include <string>
 // REWRITE 1: Use instance suffix-based identification for interaction
 // This avoids incorrect handler dispatch after vector shifts due to instance removal
 namespace Game {
+    using namespace GlHelpers;
     class GameState {
     public:
         GameState()
@@ -46,7 +48,7 @@ namespace Game {
         }
 
         void remove_model(Models::Model* model);
-
+        unsigned int pages_collected = 0;
     private:
         std::vector<Models::Model*> models;
         std::vector<Light*> lights;
@@ -106,5 +108,6 @@ namespace Game {
         glm::mat4 last_monster_transform;
         SDL_Window* window;
         SDL_GLContext glCtx;
+        TextRenderer textRenderer;
     };
 };

@@ -310,12 +310,12 @@ void Models::Model::draw_instanced(const glm::mat4& view, const glm::mat4& proje
 
 void Models::Model::draw(const glm::mat4& view, const glm::mat4& projection,
                          std::shared_ptr<Shader> shader) const {
-    // upload matrices
     if(is_instanced_) {
         draw_instanced(view,projection,shader);
         return;
     }
 
+    // upload matrices
     shader->set_mat4("uView", view);
     shader->set_mat4("uProj", projection);
     shader->set_mat4("uModel", world_transform);

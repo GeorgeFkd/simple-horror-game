@@ -1,6 +1,7 @@
 #include "Shader.h"
 #include <iostream>
 
+using namespace GlHelpers;
 
 Shader::Shader(const std::vector<std::string>& shader_paths,
            const std::vector<GLenum>& shader_types,

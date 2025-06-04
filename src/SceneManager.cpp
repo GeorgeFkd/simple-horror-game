@@ -1,5 +1,6 @@
 #include "SceneManager.h"
 #include "Camera.h"
+#include "Light.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_mixer.h>
 #include <SDL_timer.h>
@@ -57,6 +58,7 @@ void Game::SceneManager::initialise_opengl_sdl() {
     glEnable(GL_DEPTH_TEST);
     glViewport(0, 0, 1280, 720);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     SDL_SetRelativeMouseMode(SDL_TRUE);
 }
@@ -69,6 +71,8 @@ void Game::SceneManager::run_game_loop() {
     shader_types       = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
     Shader depth_debug = Shader(shader_paths, shader_types, "depth_debug");
 #endif
+    std::cout << "Attempting to load font";
+    textRenderer.load_font();
 
     Mix_Music* horrorMusic = Mix_LoadMUS("assets/audio/scary.mp3");
     if (!horrorMusic) {
@@ -127,7 +131,6 @@ void Game::SceneManager::run_game_loop() {
             }
             elapsedTime -= monster_seconds_per_coinflip * 1.0f;
         }
-        
 
         lastTicks = now;
         handle_sdl_events(running);
@@ -139,9 +142,9 @@ void Game::SceneManager::run_game_loop() {
         auto towards_monster =
             glm::normalize(glm::vec3(last_monster_transform[3]) - camera.get_position());
         monster_view_dir = glm::dot(camera_dir, towards_monster);
-        std::cout << "View with monster is: " << monster_view_dir << "\n";
+        // std::cout << "View with monster is: " << monster_view_dir << "\n";
         if (monster->isActive()) {
-            std::cout << "Time is ticking\n";
+            // std::cout << "Time is ticking\n";
             if (monster_view_dir > 0) {
                 monster_time_looking_at_it += dt;
                 monster_time_not_looking_at_it = 0;
@@ -180,8 +183,8 @@ void Game::SceneManager::run_game_loop() {
         }
         if (monster->isActive()) {
             if (Mix_PlayingMusic() == 0) {
-                Mix_PlayMusic(horrorMusic, -1); // -1 = loop forever
-                Mix_PlayChannel(-1,footstepsMusic,-1);//-1 as channel means that sdl allocates it
+                Mix_PlayMusic(horrorMusic, -1);          // -1 = loop forever
+                Mix_PlayChannel(-1, footstepsMusic, -1); //-1 as channel means that sdl allocates it
             }
 
         } else {
@@ -463,9 +466,14 @@ void Game::SceneManager::initialise_shaders() {
     shader_types    = {GL_VERTEX_SHADER, GL_GEOMETRY_SHADER, GL_FRAGMENT_SHADER};
     auto depth_cube = std::make_shared<Shader>(shader_paths, shader_types, "depth_cube");
 
+    shader_paths = {"assets/shaders/text.vert","assets/shaders/text.frag"};
+    shader_types = {GL_VERTEX_SHADER,GL_FRAGMENT_SHADER};
+    auto textshader = std::make_shared<Shader>(shader_paths,shader_types,"text");
+
     add_shader(blinnphong);
     add_shader(depth_2d);
     add_shader(depth_cube);
+    add_shader(textshader);
 }
 
 void Game::SceneManager::render(const glm::mat4& view, const glm::mat4& projection) {
@@ -494,6 +502,14 @@ void Game::SceneManager::render(const glm::mat4& view, const glm::mat4& projecti
         }
     }
 
+    glUseProgram(0);
+
+    GLCall(glViewport(0, 0, screen_width, screen_height));
+    glm::mat4 text_projection = glm::ortho(0.0f, 1280.0f, 0.0f,720.0f);
+    auto textShader = get_shader_by_name("text");
+    std::cout << "Trying to render text:\n";
+    std::string displayed_text = "pages:" + std::to_string(gameState.pages_collected);
+    textRenderer.RenderText(textShader,displayed_text, 50.0f, 720.0f - 50.0f, 1.2f, {1.0f,0.0f,0.0f},text_projection);
     glUseProgram(0);
 }
 
