@@ -19,6 +19,8 @@
 #include <algorithm>
 namespace Models {
 
+
+    using namespace GlHelpers;
 struct Vertex {
     glm::vec3 position;
     glm::vec2 texcoord;

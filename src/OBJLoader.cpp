@@ -119,7 +119,7 @@ void ObjectLoader::OBJLoader::read_from_file(const std::string &filename) {
 
 
 
-GLuint load_texture_from_tiff(const std::string& filename) {
+GLuint ObjectLoader::load_texture_from_tiff(const std::string& filename) {
     TIFF* tif = TIFFOpen(filename.c_str(), "r");
     if (!tif) {
         std::cerr << "Failed to open TIFF: " << filename << "\n";

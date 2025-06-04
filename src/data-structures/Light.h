@@ -10,7 +10,7 @@
 #include "Shader.h"
 #include "Model.h"
 #include "fwd.hpp"
-
+#include "GlMacros.h"
 enum class LightType { 
     POINT = 0,
     DIRECTIONAL = 1, 
@@ -18,7 +18,6 @@ enum class LightType {
 };
 
 class Light {
-
 public:
     Light(
         LightType light_type, 

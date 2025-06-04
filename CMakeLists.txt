@@ -14,6 +14,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(SOURCES
     src/main.cpp
     src/SceneManager.cpp
+    src/TextRenderer.cpp
     src/OBJLoader.cpp
     src/Camera.cpp
     src/Model.cpp
@@ -29,6 +30,11 @@ find_package(Catch2)
 find_package(TIFF REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(SDL2_mixer REQUIRED SDL2_mixer)
+find_package(Freetype REQUIRED)
+
+if(NOT Freetype_FOUND)
+    message(FATAL "Did not find freetype, install it using your package manager")
+endif()
 
 if(NOT SDL2_mixer_FOUND) 
     message(FATAL "Did not find sdl2 mixer")
@@ -72,6 +78,7 @@ target_include_directories(opengl_app PRIVATE
     ${SDL2_INCLUDE_DIRS}
     ${SDL2_mixer_INCLUDE_DIRS}
     ${GLEW_INCLUDE_DIRS}
+    ${FREETYPE_INCLUDE_DIRS}
     /usr/include/glm
     ${CMAKE_CURRENT_SOURCE_DIR}/src   # So headers like Renderer.h and OBJLoader.h are found
     ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
@@ -82,6 +89,7 @@ target_link_libraries(opengl_app PRIVATE
     ${OPENGL_LIBRARIES}
     ${SDL2_LIBRARIES}
     ${SDL2_mixer_LIBRARIES}
+    ${FREETYPE_LIBRARIES}
     TIFF::TIFF
     GLEW::glew
     glm::glm
@@ -174,6 +182,24 @@ add_custom_target(copy_textures ALL
 
 )
 
+
+set(FONTS_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts")
+set(FONTS_DST_DIR "${CMAKE_CURRENT_BINARY_DIR}/assets/fonts")
+file(GLOB_RECURSE ALL_FONT_FILES
+    "${FONTS_SRC_DIR}/*.ttf"
+)
+
+
+
+add_custom_target(copy_fonts ALL
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${FONTS_DST_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${FONTS_SRC_DIR}" "${FONTS_DST_DIR}"
+    COMMENT "Copying font files..."
+
+)
+
+
+add_dependencies(opengl_app copy_fonts)
 add_dependencies(opengl_app copy_models)
 add_dependencies(opengl_app copy_textures)
 add_dependencies(opengl_app copy_audio)

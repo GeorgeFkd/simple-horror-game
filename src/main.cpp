@@ -367,6 +367,7 @@ int main() {
             std::cout << "You found page: " << i << "\n";
             auto m = sceneMgr->get_game_state()->findModel("page");
             sceneMgr->remove_instanced_model_at(m, "-" + std::to_string(i));
+            sceneMgr->get_game_state()->pages_collected += 1;
         });
     }
     scene_manager.run_game_loop();

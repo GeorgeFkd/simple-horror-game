@@ -1,6 +1,9 @@
 #include "Light.h"
 #include <iostream>
 #include <memory>
+
+
+using namespace GlHelpers;
 Light::Light(
     LightType light_type, 
     const glm::vec3& position, 

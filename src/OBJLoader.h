@@ -13,15 +13,16 @@
 #include <string>
 #include <unordered_map>
 #include "Material.h"
-
+#include "GlMacros.h"
 #ifndef DEBUG_OBJLOADER
 //#define DEBUG_OBJLOADER
 #endif
 
 
 namespace ObjectLoader{ 
+    using namespace GlHelpers;
     
-
+GLuint load_texture_from_tiff(const std::string& filename);
     GLuint load_texture_from_file(const std::string& filepath);
 
     struct Face {
