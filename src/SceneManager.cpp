@@ -7,30 +7,96 @@
 #include <algorithm>
 #include <iostream>
 #include <random>
-// GameState methods
-Models::Model* Game::GameState::findModel(Models::Model* model) {
-    auto model_pos = std::find_if(models.begin(), models.end(),
-                                  [model](auto* m) { return m->name() == model->name(); });
-    return *model_pos;
-}
-Models::Model* Game::GameState::findModel(std::string_view name) {
-    auto model_pos =
-        std::find_if(models.begin(), models.end(), [name](auto* m) { return m->name() == name; });
-    return *model_pos;
-}
-void Game::GameState::remove_model(Models::Model* model) {
-    // we probably need to switch to a hashmap, this costs O(n)
-    auto res = std::remove_if(models.begin(), models.end(),
-                              [model](auto* m) { return m->name() == model->name(); });
-    models.erase(res, models.end());
-}
-Light* Game::GameState::findLight(std::string_view name) {
-    auto light_pos =
-        std::find_if(lights.begin(), lights.end(), [name](auto* l) { return l->name() == name; });
-    return *light_pos;
+
+
+void Game::GameState::add_model(std::unique_ptr<Models::Model> model, const std::string& name){
+    size_t idx = models.size();
+    model_indices[name] = idx;
+    model_names .push_back(name);
+    models      .push_back(std::move(model));
 }
 
-// Scene Manager methods
+void Game::GameState::add_model(Models::Model&& model, const std::string& name) {
+    // construct the heap‐object by moving the caller’s model in
+    auto ptr = std::make_unique<Models::Model>(std::move(model));
+    // and then register exactly as before:
+    size_t idx = models.size();
+    model_indices[name] = idx;
+    model_names .push_back(std::move(name));
+    models      .push_back(std::move(ptr));
+}
+
+void Game::GameState::remove_model(const std::string& name) {
+    auto it = model_indices.find(name);
+    if (it == model_indices.end()) return;
+
+    size_t idx  = it->second;
+    size_t last = models.size() - 1;
+
+    if (idx != last) {
+        std::swap(models[idx],      models[last]);
+        std::swap(model_names[idx], model_names[last]);
+        model_indices[ model_names[idx] ] = idx;
+    }
+    models.pop_back();
+    model_names.pop_back();
+    model_indices.erase(it);
+}
+
+Models::Model* Game::GameState::find_model(const std::string& name) const {
+    auto it = model_indices.find(name);
+    if (it == model_indices.end()) return nullptr;
+    return models[it->second].get();
+}
+
+const std::vector<std::unique_ptr<Models::Model>>& Game::GameState::get_models() const {
+    return models;
+}
+
+void Game::GameState::add_light(std::unique_ptr<Light> light, const std::string& name) {
+    size_t idx = lights.size();
+    light_indices[name] = idx;
+    light_names .push_back(name);
+    lights      .push_back(std::move(light));
+}
+
+void Game::GameState::add_light(Light&& light, const std::string& name){
+    // construct the heap‐object by moving the caller’s model in
+    auto ptr = std::make_unique<Light>(std::move(light));
+    // and then register exactly as before:
+    size_t idx = lights.size();
+    light_indices[name] = idx;
+    light_names .push_back(std::move(name));
+    lights      .push_back(std::move(ptr));
+}
+
+void Game::GameState::remove_light(const std::string& name) {
+    auto it = light_indices.find(name);
+    if (it == light_indices.end()) return;
+
+    size_t idx  = it->second;
+    size_t last = lights.size() - 1;
+
+    if (idx != last) {
+        std::swap(lights[idx],      lights[last]);
+        std::swap(light_names[idx], light_names[last]);
+        light_indices[ light_names[idx] ] = idx;
+    }
+    lights.pop_back();
+    light_names.pop_back();
+    light_indices.erase(it);
+}
+
+Light* Game::GameState::find_light(const std::string& name) const {
+    auto it = light_indices.find(name);
+    if (it == light_indices.end()) return nullptr;
+    return lights[it->second].get();
+}
+
+const std::vector<std::unique_ptr<Light>>& Game::GameState::get_lights() const {
+    return lights;
+}
+
 void Game::SceneManager::initialise_opengl_sdl() {
 
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) == -1) {
@@ -63,14 +129,34 @@ void Game::SceneManager::initialise_opengl_sdl() {
     SDL_SetRelativeMouseMode(SDL_TRUE);
 }
 
-void Game::SceneManager::run_game_loop() {
-#define printv3(v) std::cout << v.x << "," << v.y << "," << v.z << "\n";
+void Game::SceneManager::initialise_shaders() {
+    std::vector<std::string> shader_paths = {"assets/shaders/blinnphong.vert",
+                                             "assets/shaders/blinnphong.frag"};
+    std::vector<GLenum>      shader_types = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
+    auto blinnphong = std::make_shared<Shader>(shader_paths, shader_types, "blinn-phong");
 
-#ifdef DEBUG_DEPTH
-    shader_paths       = {"assets/shaders/depth_debug.vert", "assets/shaders/depth_debug.frag"};
-    shader_types       = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
-    Shader depth_debug = Shader(shader_paths, shader_types, "depth_debug");
-#endif
+    shader_paths  = {"assets/shaders/depth_2d.vert", "assets/shaders/depth_2d.frag"};
+    shader_types  = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
+    auto depth_2d = std::make_shared<Shader>(shader_paths, shader_types, "depth_2d");
+
+
+    shader_paths    = {"assets/shaders/depth_cube.vert", "assets/shaders/depth_cube.geom",
+                       "assets/shaders/depth_cube.frag"};
+    shader_types    = {GL_VERTEX_SHADER, GL_GEOMETRY_SHADER, GL_FRAGMENT_SHADER};
+    auto depth_cube = std::make_shared<Shader>(shader_paths, shader_types, "depth_cube");
+
+    shader_paths = {"assets/shaders/text.vert","assets/shaders/text.frag"};
+    shader_types = {GL_VERTEX_SHADER,GL_FRAGMENT_SHADER};
+    auto textshader = std::make_shared<Shader>(shader_paths,shader_types,"text");
+
+    add_shader(blinnphong);
+    add_shader(depth_2d);
+    add_shader(depth_cube);
+    add_shader(textshader);
+}
+
+void Game::SceneManager::run_game_loop() {
+
     std::cout << "Attempting to load font";
     textRenderer.load_font();
 
@@ -97,9 +183,15 @@ void Game::SceneManager::run_game_loop() {
     auto  monster_initial_position = glm::vec3(5.0f, 0.0f, 5.0f);
     last_monster_transform         = glm::translate(glm::mat4(1.0f), monster_initial_position);
     auto monster_init              = Models::Model("assets/models/monster.obj", "monster");
-    std::cout << "Run game loop runs\n";
-    gameState.add_model(monster_init);
-    monster = gameState.findModel("monster");
+
+    game_state->add_model(std::move(monster_init), "monster");
+
+    auto monster = game_state->find_model("monster");
+
+    if(!monster){
+        throw std::runtime_error("Could not find monster model...");
+    }
+
     monster->set_local_transform(last_monster_transform);
     monster->update_world_transform(glm::mat4(1.0f));
     std::random_device               r;
@@ -108,11 +200,12 @@ void Game::SceneManager::run_game_loop() {
     bool                             running             = true;
     Uint64                           lastTicks           = SDL_GetPerformanceCounter();
     int                              interactionDistance = 2.0f;
-    auto                             flashlight          = gameState.findLight("flashlight");
+    auto                             flashlight          = game_state->find_light("flashlight");
+
     if (!flashlight) {
-        std::cout << "Light with name: " << "flashlight" << " was not found\n";
-        assert(false);
+        throw std::runtime_error("Could not find flashlight model...");
     }
+
     float elapsedTime = 0.0f;
     while (running) {
         Uint64 now = SDL_GetPerformanceCounter();
@@ -213,17 +306,6 @@ void Game::SceneManager::run_game_loop() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         // glEnable(GL_BLEND);
         // glBlendFunc(GL_ONE,GL_ONE);
-#ifdef DEBUG_DEPTH
-        depth_debug.use();
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, flashlight.get_depth_texture());
-        glUniform1i(depth_debug.get_uniform_location("depthMap"), 0);
-        glUniform1f(depth_debug.get_uniform_location("near_plane"), 1.0f);
-        glUniform1f(depth_debug.get_uniform_location("far_plane"), 100.0f);
-        glBindVertexArray(quadVAO);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-        glBindVertexArray(0);
-#endif
 
         float     right_offset = 0.4f;
         glm::vec3 offset =
@@ -252,56 +334,46 @@ std::shared_ptr<Shader> Game::SceneManager::get_shader_by_name(const std::string
     assert(shaderPos != shaders.end());
     return *shaderPos;
 }
-void Game::SceneManager::debug_dump_model_names() {
-    for (auto m : gameState.get_models()) {
-        std::cout << "Model: " << m->name() << "\n";
+
+void Game::SceneManager::move_model(const std::string& name, const glm::vec3& direction) {
+    auto model_pos = game_state->find_model(name);
+    if(!model_pos){
+        throw std::runtime_error("Cannot find model: " + name);
     }
-}
-
-void Game::SceneManager::move_model(Models::Model* model, const glm::vec3& direction) {
-    auto model_pos = gameState.findModel(model);
     model_pos->move_relative_to(direction);
 }
 
-void Game::SceneManager::move_model(std::string_view name, const glm::vec3& direction) {
-    auto model_pos = gameState.findModel(name);
-    model_pos->move_relative_to(direction);
-}
-
-void Game::SceneManager::move_model_X(std::string_view name, float x) {
+void Game::SceneManager::move_model_X(const std::string& name, float x) {
     move_model(name, glm::vec3(x, 0.0f, 0.0f));
 }
 
-void Game::SceneManager::move_model_Y(std::string_view name, float y) {
+void Game::SceneManager::move_model_Y(const std::string& name, float y) {
     move_model(name, glm::vec3(0.0f, y, 0.0f));
 }
 
-void Game::SceneManager::move_model_Z(std::string_view name, float z) {
+void Game::SceneManager::move_model_Z(const std::string& name, float z) {
     move_model(name, glm::vec3(0.0f, 0.0f, z));
 }
 
-void Game::SceneManager::remove_instanced_model_at(Models::Model*     model,
-                                                   const std::string& suffix) {
+void Game::SceneManager::remove_instanced_model_at(const std::string& name, const std::string& suffix) {
     // assumes impl detail that instance names are created by model->name() + suffix
-    auto it = eventHandlers.find(model->name() + suffix);
+    auto it = eventHandlers.find(name + suffix);
     if (it != eventHandlers.end()) {
         eventHandlers.erase(it);
-        model->remove_instance_transform(suffix);
+        game_state->find_model(name)->remove_instance_transform(suffix);
     }
 }
 
-void Game::SceneManager::remove_model(Models::Model* m) {
-    auto it = eventHandlers.find(m->name());
+void Game::SceneManager::remove_model(const std::string& name) {
+    auto it = eventHandlers.find(name);
     if (it != eventHandlers.end()) {
         eventHandlers.erase(it);
-        gameState.remove_model(m);
+        game_state->remove_model(name);
     }
 }
 
-int Game::SceneManager::on_interaction_with(std::string_view                   instanceName,
-                                            std::function<void(SceneManager*)> handler) {
-    std::string keyStr(instanceName); // Make a copy to store
-    eventHandlers.insert({keyStr, handler});
+int Game::SceneManager::on_interaction_with(const std::string& instance_name, std::function<void(SceneManager*)> handler) {
+    eventHandlers.insert({instance_name, handler});
     return 0;
 }
 
@@ -320,26 +392,24 @@ void Game::SceneManager::render_depth_pass() {
     auto depth2D   = get_shader_by_name("depth_2d");
     auto depthCube = get_shader_by_name("depth_cube");
 
-    for (auto* light : gameState.get_lights()) {
+    for (auto& light : game_state->get_lights()) {
         std::shared_ptr<Shader> sh;
         if (light->get_type() == LightType::POINT) {
             sh = depthCube;
         } else {
             sh = depth2D;
         }
-        light->draw_depth_pass(sh, gameState.get_models());
+        light->draw_depth_pass(sh, game_state->get_models());
     }
 }
 
 void Game::SceneManager::run_interaction_handlers() {
-    constexpr float interactionDistance = 8.0f;
+    constexpr float INTERACTION_DISTANCE = 8.0f;
     const Uint8*    keys                = SDL_GetKeyboardState(nullptr);
-    if (!gameState.closestModel.empty()) {
+    if (!game_state->closest_model.empty()) {
         if (keys[SDL_SCANCODE_I]) {
-            // std::cout << "user is interacting with: " << gameState.closestModel << "\n";
-
-            if (gameState.distanceFromClosestModel < interactionDistance) {
-                run_handler_for(gameState.closestModel);
+            if (game_state->distance_from_closest_model < INTERACTION_DISTANCE) {
+                run_handler_for(game_state->closest_model);
             }
         }
     }
@@ -367,9 +437,15 @@ void Game::SceneManager::handle_sdl_events(bool& running) {
 
 void Game::SceneManager::check_all_models(float dt) {
     // reset at the start of each loop
-    gameState.distanceFromClosestModel = std::numeric_limits<float>::max();
+    game_state->distance_from_closest_model = std::numeric_limits<float>::max();
+    auto monster = game_state->find_model("monster");
+
+    if(!monster){
+        throw std::runtime_error("Could not find model monster...");
+    }
+
     monster->update_world_transform(glm::mat4(1.0f));
-    for (auto* model : gameState.get_models()) {
+    for (auto& model : game_state->get_models()) {
         if (!model->isActive())
             continue;
         auto monster_center = 0.5f * (monster->get_aabbmin() + monster->get_aabbmax());
@@ -381,9 +457,9 @@ void Game::SceneManager::check_all_models(float dt) {
                     float dist = camera.distance_from_camera_using_AABB(
                         camera.get_position(), model->get_instance_aabb_min(i),
                         model->get_instance_aabb_max(i));
-                    if (dist < gameState.distanceFromClosestModel) {
-                        gameState.closestModel             = model->instance_name(i);
-                        gameState.distanceFromClosestModel = dist;
+                    if (dist < game_state->distance_from_closest_model) {
+                        game_state->closest_model = model->name(i);
+                        game_state->distance_from_closest_model = dist;
                     }
                 }
                 bool collision_detected = false;
@@ -399,7 +475,6 @@ void Game::SceneManager::check_all_models(float dt) {
                                                    model->get_instance_aabb_min(i),
                                                    model->get_instance_aabb_max(i))) {
                     monster->set_local_transform(last_monster_transform);
-                    std::cout << "Monster is bumping into things\n";
                     collision_detected = true;
                 }
 
@@ -411,9 +486,9 @@ void Game::SceneManager::check_all_models(float dt) {
             if (model->can_interact()) {
                 float dist = camera.distance_from_camera_using_AABB(
                     camera.get_position(), model->get_aabbmin(), model->get_aabbmax());
-                if (dist < gameState.distanceFromClosestModel) {
-                    gameState.closestModel             = model->name();
-                    gameState.distanceFromClosestModel = dist;
+                if (dist < game_state->distance_from_closest_model) {
+                    game_state->closest_model = model->name();
+                    game_state->distance_from_closest_model = dist;
                 }
             }
             // single AABB path
@@ -445,56 +520,25 @@ void Game::SceneManager::check_all_models(float dt) {
 collision_done:;
 }
 
-void Game::SceneManager::initialise_shaders() {
-    std::vector<std::string> shader_paths = {"assets/shaders/blinnphong.vert",
-                                             "assets/shaders/blinnphong.frag"};
-    std::vector<GLenum>      shader_types = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
-    auto blinnphong = std::make_shared<Shader>(shader_paths, shader_types, "blinn-phong");
-
-    shader_paths  = {"assets/shaders/depth_2d.vert", "assets/shaders/depth_2d.frag"};
-    shader_types  = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
-    auto depth_2d = std::make_shared<Shader>(shader_paths, shader_types, "depth_2d");
-
-#ifdef DEBUG_DEPTH
-    shader_paths       = {"assets/shaders/depth_debug.vert", "assets/shaders/depth_debug.frag"};
-    shader_types       = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
-    Shader depth_debug = Shader(shader_paths, shader_types, "depth_debug");
-#endif
-
-    shader_paths    = {"assets/shaders/depth_cube.vert", "assets/shaders/depth_cube.geom",
-                       "assets/shaders/depth_cube.frag"};
-    shader_types    = {GL_VERTEX_SHADER, GL_GEOMETRY_SHADER, GL_FRAGMENT_SHADER};
-    auto depth_cube = std::make_shared<Shader>(shader_paths, shader_types, "depth_cube");
-
-    shader_paths = {"assets/shaders/text.vert","assets/shaders/text.frag"};
-    shader_types = {GL_VERTEX_SHADER,GL_FRAGMENT_SHADER};
-    auto textshader = std::make_shared<Shader>(shader_paths,shader_types,"text");
-
-    add_shader(blinnphong);
-    add_shader(depth_2d);
-    add_shader(depth_cube);
-    add_shader(textshader);
-}
 
 void Game::SceneManager::render(const glm::mat4& view, const glm::mat4& projection) {
 
-    // Optional: reset viewport to screen size
     GLCall(glViewport(0, 0, screen_width, screen_height));
     GLCall(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
 
     auto shader = get_shader_by_name("blinn-phong");
 
     shader->use();
-    shader->set_int("numLights", (GLint)gameState.get_lights().size());
+    shader->set_int("numLights", (GLint)game_state->get_lights().size());
 
-    for (size_t i = 0; i < gameState.get_lights().size(); ++i) {
-        const Light* light = gameState.get_lights()[i];
+    for (size_t i = 0; i < game_state->get_lights().size(); ++i) {
+        auto light = game_state->get_lights()[i].get();
         std::string  base  = "lights[" + std::to_string(i) + "].";
         light->draw_lighting(shader, base, i);
         light->bind_shadow_map(shader, base, i);
     }
 
-    for (auto const& model : gameState.get_models()) {
+    for (auto const& model : game_state->get_models()) {
         if (model->isActive()) {
             model->update_world_transform(glm::mat4(1.0f));
             // instancing is an impl detail
@@ -508,7 +552,7 @@ void Game::SceneManager::render(const glm::mat4& view, const glm::mat4& projecti
     glm::mat4 text_projection = glm::ortho(0.0f, 1280.0f, 0.0f,720.0f);
     auto textShader = get_shader_by_name("text");
     std::cout << "Trying to render text:\n";
-    std::string displayed_text = "pages:" + std::to_string(gameState.pages_collected);
+    std::string displayed_text = "pages:" + std::to_string(game_state->pages_collected);
     textRenderer.RenderText(textShader,displayed_text, 50.0f, 720.0f - 50.0f, 1.2f, {1.0f,0.0f,0.0f},text_projection);
     glUseProgram(0);
 }
@@ -523,7 +567,7 @@ Game::SceneManager::~SceneManager() {
     SDL_DestroyWindow(window);
     Mix_CloseAudio();
     SDL_Quit();
-    gameState.get_models().clear();
     shaders.clear();
-    gameState.get_lights().clear();
+    game_state->clear_models();
+    game_state->clear_lights();
 }

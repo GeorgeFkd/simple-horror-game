@@ -140,7 +140,7 @@ void Light::draw_lighting(std::shared_ptr<Shader> shader, const std::string &bas
 }
 
 void Light::draw_depth_pass(std::shared_ptr<Shader> shader, 
-                            const std::vector<Models::Model*>& models) const 
+                            const std::vector<std::unique_ptr<Models::Model>>& models) const 
 {
     GLCall(glViewport(0, 0, shadow_width, shadow_height));
     GLCall(glBindFramebuffer(GL_FRAMEBUFFER, depth_map_fbo));
@@ -178,7 +178,7 @@ void Light::draw_depth_pass(std::shared_ptr<Shader> shader,
             shader->set_float("farPlane", far_plane);
 
             // draw all models into this face
-            for (auto* m : models) {
+            for (auto& m : models) {
                 //m->update_world_transform(glm::mat4(1.0f));
                 if (!m->isActive()) continue;
                 if(m->is_instanced()){
@@ -207,7 +207,7 @@ void Light::draw_depth_pass(std::shared_ptr<Shader> shader,
         shader->set_mat4("uProj", get_light_projection());
 
         // draw all models into this 2D map
-        for (auto* m : models) {
+        for (auto& m : models) {
             //m->update_world_transform(glm::mat4(1.0f));
             if(!m->isActive()) continue;
             if(m->is_instanced()){

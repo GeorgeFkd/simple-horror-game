@@ -21,37 +21,60 @@ namespace Game {
     class GameState {
     public:
         GameState()
-            : distanceFromClosestModel(std::numeric_limits<float>::max()),
-              closestModel("") {}
+            : distance_from_closest_model(std::numeric_limits<float>::max()),
+              closest_model("") {}
 
-        float distanceFromClosestModel;
-        std::string closestModel;
+        float distance_from_closest_model;
+        std::string closest_model;
 
-        Models::Model* findModel(Models::Model* model);
-        Models::Model* findModel(std::string_view name);
-        Light* findLight(std::string_view name);
+        /// Take ownership of this model and register it under `name`.
+        void add_model(std::unique_ptr<Models::Model> model, const std::string& name);
+        void add_model(Models::Model&& model, const std::string& name);
 
-        void add_model(Models::Model& model) {
-            models.push_back(&model);
-        }
+        /// Remove (and destroy) the model registered as `name` (if any).
+        void remove_model(const std::string& name);
 
-        void add_light(Light& light) {
-            lights.push_back(&light);
-        }
+        /// Look up a model by name; returns nullopt if not found.
+        Models::Model* find_model(const std::string& name) const;
 
-        std::vector<Models::Model*> get_models() const {
-            return models;
-        }
+        /// Fast, cache-friendly iteration over all models.
+        const std::vector<std::unique_ptr<Models::Model>>& get_models() const;
 
-        std::vector<Light*>& get_lights() {
-            return lights;
-        }
+        // — Lights API —
+        /// Take ownership of this light and register it under `name`.
+        void add_light(std::unique_ptr<Light> light, const std::string& name);
+        void add_light(Light&& light, const std::string& name);
 
-        void remove_model(Models::Model* model);
+        /// Remove (and destroy) the light registered as `name` (if any).
+        void remove_light(const std::string& name);
+
+        /// Look up a light by name; returns nullopt if not found.
+        Light* find_light(const std::string& name) const;
+
+        /// Fast, cache-friendly iteration over all lights.
+        const std::vector<std::unique_ptr<Light>>& get_lights() const;
+
         unsigned int pages_collected = 0;
+
+        void clear_models() {
+            models.clear();          // the unique_ptrs—and hence the Model objects—are destroyed
+            model_names.clear();     // clear the name list
+            model_indices.clear();   // clear the lookup map
+        }
+
+        void clear_lights() {
+            lights.clear();
+            light_names.clear();
+            light_indices.clear();
+        }
     private:
-        std::vector<Models::Model*> models;
-        std::vector<Light*> lights;
+        std::vector<std::unique_ptr<Models::Model>> models;
+        std::vector<std::string>                   model_names;
+        std::unordered_map<std::string, size_t>    model_indices;
+
+        std::vector<std::unique_ptr<Light>> lights;
+        std::vector<std::string>           light_names;
+        std::unordered_map<std::string, size_t> light_indices;
     };
 
     class SceneManager {
@@ -59,12 +82,13 @@ namespace Game {
         SceneManager(int width, int height, Camera::CameraObj camera);
         ~SceneManager();
         void debug_dump_model_names();
-        inline void set_game_state(GameState g) {
-            gameState = g;
+
+        inline void set_game_state(GameState& g) {
+            game_state = &g;
         }
 
         inline GameState* get_game_state() {
-            return &gameState;
+            return game_state;
         }
         inline void add_shader(std::shared_ptr<Shader> shader) {
             shaders.push_back(shader);
@@ -74,40 +98,39 @@ namespace Game {
             return camera;
         }
 
-        void move_model(Models::Model* model, const glm::vec3& direction);
-        void move_model(std::string_view name, const glm::vec3& direction);
-        void move_model_X(std::string_view name, float x);
-        void move_model_Y(std::string_view name, float y);
-        void move_model_Z(std::string_view name, float z);
+        void move_model(const std::string& name, const glm::vec3& direction);
+        void move_model_X(const std::string& name, float x);
+        void move_model_Y(const std::string& name, float y);
+        void move_model_Z(const std::string& name, float z);
 
-        void remove_model(Models::Model* m);
-        void remove_instanced_model_at(Models::Model* m, const std::string& suffix);
+        void remove_model(const std::string& name);
+        void remove_instanced_model_at(const std::string& name, const std::string& suffix);
 
-        int on_interaction_with(std::string_view name, std::function<void(SceneManager*)> handler);
+        int on_interaction_with(const std::string& instance_name, std::function<void(SceneManager*)> handler);
 
         void initialise_shaders();
-        void run_game_loop();
         void initialise_opengl_sdl();
+        void run_game_loop();
 
     private:
-        void run_handler_for(const std::string& m);
         void render_depth_pass();
         void render(const glm::mat4& view, const glm::mat4& projection);
         std::shared_ptr<Shader> get_shader_by_name(const std::string& shader_name);
         void handle_sdl_events(bool& running);
         void check_all_models(float dt);
+        void run_handler_for(const std::string& m);
         void run_interaction_handlers();
 
-        GameState gameState;
-        Models::Model* monster;
+        GameState* game_state;
         std::vector<std::shared_ptr<Shader>> shaders;
         std::unordered_map<std::string, std::function<void(SceneManager*)>> eventHandlers;
         int screen_width, screen_height;
         Camera::CameraObj camera;
-        glm::vec3 last_camera_position;
-        glm::mat4 last_monster_transform;
         SDL_Window* window;
         SDL_GLContext glCtx;
         TextRenderer textRenderer;
+
+        glm::vec3 last_camera_position;
+        glm::mat4 last_monster_transform;
     };
 };

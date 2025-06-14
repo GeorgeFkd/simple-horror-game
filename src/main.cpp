@@ -10,16 +10,10 @@
 #include <string>
 #include <vector>
 
-#ifndef DEBUG_DEPTH
-// #define DEBUG_DEPTH
-#endif
-
-using namespace Game;
-using namespace Models;
 
 enum class SurfaceType { Floor, Ceiling, WallFront, WallBack, WallLeft, WallRight };
 struct
-Model repeating_tile(SurfaceType surface, float offset, const Material& material) {
+Models::Model repeating_tile(SurfaceType surface, float offset, const Material& material) {
     // might be able to constexpr this
     constexpr int   TILE_WIDTH  = 50;
     constexpr int   TILE_HEIGHT = 50;
@@ -92,7 +86,7 @@ Model repeating_tile(SurfaceType surface, float offset, const Material& material
     std::vector<glm::vec3> normals(4, normal);
     std::vector<GLuint>    indices = {0, 1, 2, 0, 2, 3};
 
-    return Model(verts, normals, texcoords, indices, std::move(label), material);
+    return Models::Model(verts, normals, texcoords, indices, std::move(label), material);
 }
 
 struct State {
@@ -100,7 +94,7 @@ struct State {
     float            closestModelDistance;
 };
 
-Model createFloor(float roomSize) {
+Models::Model createFloor(float roomSize) {
 
     float                  y           = 0.0f;
     std::vector<glm::vec3> floor_verts = {{-roomSize, y, -roomSize},
@@ -119,21 +113,18 @@ Model createFloor(float roomSize) {
     floor_material.d     = 1.0f;                           // opacity
     floor_material.illum = 2;                              // standard Phong
 
-    return Model(floor_verts, floor_normals, floor_uvs, floor_indices, std::move("Floor"), floor_material);
+    return Models::Model(floor_verts, floor_normals, floor_uvs, floor_indices, std::move("Floor"), floor_material);
 }
 int main() {
+
     Camera::CameraObj  camera(1280, 720, glm::vec3(0.0f, 10.0f, 3.5f));
     Game::SceneManager scene_manager(1280, 720, camera);
+
     scene_manager.initialise_opengl_sdl();
-
     scene_manager.initialise_shaders();
-    GameState gameState;
 
-#ifdef DEBUG_DEPTH
-    shader_paths       = {"assets/shaders/depth_debug.vert", "assets/shaders/depth_debug.frag"};
-    shader_types       = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
-    Shader depth_debug = Shader(shader_paths, shader_types, "depth_debug");
-#endif
+    Game::GameState game_state;
+
     constexpr float ROOM_HEIGHT = 50.0f;
     constexpr float ROOM_WIDTH  = 60.0f;
     constexpr float ROOM_DEPTH  = ROOM_WIDTH;
@@ -175,9 +166,9 @@ int main() {
     // }
 
     floor_model.debug_dump();
-    gameState.add_model(floor_model);
+    game_state.add_model(std::move(floor_model), floor_model.name());
 
-    auto scroll = Model("assets/models/scroll.obj", "page");
+    auto scroll = Models::Model("assets/models/scroll.obj", "page");
     scroll.init_instancing(6);
     glm::vec3 scroll_positions[6];
     scroll_positions[0] = {-29.0f, 0.0f, -29.0f};
@@ -191,9 +182,9 @@ int main() {
     for (int i = 0; i < 6; i++)
         scroll.add_instance_transform(glm::translate(glm::mat4(1.0f), scroll_positions[i]),"-" + std::to_string(i));
     scroll.debug_dump();
-    gameState.add_model(scroll);
+    game_state.add_model(std::move(scroll), "page");
 
-    auto wall = Model("assets/models/SimpleOldTownAssets/OldHouseBrownWallLarge.obj", "Wall");
+    auto wall = Models::Model("assets/models/SimpleOldTownAssets/OldHouseBrownWallLarge.obj", "wall");
     constexpr int   grid_rows                               = 10;
     constexpr int   grid_columns                            = 7;
     constexpr float wall_y                                  = 0.0f;
@@ -293,12 +284,12 @@ int main() {
         }
     };
 
-    gameState.add_model(wall);
+    game_state.add_model(std::move(wall), "wall");
 
-    auto right_light = Model("assets/models/light_sphere.obj", "Sphere");
+    auto right_light = Models::Model("assets/models/light_sphere.obj", "sphere");
     auto overhead_point_light_model =
-        Model("assets/models/light_sphere.obj", "Overhead point light");
-    auto  right_spot_light_model = Model("assets/models/light_sphere.obj", "Right spot light");
+        Models::Model("assets/models/light_sphere.obj", "overhead_point_light");
+    auto  right_spot_light_model = Models::Model("assets/models/light_sphere.obj", "right_spot_light");
     Light flashlight(LightType::SPOT,
                      glm::vec3(0.0f),               // position
                      glm::vec3(0.0f, 0.0f, -1.0f),  // direction
@@ -336,38 +327,18 @@ int main() {
     // gameState.add_model(overhead_point_light_model);
     // gameState.add_model(right_spot_light_model);
     // scene_manager.add_light(overhead_point_light);
-    gameState.add_light(flashlight);
+    game_state.add_light(std::move(flashlight), "flashlight");
     // gameState.add_light(right_spotlight);
 
-#ifdef DEBUG_DEPTH
-    float quadVertices[] = {
-        // positions   // texCoords
-        -1.0f, 1.0f, 0.0f, 1.0f, -1.0f, -1.0f, 0.0f, 0.0f, 1.0f, -1.0f, 1.0f, 0.0f,
-
-        -1.0f, 1.0f, 0.0f, 1.0f, 1.0f,  -1.0f, 1.0f, 0.0f, 1.0f, 1.0f,  1.0f, 1.0f};
-
-    GLuint quadVAO, quadVBO;
-    glGenVertexArrays(1, &quadVAO);
-    glGenBuffers(1, &quadVBO);
-    glBindVertexArray(quadVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-#endif
-
-    scene_manager.set_game_state(gameState);
+    scene_manager.set_game_state(game_state);
     scene_manager.on_interaction_with(
-        "Bookcase", [](auto sceneMgr) { std::cout << "I live with only a chair on my side\n"; });
+        "Bookcase", [](auto scene_manager) { std::cout << "I live with only a chair on my side\n"; });
 
     for (size_t i = 0; i < 6; i++) {
-        scene_manager.on_interaction_with("page-" + std::to_string(i), [i](SceneManager* sceneMgr) {
-            std::cout << "You found page: " << i << "\n";
-            auto m = sceneMgr->get_game_state()->findModel("page");
-            sceneMgr->remove_instanced_model_at(m, "-" + std::to_string(i));
-            sceneMgr->get_game_state()->pages_collected += 1;
+        scene_manager.on_interaction_with("page-" + std::to_string(i), [i](Game::SceneManager* scene_manager) {
+            auto m = scene_manager->get_game_state()->find_model("page");
+            scene_manager->remove_instanced_model_at(m->name(), "-" + std::to_string(i));
+            scene_manager->get_game_state()->pages_collected += 1;
         });
     }
     scene_manager.run_game_loop();

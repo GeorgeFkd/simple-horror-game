@@ -53,12 +53,16 @@ class Model {
     void draw_depth_instanced(std::shared_ptr<Shader> shader) const;
     void draw(const glm::mat4& view, const glm::mat4& projection,
               std::shared_ptr<Shader> shader) const;
-        void set_local_transform(const glm::mat4& local_transform);
+    void set_local_transform(const glm::mat4& local_transform);
     void update_world_transform(const glm::mat4& parent_transform);
     void compute_aabb();
     void add_child(Model* child);
     void debug_dump() const;
     void move_relative_to(const glm::vec3& direction);
+    void add_instance_transform(const glm::mat4& transform,const std::string& suffix);
+    void compute_transformed_aabb(const glm::mat4& xf, glm::vec3& out_min, glm::vec3& out_max);
+    void init_instancing(size_t max_instances);
+    void update_instance_data() const;
 
     inline bool intersectAABB(const glm::vec3& minA, const glm::vec3& maxA, const glm::vec3& minB,
                               const glm::vec3& maxB) {
@@ -111,10 +115,6 @@ class Model {
         this->active = false;
     }
 
-    inline std::string instance_name(size_t i) {
-        return label + instance_suffixes[i];
-    }
-
     inline void enable() {
         this->active = true;
     }
@@ -161,24 +161,22 @@ class Model {
         return instance_transforms.size();
     }
 
-    void add_instance_transform(const glm::mat4& transform,std::string suffix);
-    void compute_transformed_aabb(const glm::mat4& xf, glm::vec3& out_min, glm::vec3& out_max);
-    void init_instancing(size_t max_instances);
-    void update_instance_data() const;
+    inline glm::mat4 get_world_transform() {
+        return world_transform;
+    }
+
+    inline std::string name(std::size_t instance_index = 0) const {
+        if (is_instanced() && instance_index < instance_suffixes.size()) {
+            return label + instance_suffixes[instance_index];
+        }
+        return label;
+    }
 
     Model(const std::vector<glm::vec3>& positions, const std::vector<glm::vec3>& normals,
           const std::vector<glm::vec2>& texcoords, const std::vector<GLuint>& indices,
           std::string label, const Material& mat = Material());
 
-    inline glm::mat4 get_world_transform() {
-        return world_transform;
-    }
-
     Model(const std::string& objFile, const std::string& label);
-
-    inline const std::string& name() {
-        return label;
-    }
 
     ~Model();
 
