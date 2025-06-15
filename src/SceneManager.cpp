@@ -357,35 +357,34 @@ void Game::SceneManager::move_model_Z(const std::string& name, float z) {
 
 void Game::SceneManager::remove_instanced_model_at(const std::string& name, const std::string& suffix) {
     // assumes impl detail that instance names are created by model->name() + suffix
-    auto it = eventHandlers.find(name + suffix);
-    if (it != eventHandlers.end()) {
-        eventHandlers.erase(it);
+    auto it = event_handlers.find(name);
+    if (it != event_handlers.end()) {
+        event_handlers.erase(it);
         game_state->find_model(name)->remove_instance_transform(suffix);
     }
 }
 
 void Game::SceneManager::remove_model(const std::string& name) {
-    auto it = eventHandlers.find(name);
-    if (it != eventHandlers.end()) {
-        eventHandlers.erase(it);
+    auto it = event_handlers.find(name);
+    if (it != event_handlers.end()) {
+        event_handlers.erase(it);
         game_state->remove_model(name);
     }
 }
 
-int Game::SceneManager::on_interaction_with(const std::string& instance_name, std::function<void(SceneManager*)> handler) {
-    eventHandlers.insert({instance_name, handler});
-    return 0;
+void Game::SceneManager::bind_handler_to_model(
+    const std::string& name, 
+    std::function<void(SceneManager*)> handler
+) {
+
+    event_handlers.insert({name, handler});
 }
 
 void Game::SceneManager::run_handler_for(const std::string& m) {
-    std::cout << "Keys: " << eventHandlers.count(m) << "\n";
-    std::cout << m << "\n";
-    auto it = eventHandlers.find(m);
-    if (it != eventHandlers.end()) {
+    auto it = event_handlers.find(m);
+    if (it != event_handlers.end()) {
         it->second(this);
-    } else {
-        std::cerr << "No handler for instance: " << m << "\n";
-    }
+    } 
 }
 
 void Game::SceneManager::render_depth_pass() {
@@ -436,88 +435,62 @@ void Game::SceneManager::handle_sdl_events(bool& running) {
 }
 
 void Game::SceneManager::check_all_models(float dt) {
-    // reset at the start of each loop
+    // Reset at the start of each loop
     game_state->distance_from_closest_model = std::numeric_limits<float>::max();
-    auto monster = game_state->find_model("monster");
 
-    if(!monster){
+    auto monster = game_state->find_model("monster");
+    if (!monster) {
         throw std::runtime_error("Could not find model monster...");
     }
 
+    // Precompute monster world‐space center
     monster->update_world_transform(glm::mat4(1.0f));
-    for (auto& model : game_state->get_models()) {
-        if (!model->isActive())
-            continue;
-        auto monster_center = 0.5f * (monster->get_aabbmin() + monster->get_aabbmax());
-        // std::cout << "Monster center is: " << monster_center.x << "," << monster_center.y << ","
-        //           << monster_center.z << "\n";
-        if (model->is_instanced()) {
-            for (size_t i = 0; i < model->get_instance_count(); ++i) {
-                if (model->can_interact()) {
-                    float dist = camera.distance_from_camera_using_AABB(
-                        camera.get_position(), model->get_instance_aabb_min(i),
-                        model->get_instance_aabb_max(i));
-                    if (dist < game_state->distance_from_closest_model) {
-                        game_state->closest_model = model->name(i);
-                        game_state->distance_from_closest_model = dist;
-                    }
-                }
-                bool collision_detected = false;
-                if (camera.intersect_sphere_aabb(camera.get_position(), camera.get_radius(),
-                                                 model->get_instance_aabb_min(i),
-                                                 model->get_instance_aabb_max(i))) {
+    glm::vec3 monster_center = 0.5f * (monster->get_aabbmin() + monster->get_aabbmax());
 
-                    camera.set_position(last_camera_position);
-                    collision_detected = true;
-                }
+    const auto camera_pos    = camera.get_position();
+    const auto camera_radius = camera.get_radius();
+    const auto monster_name  = monster->name();
+    const auto last_cam_pos  = last_camera_position;
+    const auto last_mon_xform= last_monster_transform;
 
-                if (Camera::intersects_sphere_aabb(monster_center, 1.0f,
-                                                   model->get_instance_aabb_min(i),
-                                                   model->get_instance_aabb_max(i))) {
-                    monster->set_local_transform(last_monster_transform);
-                    collision_detected = true;
-                }
-
-                if (collision_detected) {
-                    goto collision_done;
-                }
-            }
-        } else {
-            if (model->can_interact()) {
-                float dist = camera.distance_from_camera_using_AABB(
-                    camera.get_position(), model->get_aabbmin(), model->get_aabbmax());
-                if (dist < game_state->distance_from_closest_model) {
-                    game_state->closest_model = model->name();
-                    game_state->distance_from_closest_model = dist;
-                }
-            }
-            // single AABB path
-            //
-            bool collision_detected = false;
-            if (camera.intersect_sphere_aabb(camera.get_position(), camera.get_radius(),
-                                             model->get_aabbmin(), model->get_aabbmax())) {
-                // std::cout << "Non instanced Intersection\n";
-                if (!model->name().empty()) {
-                    // std::cout << "Collision with: " << model->name() << "\n";
-                }
-                camera.set_position(last_camera_position);
-                collision_detected = true;
-            }
-            if (model->name() != monster->name()) {
-
-                if (Camera::intersects_sphere_aabb(monster_center, 0.8f, model->get_aabbmin(),
-                                                   model->get_aabbmax())) {
-                    monster->set_local_transform(last_monster_transform);
-                    std::cout << "Monster is bumping into " << model->name() << "\n";
-                    collision_detected = true;
-                }
-                if (collision_detected) {
-                    goto collision_done;
-                }
+    const float monster_sphere_radius = 0.8f;
+    // A small helper to handle distance update and both camera/monster collision.
+    // Returns true if any collision occured, so we can break out.
+    auto processAABB = [&](Models::Model* model)
+    {
+        std::string name = "";
+        bool closer = false;
+        float squared_distance = 0.0f;
+        // update “closest interactable” tracking
+        if (model->can_interact()) {
+            std::tie(name, closer, squared_distance) = model->is_closer_than_current_model(camera_pos, game_state->distance_from_closest_model);
+            if (closer) {
+                game_state->closest_model = name;
+                game_state->distance_from_closest_model = squared_distance;
             }
         }
+
+        // camera–AABB collision
+        if (model->intersect_sphere_aabb(camera_pos, camera_radius)) {
+            camera.set_position(last_cam_pos);
+            return true;
+        }
+
+        // monster–AABB collision (skip self)
+        if (name != monster_name && model->intersect_sphere_aabb(monster_center, monster_sphere_radius)){
+            monster->set_local_transform(last_mon_xform);
+            return true;
+        }
+
+        return false;
+    };
+
+    // Iterate models; break out of both loops if a collision happens.
+    bool collision_detected = false;
+    for (auto& model : game_state->get_models()) {
+        if (!model->isActive()) continue;
+        if (processAABB(model.get())) break;
     }
-collision_done:;
 }
 
 
@@ -559,7 +532,7 @@ void Game::SceneManager::render(const glm::mat4& view, const glm::mat4& projecti
 
 Game::SceneManager::SceneManager(int width, int height, Camera::CameraObj camera)
     : screen_width(width), screen_height(height), camera(camera) {
-    eventHandlers = {};
+    event_handlers = {};
 }
 
 Game::SceneManager::~SceneManager() {

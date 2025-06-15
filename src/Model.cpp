@@ -497,3 +497,50 @@ void Models::Model::add_instance_transform(const glm::mat4& xf, const std::strin
     instance_aabb_max.push_back(wmax);
     instance_suffixes.push_back(suffix);
 }
+
+std::pair<float,int> Models::Model::distance_from_point_using_AABB(const glm::vec3& point)
+{
+    static const glm::vec3 convenience_offset{0.0f, -0.6f, 0.0f};
+    glm::vec3 offset_cen = point + convenience_offset;
+
+    // non-instanced: just one AABB, instance = -1
+    if (!is_instanced()) {
+        glm::vec3 closest = glm::clamp(offset_cen, aabbmin, aabbmax);
+        float d2 = glm::length2(closest - offset_cen);
+        return { d2, -1 };
+    }
+
+    // instanced: find the instance with the smallest distance
+    float best_d2 = std::numeric_limits<float>::max();
+    int best_idx = -1;
+
+    for (int i = 0; i < get_instance_count(); ++i) {
+        const auto& min_i = get_instance_aabb_min(i);
+        const auto& max_i = get_instance_aabb_max(i);
+        glm::vec3 closest = glm::clamp(offset_cen, min_i, max_i);
+        float d2 = glm::length2(closest - offset_cen);
+
+        if (d2 < best_d2) {
+            best_d2 = d2;
+            best_idx = i;
+        }
+    }
+
+    return { best_d2, best_idx };
+}
+
+bool Models::Model::intersect_sphere_aabb(const glm::vec3& point, float radius){
+    auto[squared_distance, _] = distance_from_point_using_AABB(point);
+    return squared_distance <= radius * radius;
+}
+
+std::tuple<std::string, bool, float> Models::Model::is_closer_than_current_model(const glm::vec3& point_to_check, float current_distance_to_closest_model){
+
+    auto [squared_distance, instance_index] = distance_from_point_using_AABB(point_to_check);
+
+    if(instance_index == - 1){
+        return  {name(), squared_distance < current_distance_to_closest_model, squared_distance};
+    }
+
+    return {name(instance_index), squared_distance < current_distance_to_closest_model, squared_distance};
+}

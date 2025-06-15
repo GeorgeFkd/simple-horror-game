@@ -8,6 +8,7 @@
 #include <functional>
 #include <glm/glm.hpp>
 #include <glm/gtc/epsilon.hpp>
+#include <glm/gtx/norm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <limits>
@@ -63,6 +64,10 @@ class Model {
     void compute_transformed_aabb(const glm::mat4& xf, glm::vec3& out_min, glm::vec3& out_max);
     void init_instancing(size_t max_instances);
     void update_instance_data() const;
+
+    std::tuple<std::string, bool, float> is_closer_than_current_model(const glm::vec3& point_to_check, float current_distance_from_closest_model);
+    bool intersect_sphere_aabb(const glm::vec3& point, float radius);
+    std::pair<float, int> distance_from_point_using_AABB(const glm::vec3& point);
 
     inline bool intersectAABB(const glm::vec3& minA, const glm::vec3& maxA, const glm::vec3& minB,
                               const glm::vec3& maxB) {
@@ -195,6 +200,7 @@ class Model {
     std::vector<glm::mat4> instance_transforms;
     std::vector<glm::vec3> instance_aabb_min;
     std::vector<glm::vec3> instance_aabb_max;
+
     void draw_instanced(const glm::mat4& view, const glm::mat4& projection,
                         std::shared_ptr<Shader> shader) const;
 

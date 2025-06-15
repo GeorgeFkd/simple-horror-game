@@ -115,9 +115,8 @@ namespace Camera{
             float dist2 = glm::length2(closest - offset_cen);
             return dist2;
         }
-
-        bool intersect_sphere_aabb(const glm::vec3& cen, float r, const glm::vec3& bmin, const glm::vec3& bmax)
-        {
+        
+        bool intersect_sphere_aabb(const glm::vec3& cen, float r, const glm::vec3& bmin, const glm::vec3& bmax){
             
             return this->distance_from_camera_using_AABB(cen, bmin, bmax)<= r * r;
         }

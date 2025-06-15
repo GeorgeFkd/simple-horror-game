@@ -331,11 +331,9 @@ int main() {
     // gameState.add_light(right_spotlight);
 
     scene_manager.set_game_state(game_state);
-    scene_manager.on_interaction_with(
-        "Bookcase", [](auto scene_manager) { std::cout << "I live with only a chair on my side\n"; });
 
     for (size_t i = 0; i < 6; i++) {
-        scene_manager.on_interaction_with("page-" + std::to_string(i), [i](Game::SceneManager* scene_manager) {
+        scene_manager.bind_handler_to_model("page", [i](Game::SceneManager* scene_manager) {
             auto m = scene_manager->get_game_state()->find_model("page");
             scene_manager->remove_instanced_model_at(m->name(), "-" + std::to_string(i));
             scene_manager->get_game_state()->pages_collected += 1;
