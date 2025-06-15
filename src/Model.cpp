@@ -219,7 +219,21 @@ Models::Model::Model(const std::string& objFile, const std::string& label)
 }
 
 Models::Model::~Model() {
-    // Tear down GL objects in reverse order of creation:
+    // Tear down instancing first (reverse of creation)
+    if (instance_vbo) {
+        GLCall(glDeleteBuffers(1, &instance_vbo));
+        instance_vbo = 0;
+    }
+    is_instanced_ = false;
+
+    // Clear all CPU‐side instance arrays
+    instance_suffixes.clear();
+    instance_transforms.clear();
+    instance_aabb_min.clear();
+    instance_aabb_max.clear();
+    instance_modifications.clear();
+
+    // Then tear down your regular VAO/VBO/EBO in reverse creation order
     if (ebo) {
         GLCall(glDeleteBuffers(1, &ebo));
         ebo = 0;
@@ -253,9 +267,10 @@ void Models::Model::update_world_transform(const glm::mat4& parent_transform) {
 //I could remove this from the public API
 //and have it be an impl detail, as both draws are called with the same params
 void Models::Model::draw_instanced(const glm::mat4& view, const glm::mat4& projection,
-                                   std::shared_ptr<Shader> shader) const {
+                                   std::shared_ptr<Shader> shader){
 
-    update_instance_data();
+    if(instance_data_dirty) update_instance_data();
+
 
     shader->set_mat4("uView", view);
     shader->set_mat4("uProj", projection);
@@ -309,7 +324,7 @@ void Models::Model::draw_instanced(const glm::mat4& view, const glm::mat4& proje
 }
 
 void Models::Model::draw(const glm::mat4& view, const glm::mat4& projection,
-                         std::shared_ptr<Shader> shader) const {
+                         std::shared_ptr<Shader> shader){
     if(is_instanced_) {
         draw_instanced(view,projection,shader);
         return;
@@ -367,7 +382,7 @@ void Models::Model::draw(const glm::mat4& view, const glm::mat4& projection,
     GLCall(glBindVertexArray(0));
 }
 
-void Models::Model::draw_depth(std::shared_ptr<Shader> shader) const {
+void Models::Model::draw_depth(std::shared_ptr<Shader> shader){
 
     // GLCall(glEnable(GL_CULL_FACE));
     // GLCall(glCullFace(GL_FRONT));
@@ -385,8 +400,8 @@ void Models::Model::draw_depth(std::shared_ptr<Shader> shader) const {
     GLCall(glBindVertexArray(0));
 }
 
-void Models::Model::draw_depth_instanced(std::shared_ptr<Shader> shader) const {
-    update_instance_data();
+void Models::Model::draw_depth_instanced(std::shared_ptr<Shader> shader){
+    if(instance_data_dirty) update_instance_data();
 
     shader->set_bool("uUseInstancing", true);
     GLCall(glBindVertexArray(vao));
@@ -476,15 +491,43 @@ void Models::Model::init_instancing(size_t max_instances) {
         GLCall(glVertexAttribDivisor(attrib, 1));
     }
     is_instanced_ = true;
+    instance_suffixes.reserve(max_instances);
+    instance_transforms.reserve(max_instances);
+    instance_aabb_min.reserve(max_instances);
+    instance_aabb_max.reserve(max_instances);
+    instance_modifications.reserve(max_instances);
     GLCall(glBindVertexArray(0));
 }
 
-void Models::Model::update_instance_data() const {
-    // Map & write only the portion we need (could also use glBufferSubData)
+//void Models::Model::update_instance_data() const {
+//    // Map & write only the portion we need (could also use glBufferSubData)
+//    GLCall(glBindBuffer(GL_ARRAY_BUFFER, instance_vbo));
+//    void* ptr = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+//    memcpy(ptr, instance_transforms.data(), instance_transforms.size() * sizeof(glm::mat4));
+//    GLCall(glUnmapBuffer(GL_ARRAY_BUFFER));
+//}
+
+void Models::Model::update_instance_data(){
+    // build a temporary list of only the active transforms
+    std::vector<glm::mat4> active;
+    active.reserve(instance_transforms.size());
+    for (size_t i = 0; i < instance_transforms.size(); ++i) {
+        if (instance_modifications[i] != InstanceModifiedTypes::REMOVED) {
+            active.push_back(instance_transforms[i]);
+        }
+    }
+
+    // upload only the active list
     GLCall(glBindBuffer(GL_ARRAY_BUFFER, instance_vbo));
-    void* ptr = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
-    memcpy(ptr, instance_transforms.data(), instance_transforms.size() * sizeof(glm::mat4));
-    GLCall(glUnmapBuffer(GL_ARRAY_BUFFER));
+    GLCall(glBufferData(
+      GL_ARRAY_BUFFER,
+      active.size() * sizeof(glm::mat4),
+      active.data(),
+      GL_STREAM_DRAW));
+    // GLCall(glUnmapBuffer(GL_ARRAY_BUFFER));
+    // remember how many instances we’ll actually draw
+    gl_instance_count = (GLuint)active.size();
+    instance_data_dirty = false;
 }
 
 void Models::Model::add_instance_transform(const glm::mat4& xf, const std::string& suffix){
@@ -496,6 +539,7 @@ void Models::Model::add_instance_transform(const glm::mat4& xf, const std::strin
     instance_aabb_min.push_back(wmin);
     instance_aabb_max.push_back(wmax);
     instance_suffixes.push_back(suffix);
+    instance_modifications.push_back(InstanceModifiedTypes::NOT_MODIFIED);
 }
 
 std::pair<float,int> Models::Model::distance_from_point_using_AABB(const glm::vec3& point)
@@ -543,4 +587,18 @@ std::tuple<std::string, bool, float> Models::Model::is_closer_than_current_model
     }
 
     return {name(instance_index), squared_distance < current_distance_to_closest_model, squared_distance};
+}
+
+
+void Models::Model::remove_instance_transform(const std::string& suffix){
+    std::cout << suffix << std::endl;
+    auto it = std::find(instance_suffixes.begin(), instance_suffixes.end(), suffix);
+    if (it == instance_suffixes.end()) {
+        std::cerr << "Instance suffix not found: " << suffix << "\n";
+        return;
+    }
+
+    size_t i = std::distance(instance_suffixes.begin(), it);
+    instance_modifications[i] = InstanceModifiedTypes::REMOVED;
+    instance_data_dirty = true;
 }

@@ -333,10 +333,15 @@ int main() {
     scene_manager.set_game_state(game_state);
 
     for (size_t i = 0; i < 6; i++) {
-        scene_manager.bind_handler_to_model("page", [i](Game::SceneManager* scene_manager) {
+        auto name = std::string("page-") + std::to_string(i);
+        scene_manager.bind_handler_to_model(name, [i](Game::SceneManager* scene_manager) {
             auto m = scene_manager->get_game_state()->find_model("page");
-            scene_manager->remove_instanced_model_at(m->name(), "-" + std::to_string(i));
+            if(!m){
+                throw std::runtime_error("Model not found " + m->name());
+            }
+            scene_manager->remove_instanced_model_at(m->name(-1), "-" + std::to_string(i));
             scene_manager->get_game_state()->pages_collected += 1;
+            return false;
         });
     }
     scene_manager.run_game_loop();

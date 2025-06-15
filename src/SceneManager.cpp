@@ -357,9 +357,8 @@ void Game::SceneManager::move_model_Z(const std::string& name, float z) {
 
 void Game::SceneManager::remove_instanced_model_at(const std::string& name, const std::string& suffix) {
     // assumes impl detail that instance names are created by model->name() + suffix
-    auto it = event_handlers.find(name);
+    auto it = event_handlers.find(name + suffix);
     if (it != event_handlers.end()) {
-        event_handlers.erase(it);
         game_state->find_model(name)->remove_instance_transform(suffix);
     }
 }
@@ -367,14 +366,13 @@ void Game::SceneManager::remove_instanced_model_at(const std::string& name, cons
 void Game::SceneManager::remove_model(const std::string& name) {
     auto it = event_handlers.find(name);
     if (it != event_handlers.end()) {
-        event_handlers.erase(it);
         game_state->remove_model(name);
     }
 }
 
 void Game::SceneManager::bind_handler_to_model(
     const std::string& name, 
-    std::function<void(SceneManager*)> handler
+    std::function<bool(SceneManager*)> handler
 ) {
 
     event_handlers.insert({name, handler});
@@ -383,7 +381,12 @@ void Game::SceneManager::bind_handler_to_model(
 void Game::SceneManager::run_handler_for(const std::string& m) {
     auto it = event_handlers.find(m);
     if (it != event_handlers.end()) {
-        it->second(this);
+        bool keep = it->second(this);
+        if (!keep) {
+            it = event_handlers.erase(it);
+        } else {
+            ++it;
+        }
     } 
 }
 
@@ -526,7 +529,6 @@ void Game::SceneManager::render(const glm::mat4& view, const glm::mat4& projecti
     GLCall(glViewport(0, 0, screen_width, screen_height));
     glm::mat4 text_projection = glm::ortho(0.0f, 1280.0f, 0.0f,720.0f);
     auto textShader = get_shader_by_name("text");
-    std::cout << "Trying to render text:\n";
     std::string displayed_text = "pages:" + std::to_string(game_state->pages_collected);
     textRenderer.RenderText(textShader,displayed_text, 50.0f, 720.0f - 50.0f, 1.2f, {1.0f,0.0f,0.0f},text_projection);
     glUseProgram(0);

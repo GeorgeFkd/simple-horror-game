@@ -116,8 +116,6 @@ void TextRenderer::RenderText(std::shared_ptr<Shader> s,
                               float scale,
                               const glm::vec3& color,const glm::mat4& projection)
 {
-    std::cout << "Attempting to render text: \"" << text << "\"\n";
-
     s->use();
     s->set_mat4("projection",projection);
 

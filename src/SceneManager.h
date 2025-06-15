@@ -106,7 +106,7 @@ namespace Game {
         void remove_model(const std::string& name);
         void remove_instanced_model_at(const std::string& name, const std::string& suffix);
 
-        void bind_handler_to_model(const std::string& name, std::function<void(SceneManager*)> handler);
+        void bind_handler_to_model(const std::string& name, std::function<bool(SceneManager*)> handler);
 
         void initialise_shaders();
         void initialise_opengl_sdl();
@@ -123,7 +123,7 @@ namespace Game {
 
         GameState* game_state;
         std::vector<std::shared_ptr<Shader>> shaders;
-        std::unordered_map<std::string, std::function<void(SceneManager*)>> event_handlers;
+        std::unordered_map<std::string, std::function<bool(SceneManager*)>> event_handlers;
         int screen_width, screen_height;
         Camera::CameraObj camera;
         SDL_Window* window;
