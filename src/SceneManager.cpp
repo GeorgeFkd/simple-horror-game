@@ -471,13 +471,15 @@ void Game::SceneManager::check_all_models(float dt) {
         }
 
         // camera–AABB collision
-        if (model->intersect_sphere_aabb(camera_pos, camera_radius)) {
+        auto [is_collided, instance_index_camera] = model->intersect_sphere_aabb(camera_pos, camera_radius);
+        if (is_collided) {
             camera.set_position(last_cam_pos);
             return true;
         }
 
         // monster–AABB collision (skip self)
-        if (name != monster_name && model->intersect_sphere_aabb(monster_center, monster_sphere_radius)){
+        auto [monster_is_collided, instance_index_monster] = model->intersect_sphere_aabb(monster_center, monster_sphere_radius);
+        if (name != monster_name && monster_is_collided){
             monster->set_local_transform(last_mon_xform);
             return true;
         }

@@ -529,9 +529,9 @@ std::pair<float,int> Models::Model::distance_from_point_using_AABB(const glm::ve
     return { best_d2, best_idx };
 }
 
-bool Models::Model::intersect_sphere_aabb(const glm::vec3& point, float radius){
-    auto[squared_distance, _] = distance_from_point_using_AABB(point);
-    return squared_distance <= radius * radius;
+std::pair<bool, int> Models::Model::intersect_sphere_aabb(const glm::vec3& point, float radius){
+    auto[squared_distance, instance_index] = distance_from_point_using_AABB(point);
+    return {squared_distance <= radius * radius, instance_index};
 }
 
 std::tuple<std::string, bool, float> Models::Model::is_closer_than_current_model(const glm::vec3& point_to_check, float current_distance_to_closest_model){

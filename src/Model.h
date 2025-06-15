@@ -66,7 +66,7 @@ class Model {
     void update_instance_data() const;
 
     std::tuple<std::string, bool, float> is_closer_than_current_model(const glm::vec3& point_to_check, float current_distance_from_closest_model);
-    bool intersect_sphere_aabb(const glm::vec3& point, float radius);
+    std::pair<bool, int> intersect_sphere_aabb(const glm::vec3& point, float radius);
     std::pair<float, int> distance_from_point_using_AABB(const glm::vec3& point);
 
     inline bool intersectAABB(const glm::vec3& minA, const glm::vec3& maxA, const glm::vec3& minB,
