@@ -559,6 +559,8 @@ std::pair<float,int> Models::Model::distance_from_point_using_AABB(const glm::ve
     int best_idx = -1;
 
     for (int i = 0; i < get_instance_count(); ++i) {
+        if (instance_modifications[i] == InstanceModifiedTypes::REMOVED)
+            continue;
         const auto& min_i = get_instance_aabb_min(i);
         const auto& max_i = get_instance_aabb_max(i);
         glm::vec3 closest = glm::clamp(offset_cen, min_i, max_i);
@@ -591,7 +593,6 @@ std::tuple<std::string, bool, float> Models::Model::is_closer_than_current_model
 
 
 void Models::Model::remove_instance_transform(const std::string& suffix){
-    std::cout << suffix << std::endl;
     auto it = std::find(instance_suffixes.begin(), instance_suffixes.end(), suffix);
     if (it == instance_suffixes.end()) {
         std::cerr << "Instance suffix not found: " << suffix << "\n";
