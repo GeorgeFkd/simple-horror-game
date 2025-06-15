@@ -540,6 +540,7 @@ void Models::Model::add_instance_transform(const glm::mat4& xf, const std::strin
     instance_aabb_max.push_back(wmax);
     instance_suffixes.push_back(suffix);
     instance_modifications.push_back(InstanceModifiedTypes::NOT_MODIFIED);
+    instance_data_dirty = true;
 }
 
 std::pair<float,int> Models::Model::distance_from_point_using_AABB(const glm::vec3& point)

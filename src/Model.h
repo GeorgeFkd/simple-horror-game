@@ -118,11 +118,11 @@ namespace Models {
             return interactable;
         }
 
-        inline bool isActive() const {
+        inline bool is_active() const {
             return this->active;
         }
 
-        inline void toggleActive() {
+        inline void toggle_active() {
             active = !active;
         }
 
@@ -153,6 +153,16 @@ namespace Models {
 
         inline size_t get_instance_count() const {
             return instance_transforms.size();
+        }
+
+        inline size_t get_active_instance_count() const {
+            return std::count_if(
+                instance_modifications.begin(),
+                instance_modifications.end(),
+                [](InstanceModifiedTypes m) {
+                    return m != InstanceModifiedTypes::REMOVED;
+                }
+            );
         }
 
         inline glm::mat4 get_world_transform() const{

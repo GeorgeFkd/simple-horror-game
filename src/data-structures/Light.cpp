@@ -180,7 +180,7 @@ void Light::draw_depth_pass(std::shared_ptr<Shader> shader,
             // draw all models into this face
             for (auto& m : models) {
                 //m->update_world_transform(glm::mat4(1.0f));
-                if (!m->isActive()) continue;
+                if (!m->is_active()) continue;
                 if(m->is_instanced()){
                     m->draw_depth_instanced(shader);
                 }else{
@@ -209,7 +209,7 @@ void Light::draw_depth_pass(std::shared_ptr<Shader> shader,
         // draw all models into this 2D map
         for (auto& m : models) {
             //m->update_world_transform(glm::mat4(1.0f));
-            if(!m->isActive()) continue;
+            if(!m->is_active()) continue;
             if(m->is_instanced()){
                 m->draw_depth_instanced(shader);
             }else{

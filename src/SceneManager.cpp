@@ -214,13 +214,13 @@ void Game::SceneManager::run_game_loop() {
         if (elapsedTime > monster_seconds_per_coinflip * 1.0f) {
             float randNum = uniform_rand(el);
             float probs   = 0.0f;
-            if (monster->isActive()) {
+            if (monster->is_active()) {
                 probs = monster_random_dissapear_probability;
             } else {
                 probs = 1 - monster_random_dissapear_probability;
             }
             if (randNum < probs) {
-                monster->toggleActive();
+                monster->toggle_active();
             }
             elapsedTime -= monster_seconds_per_coinflip * 1.0f;
         }
@@ -236,7 +236,7 @@ void Game::SceneManager::run_game_loop() {
             glm::normalize(glm::vec3(last_monster_transform[3]) - camera.get_position());
         monster_view_dir = glm::dot(camera_dir, towards_monster);
         // std::cout << "View with monster is: " << monster_view_dir << "\n";
-        if (monster->isActive()) {
+        if (monster->is_active()) {
             // std::cout << "Time is ticking\n";
             if (monster_view_dir > 0) {
                 monster_time_looking_at_it += dt;
@@ -266,7 +266,7 @@ void Game::SceneManager::run_game_loop() {
             if (monster_time_looking_at_it > monster_seconds_to_look_at_it_for_coinflip * 1.0f) {
                 float randNum = uniform_rand(el);
                 if (randNum < 0.25f) {
-                    monster->toggleActive();
+                    monster->toggle_active();
                 }
             }
         } else {
@@ -274,7 +274,7 @@ void Game::SceneManager::run_game_loop() {
             monster_time_looking_at_it     = 0.0f;
             monster_time_not_looking_at_it = 0.0f;
         }
-        if (monster->isActive()) {
+        if (monster->is_active()) {
             if (Mix_PlayingMusic() == 0) {
                 Mix_PlayMusic(horrorMusic, -1);          // -1 = loop forever
                 Mix_PlayChannel(-1, footstepsMusic, -1); //-1 as channel means that sdl allocates it
@@ -493,7 +493,7 @@ void Game::SceneManager::check_all_models(float dt) {
     // Iterate models; break out of both loops if a collision happens.
     bool collision_detected = false;
     for (auto& model : game_state->get_models()) {
-        if (!model->isActive()) continue;
+        if (!model->is_active()) continue;
         if (processAABB(model.get())) break;
     }
 }
@@ -517,7 +517,7 @@ void Game::SceneManager::render(const glm::mat4& view, const glm::mat4& projecti
     }
 
     for (auto const& model : game_state->get_models()) {
-        if (model->isActive()) {
+        if (model->is_active()) {
             model->update_world_transform(glm::mat4(1.0f));
             // instancing is an impl detail
             model->draw(view, projection, shader);

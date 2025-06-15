@@ -341,6 +341,10 @@ int main() {
             }
             scene_manager->remove_instanced_model_at(m->name(-1), "-" + std::to_string(i));
             scene_manager->get_game_state()->pages_collected += 1;
+
+            if(m->get_active_instance_count() == 0){
+                m->disable();
+            }
             return false;
         });
     }
