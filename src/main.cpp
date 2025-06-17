@@ -1,6 +1,7 @@
 // main.cpp
 #include "Camera.h"
 #include "Light.h"
+#include "Room.h"
 #include "SceneManager.h"
 #include "fwd.hpp"
 #include <GL/glew.h>
@@ -137,9 +138,7 @@ Models::Model createCeiling(float roomSize, float height) {
                          floor_material);
 }
 
-void createRoom2(Game::GameState& game_state) {
-
-}
+void createRoom2(Game::GameState& game_state) {}
 
 int main() {
 
@@ -151,7 +150,7 @@ int main() {
 
     Game::GameState game_state;
 
-    constexpr float ROOM_HEIGHT = 50.0f;
+    constexpr float ROOM_HEIGHT = 30.0f;
     constexpr float ROOM_WIDTH  = 60.0f;
     constexpr float ROOM_DEPTH  = ROOM_WIDTH;
 
@@ -318,229 +317,378 @@ int main() {
     // right_spot_light_model.set_local_transform(
     //     glm::translate(glm::mat4(1.0f), right_spotlight.get_position()));
 
-    // gameState.add_model(overhead_point_light_model);
-    // gameState.add_model(right_spot_light_model);
     // scene_manager.add_light(overhead_point_light);
     game_state.add_light(std::move(flashlight), "flashlight");
-    // gameState.add_light(right_spotlight);
 
     // Creating Rooms
-    float room_size = 10.0f;
-
-    // Compute the “origin” offset of the room within the larger map
+    float     room_size   = 10.0f;
     glm::vec3 room_offset = glm::vec3(ROOM_WIDTH - room_size, 0.0f, ROOM_DEPTH - room_size);
-
-    auto door =
-        Models::Model("assets/models/SimpleOldTownAssets/OldHouseDoorWoodDarkRed.obj", "door");
-    glm::vec3 door_pos = room_offset;
-    glm::mat4 door_tf  = glm::translate(door.get_local_transform(), door_pos);
-    door_tf            = glm::scale(door_tf, glm::vec3(1.2f));
-    door.set_local_transform(door_tf);
-    door.set_interactivity(true);
-    game_state.add_model(std::move(door), door.name());
-
-    wall.add_instance_transform(
-        glm::translate(glm::mat4(1.0f), room_offset + glm::vec3(room_size, 0.0f, 5.0f)),
-        "wall-room-1");
-    wall.add_instance_transform(
-        glm::translate(glm::mat4(1.0f), room_offset + glm::vec3(0.0f, 0.0f, 4.8f)), "wall-room-2");
-    wall.add_instance_transform(
-        glm::translate(glm::mat4(1.0f), room_offset + glm::vec3(0.0f, 0.0f, -6.75f)),
-        "wall-room-3");
-    wall.add_instance_transform(
-        glm::translate(glm::mat4(1.0f), room_offset + glm::vec3(room_size, 0.0f, -5.0f)),
-        "wall-room-4");
-    wall.add_instance_transform(
-        glm::rotate(glm::translate(glm::mat4(1.0f), room_offset + glm::vec3(5.5f, 0.0f, room_size)),
-                    glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
-        "wall-room-5");
-    wall.add_instance_transform(
-        glm::rotate(glm::translate(glm::mat4(1.0f), room_offset + glm::vec3(5.5f, 0.0f, -12.0f)),
-                    glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
-        "wall-room-6");
-
-    auto chair = Models::Model("assets/models/SimpleOldTownAssets/ChairCafeBrown01.obj", "chair");
-    glm::vec3 chair_pos = room_offset + glm::vec3(5.0f, 0.0f, 5.0f);
-    glm::mat4 chair_tf  = glm::translate(chair.get_local_transform(), chair_pos);
-    chair.set_local_transform(chair_tf);
-    chair.set_interactivity(false);
-    game_state.add_model(std::move(chair), chair.name());
-
-   
-    auto small_table =
-        Models::Model("assets/models/SimpleOldTownAssets/TableSmall1.obj", "small_table");
-    glm::vec3 table_pos = room_offset + glm::vec3(5.0f, 0.0f, -4.0f);
-    glm::mat4 table_tf  = glm::translate(small_table.get_local_transform(), table_pos);
-    table_tf            = glm::scale(table_tf, glm::vec3(1.0f));
-    small_table.set_local_transform(table_tf);
-    small_table.set_interactivity(false);
-    game_state.add_model(std::move(small_table), small_table.name());
-
-    auto      leaves     = Models::Model("assets/models/SimpleOldTownAssets/leaves.obj", "leaves");
-    glm::vec3 leaves_pos = room_offset + glm::vec3(3.0f, 0.0f, -6.0f);
-    glm::mat4 leaves_tf  = glm::translate(leaves.get_local_transform(), leaves_pos);
-    leaves_tf            = glm::scale(leaves_tf, glm::vec3(1.2f));
-    leaves.set_local_transform(leaves_tf);
-    leaves.set_interactivity(false);
-    game_state.add_model(std::move(leaves), leaves.name());
-
-    auto      flokati = Models::Model("assets/models/SimpleOldTownAssets/Flokati.obj", "flokati");
-    glm::vec3 flokati_pos = room_offset + glm::vec3(5.0f, 0.0f, 0.0f);
-    glm::mat4 flokati_tf  = glm::translate(flokati.get_local_transform(), flokati_pos);
-    flokati_tf            = glm::scale(flokati_tf, glm::vec3(5.5f, 1.0f, 5.5f));
-    flokati.set_local_transform(flokati_tf);
-    flokati.set_interactivity(false);
-    game_state.add_model(std::move(flokati), flokati.name());
-
-    auto      bed     = Models::Model("assets/models/SimpleOldTownAssets/Bed02.obj", "bed");
-    glm::vec3 bed_pos = room_offset + glm::vec3(5.0f, 0.0f, 0.0f);
-    glm::mat4 bed_tf  = glm::translate(bed.get_local_transform(), bed_pos);
-    bed_tf            = glm::scale(bed_tf, glm::vec3(1.2f, 1.2f, 1.2f));
-    bed.set_local_transform(bed_tf);
-    bed.set_interactivity(false);
-
-    auto page_pos = room_offset + glm::vec3(5.0f,0.0f,8.0f);
-    scroll.add_instance_transform(glm::translate(scroll.get_local_transform(),page_pos),"page-7");
-    game_state.add_model(std::move(bed), bed.name());
-    
-    //room 2
+    Room room1("room-1", room_offset);
+    room1
+        .model("assets/models/SimpleOldTownAssets/OldHouseDoorWoodDarkRed.obj", "door",
+               glm::vec3(0.0f), {}, {}, true)
+        .walls(wall, "wall", room_size)
+        .model("assets/models/SimpleOldTownAssets/ChairCafeBrown01.obj", "chair",
+               glm::vec3(5.0f,0.0f,5.0f))
+        .model("assets/models/SimpleOldTownAssets/TableSmall1.obj", "small_table",
+               glm::vec3(5.0f,0.0f,-4.0f))
+        .model("assets/models/SimpleOldTownAssets/leaves.obj", "leaves",
+               glm::vec3(3.0f,0.0f,-6.0f))
+        .model("assets/models/SimpleOldTownAssets/Flokati.obj", "flokati",
+               glm::vec3(5.0f,0.0f,0.0f),
+               glm::vec3(5.5f,1.0f,5.5f))
+        .model("assets/models/SimpleOldTownAssets/Bed02.obj", "bed",
+               glm::vec3(5.0f,0.0f,0.0f),
+               glm::vec3(1.2f,1.2f,1.2f))
+        .model("assets/models/scroll.obj", "page-7",
+               glm::vec3(5.0f,0.0f,8.0f));
+    auto room1_models = room1.models();
+    for (auto& m : room1_models) {
+        game_state.add_model(std::move(m), m->name());
+    }
+    // room 2
     glm::vec3 room_offset2 = glm::vec3(-ROOM_WIDTH + room_size, 0.0f, -ROOM_DEPTH + room_size * 2);
-    std::string prefix = "room-" + std::to_string(2) + "-";
+    Room room2("room-2", room_offset2);
+    room2
+        // door: scaled 1.2×, interactive
+        .model(
+            "assets/models/SimpleOldTownAssets/OldHouseDoorWoodDarkRed.obj",
+            "door",
+            glm::vec3(0.0f),
+            glm::vec3(1.2f),
+            std::nullopt,
+            true
+        )
+        // walls: use the same wall model, name prefix “wall”
+        .walls(wall, "wall", room_size)
+        // chair
+        .model(
+            "assets/models/SimpleOldTownAssets/ChairCafeBrown01.obj",
+            "chair",
+            glm::vec3(5.0f, 0.0f,  5.0f)
+        )
+        // small table
+        .model(
+            "assets/models/SimpleOldTownAssets/TableSmall1.obj",
+            "small_table",
+            glm::vec3(5.0f, 0.0f, -4.0f)
+        )
+        // leaves (scaled 1.2×)
+        .model(
+            "assets/models/SimpleOldTownAssets/leaves.obj",
+            "leaves",
+            glm::vec3(3.0f, 0.0f, -6.0f),
+            glm::vec3(1.2f)
+        )
+        // flokati rug
+        .model(
+            "assets/models/SimpleOldTownAssets/Flokati.obj",
+            "flokati",
+            glm::vec3(5.0f, 0.0f, 0.0f),
+            glm::vec3(5.5f, 1.0f, 5.5f)
+        )
+        // bed
+        .model(
+            "assets/models/SimpleOldTownAssets/Bed02.obj",
+            "bed",
+            glm::vec3(5.0f, 0.0f, 0.0f),
+            glm::vec3(1.2f, 1.2f, 1.2f)
+        );
 
-    auto door2 =
-        Models::Model("assets/models/SimpleOldTownAssets/OldHouseDoorWoodDarkRed.obj", prefix + "door");
-    glm::vec3 door2_pos = room_offset2;
-    glm::mat4 door2_tf  = glm::translate(door2.get_local_transform(), door2_pos);
-    door2_tf            = glm::scale(door2_tf, glm::vec3(1.2f));
-    door2.set_local_transform(door2_tf);
-    door2.set_interactivity(true);
-    game_state.add_model(std::move(door2), door2.name());
+    for (auto& m : room2.models()) {
+        game_state.add_model(std::move(m), m->name());
+    }
+    // glm::vec3 room_offset2 = glm::vec3(-ROOM_WIDTH + room_size, 0.0f, -ROOM_DEPTH + room_size * 2);
+    // std::string prefix    = "room-" + std::to_string(2) + "-";
+    //
+    // auto      door2 = Models::Model("assets/models/SimpleOldTownAssets/OldHouseDoorWoodDarkRed.obj",
+    //                                 prefix + "door");
+    // glm::vec3 door2_pos = room_offset2;
+    // glm::mat4 door2_tf  = glm::translate(door2.get_local_transform(), door2_pos);
+    // door2_tf            = glm::scale(door2_tf, glm::vec3(1.2f));
+    // door2.set_local_transform(door2_tf);
+    // door2.set_interactivity(true);
+    // game_state.add_model(std::move(door2), door2.name());
+    //
+    // wall.add_instance_transform(
+    //     glm::translate(glm::mat4(1.0f), room_offset2 + glm::vec3(room_size, 0.0f, 5.0f)),
+    //     prefix + "wall-room-1");
+    // wall.add_instance_transform(
+    //     glm::translate(glm::mat4(1.0f), room_offset2 + glm::vec3(0.0f, 0.0f, 4.8f)),
+    //     prefix + "wall-room-2");
+    // wall.add_instance_transform(
+    //     glm::translate(glm::mat4(1.0f), room_offset2 + glm::vec3(0.0f, 0.0f, -6.75f)),
+    //     prefix + "wall-room-3");
+    // wall.add_instance_transform(
+    //     glm::translate(glm::mat4(1.0f), room_offset2 + glm::vec3(room_size, 0.0f, -5.0f)),
+    //     prefix + "wall-room-4");
+    // wall.add_instance_transform(
+    //     glm::rotate(
+    //         glm::translate(glm::mat4(1.0f), room_offset2 + glm::vec3(5.5f, 0.0f, room_size)),
+    //         glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
+    //     prefix + "wall-room-5");
+    // wall.add_instance_transform(
+    //     glm::rotate(glm::translate(glm::mat4(1.0f), room_offset2 + glm::vec3(5.5f, 0.0f, -12.0f)),
+    //                 glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
+    //     prefix + "wall-room-6");
+    //
+    // auto room_roof = glm::translate(glm::mat4(1.0f), room_offset2 + glm::vec3(0.0f, 3.75f, -0.6f));
+    // room_roof      = glm::rotate(room_roof, glm::radians(-90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    // room_roof      = glm::scale(room_roof, {1.0f, 2.8f, 2.2f});
+    // wall.add_instance_transform(room_roof, prefix + "wall-room-7");
+    // auto chair2 =
+    //     Models::Model("assets/models/SimpleOldTownAssets/ChairCafeBrown01.obj", prefix + "chair");
+    // glm::vec3 chair2_pos = room_offset2 + glm::vec3(5.0f, 0.0f, 5.0f);
+    // glm::mat4 chair2_tf  = glm::translate(chair2.get_local_transform(), chair2_pos);
+    // chair2.set_local_transform(chair2_tf);
+    // chair2.set_interactivity(false);
+    // game_state.add_model(std::move(chair2), chair2.name());
+    //
+    // auto small_table2 =
+    //     Models::Model("assets/models/SimpleOldTownAssets/TableSmall1.obj", prefix + "small_table");
+    // glm::vec3 table_pos2 = room_offset2 + glm::vec3(5.0f, 0.0f, -4.0f);
+    // glm::mat4 table_tf2  = glm::translate(small_table2.get_local_transform(), table_pos2);
+    // table_tf2            = glm::scale(table_tf2, glm::vec3(1.0f));
+    // small_table2.set_local_transform(table_tf2);
+    // small_table2.set_interactivity(false);
+    // game_state.add_model(std::move(small_table2), small_table2.name());
+    //
+    // auto leaves2 = Models::Model("assets/models/SimpleOldTownAssets/leaves.obj", prefix + "leaves");
+    // glm::vec3 leaves_pos2 = room_offset2 + glm::vec3(3.0f, 0.0f, -6.0f);
+    // glm::mat4 leaves_tf2  = glm::translate(leaves2.get_local_transform(), leaves_pos2);
+    // leaves_tf2            = glm::scale(leaves_tf2, glm::vec3(1.2f));
+    // leaves2.set_local_transform(leaves_tf2);
+    // leaves2.set_interactivity(false);
+    // game_state.add_model(std::move(leaves2), leaves2.name());
+    //
+    // auto flokati2 =
+    //     Models::Model("assets/models/SimpleOldTownAssets/Flokati.obj", prefix + "flokati");
+    // glm::vec3 flokati_pos2 = room_offset2 + glm::vec3(5.0f, 0.0f, 0.0f);
+    // glm::mat4 flokati_tf2  = glm::translate(flokati2.get_local_transform(), flokati_pos2);
+    // flokati_tf2            = glm::scale(flokati_tf2, glm::vec3(5.5f, 1.0f, 5.5f));
+    // flokati2.set_local_transform(flokati_tf2);
+    // flokati2.set_interactivity(false);
+    // game_state.add_model(std::move(flokati2), flokati2.name());
+    //
+    // auto      bed2 = Models::Model("assets/models/SimpleOldTownAssets/Bed02.obj", prefix + "bed");
+    // glm::vec3 bed_pos2 = room_offset2 + glm::vec3(5.0f, 0.0f, 0.0f);
+    // glm::mat4 bed_tf2  = glm::translate(bed2.get_local_transform(), bed_pos2);
+    // bed_tf2            = glm::scale(bed_tf2, glm::vec3(1.2f, 1.2f, 1.2f));
+    // bed2.set_local_transform(bed_tf2);
+    // bed2.set_interactivity(false);
+    // game_state.add_model(std::move(bed2), prefix + "bed");
+    //
+    // auto page_pos2 = room_offset2 + glm::vec3(5.0f, 0.0f, 8.0f);
+    // scroll.add_instance_transform(glm::translate(scroll.get_local_transform(), page_pos2),
+    //                               "page-8");
 
-    wall.add_instance_transform(
-        glm::translate(glm::mat4(1.0f), room_offset2 + glm::vec3(room_size, 0.0f, 5.0f)),
-        prefix + "wall-room-1");
-    wall.add_instance_transform(
-        glm::translate(glm::mat4(1.0f), room_offset2 + glm::vec3(0.0f, 0.0f, 4.8f)), prefix + "wall-room-2");
-    wall.add_instance_transform(
-        glm::translate(glm::mat4(1.0f), room_offset2 + glm::vec3(0.0f, 0.0f, -6.75f)),
-        prefix + "wall-room-3");
-    wall.add_instance_transform(
-        glm::translate(glm::mat4(1.0f), room_offset2 + glm::vec3(room_size, 0.0f, -5.0f)),
-        prefix + "wall-room-4");
-    wall.add_instance_transform(
-        glm::rotate(glm::translate(glm::mat4(1.0f), room_offset2 + glm::vec3(5.5f, 0.0f, room_size)),
-                    glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
-        prefix + "wall-room-5");
-    wall.add_instance_transform(
-        glm::rotate(glm::translate(glm::mat4(1.0f), room_offset2 + glm::vec3(5.5f, 0.0f, -12.0f)),
-                    glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
-        prefix + "wall-room-6");
+    // ROOM 3 SETUP
+    glm::vec3   room_offset3 = glm::vec3(ROOM_WIDTH - room_size, 0.0f, -ROOM_DEPTH + room_size * 2);
+    Room room3("room-3", room_offset3);
+    room3
+        .model(
+            "assets/models/SimpleOldTownAssets/OldHouseDoorWoodDarkRed.obj",
+            "door",
+            glm::vec3(0.0f),
+            glm::vec3(1.2f),
+            std::nullopt,
+            true
+        )
+        .walls(wall, "wall", room_size)
+        .model(
+            "assets/models/SimpleOldTownAssets/ChairCafeBrown01.obj",
+            "chair",
+            glm::vec3(5.0f, 0.0f,  5.0f)
+        )
+        .model(
+            "assets/models/SimpleOldTownAssets/TableSmall1.obj",
+            "small_table",
+            glm::vec3(5.0f, 0.0f, -4.0f)
+        )
+        .model(
+            "assets/models/SimpleOldTownAssets/leaves.obj",
+            "leaves",
+            glm::vec3(3.0f, 0.0f, -6.0f),
+            glm::vec3(1.2f)
+        )
+        .model(
+            "assets/models/SimpleOldTownAssets/Flokati.obj",
+            "flokati",
+            glm::vec3(5.0f, 0.0f, 0.0f),
+            glm::vec3(5.5f, 1.0f, 5.5f)
+        )
+        .model(
+            "assets/models/SimpleOldTownAssets/Bed02.obj",
+            "bed",
+            glm::vec3(5.0f, 0.0f, 0.0f),
+            glm::vec3(1.2f, 1.2f, 1.2f)
+        );
 
-    auto chair2 = Models::Model("assets/models/SimpleOldTownAssets/ChairCafeBrown01.obj", prefix + "chair");
-    glm::vec3 chair2_pos = room_offset2 + glm::vec3(5.0f, 0.0f, 5.0f);
-    glm::mat4 chair2_tf  = glm::translate(chair2.get_local_transform(), chair2_pos);
-    chair2.set_local_transform(chair2_tf);
-    chair2.set_interactivity(false);
-    game_state.add_model(std::move(chair2), chair2.name());
+    for (auto& m : room3.models()) {
+        game_state.add_model(std::move(m), m->name());
+    }
 
-    
+    glm::vec3 page3_pos = room_offset3 + glm::vec3(5.0f, 0.0f, 8.0f);
+    scroll.add_instance_transform(
+        glm::translate(scroll.get_local_transform(), page3_pos),
+        "room-3-page-9"
+    );
+    // std::string prefix3      = "room-3-";
+    //
+    // auto      door3 = Models::Model("assets/models/SimpleOldTownAssets/OldHouseDoorWoodDarkRed.obj",
+    //                                 prefix3 + "door");
+    // glm::vec3 door3_pos = room_offset3;
+    // glm::mat4 door3_tf  = glm::translate(door3.get_local_transform(), door3_pos);
+    // door3_tf            = glm::scale(door3_tf, glm::vec3(1.2f));
+    // door3.set_local_transform(door3_tf);
+    // door3.set_interactivity(true);
+    // game_state.add_model(std::move(door3), door3.name());
+    //
+    // wall.add_instance_transform(
+    //     glm::translate(glm::mat4(1.0f), room_offset3 + glm::vec3(room_size, 0.0f, 5.0f)),
+    //     prefix3 + "wall-room-1");
+    // wall.add_instance_transform(
+    //     glm::translate(glm::mat4(1.0f), room_offset3 + glm::vec3(0.0f, 0.0f, 4.8f)),
+    //     prefix3 + "wall-room-2");
+    // wall.add_instance_transform(
+    //     glm::translate(glm::mat4(1.0f), room_offset3 + glm::vec3(0.0f, 0.0f, -6.75f)),
+    //     prefix3 + "wall-room-3");
+    // wall.add_instance_transform(
+    //     glm::translate(glm::mat4(1.0f), room_offset3 + glm::vec3(room_size, 0.0f, -5.0f)),
+    //     prefix3 + "wall-room-4");
+    // wall.add_instance_transform(
+    //     glm::rotate(
+    //         glm::translate(glm::mat4(1.0f), room_offset3 + glm::vec3(5.5f, 0.0f, room_size)),
+    //         glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
+    //     prefix3 + "wall-room-5");
+    // wall.add_instance_transform(
+    //     glm::rotate(glm::translate(glm::mat4(1.0f), room_offset3 + glm::vec3(5.5f, 0.0f, -12.0f)),
+    //                 glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
+    //     prefix3 + "wall-room-6");
+    // auto room_roof3 = glm::translate(glm::mat4(1.0f), room_offset3 + glm::vec3(0.0f, 3.75f, -0.6f));
+    // room_roof3      = glm::rotate(room_roof3, glm::radians(-90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    // room_roof3      = glm::scale(room_roof3, {1.0f, 2.8f, 2.2f});
+    // wall.add_instance_transform(room_roof3, prefix3 + "wall-room-7");
+    //
+    // auto chair3 =
+    //     Models::Model("assets/models/SimpleOldTownAssets/ChairCafeBrown01.obj", prefix3 + "chair");
+    // glm::vec3 chair3_pos = room_offset3 + glm::vec3(5.0f, 0.0f, 5.0f);
+    // glm::mat4 chair3_tf  = glm::translate(chair3.get_local_transform(), chair3_pos);
+    // chair3.set_local_transform(chair3_tf);
+    // chair3.set_interactivity(false);
+    // game_state.add_model(std::move(chair3), chair3.name());
+    //
+    // auto small_table3 =
+    //     Models::Model("assets/models/SimpleOldTownAssets/TableSmall1.obj", prefix3 + "small_table");
+    // glm::vec3 table3_pos = room_offset3 + glm::vec3(5.0f, 0.0f, -4.0f);
+    // glm::mat4 table3_tf  = glm::translate(small_table3.get_local_transform(), table3_pos);
+    // table3_tf            = glm::scale(table3_tf, glm::vec3(1.0f));
+    // small_table3.set_local_transform(table3_tf);
+    // small_table3.set_interactivity(false);
+    // game_state.add_model(std::move(small_table3), small_table3.name());
+    //
+    // auto leaves3 =
+    //     Models::Model("assets/models/SimpleOldTownAssets/leaves.obj", prefix3 + "leaves");
+    // glm::vec3 leaves3_pos = room_offset3 + glm::vec3(3.0f, 0.0f, -6.0f);
+    // glm::mat4 leaves3_tf  = glm::translate(leaves3.get_local_transform(), leaves3_pos);
+    // leaves3_tf            = glm::scale(leaves3_tf, glm::vec3(1.2f));
+    // leaves3.set_local_transform(leaves3_tf);
+    // leaves3.set_interactivity(false);
+    // game_state.add_model(std::move(leaves3), leaves3.name());
+    //
+    // auto flokati3 =
+    //     Models::Model("assets/models/SimpleOldTownAssets/Flokati.obj", prefix3 + "flokati");
+    // glm::vec3 flokati3_pos = room_offset3 + glm::vec3(5.0f, 0.0f, 0.0f);
+    // glm::mat4 flokati3_tf  = glm::translate(flokati3.get_local_transform(), flokati3_pos);
+    // flokati3_tf            = glm::scale(flokati3_tf, glm::vec3(5.5f, 1.0f, 5.5f));
+    // flokati3.set_local_transform(flokati3_tf);
+    // flokati3.set_interactivity(false);
+    // game_state.add_model(std::move(flokati3), flokati3.name());
+    //
+    // auto      bed3 = Models::Model("assets/models/SimpleOldTownAssets/Bed02.obj", prefix3 + "bed");
+    // glm::vec3 bed3_pos = room_offset3 + glm::vec3(5.0f, 0.0f, 0.0f);
+    // glm::mat4 bed3_tf  = glm::translate(bed3.get_local_transform(), bed3_pos);
+    // bed3_tf            = glm::scale(bed3_tf, glm::vec3(1.2f, 1.2f, 1.2f));
+    // bed3.set_local_transform(bed3_tf);
+    // bed3.set_interactivity(false);
+    // game_state.add_model(std::move(bed3), bed3.name());
+    //
+    // auto page3_pos = room_offset3 + glm::vec3(5.0f, 0.0f, 8.0f);
+    // scroll.add_instance_transform(glm::translate(scroll.get_local_transform(), page3_pos),
+    //                               "page-9");
 
-   
-    auto small_table2 =
-        Models::Model("assets/models/SimpleOldTownAssets/TableSmall1.obj", prefix + "small_table");
-    glm::vec3 table_pos2 = room_offset2 + glm::vec3(5.0f, 0.0f, -4.0f);
-    glm::mat4 table_tf2  = glm::translate(small_table2.get_local_transform(), table_pos2);
-    table_tf2            = glm::scale(table_tf2, glm::vec3(1.0f));
-    small_table2.set_local_transform(table_tf2);
-    small_table2.set_interactivity(false);
-    game_state.add_model(std::move(small_table2), small_table2.name());
+    glm::vec3 room_offset4 = glm::vec3(-ROOM_WIDTH + room_size, // x
+                                       0.0f,                    // y
+                                       ROOM_DEPTH - room_size   // z
+    );
+    Room room4("room-4", room_offset4);
+    room4
+        .model("assets/models/SimpleOldTownAssets/OldHouseDoorWoodDarkRed.obj", "door",
+               glm::vec3(0.0f), std::nullopt, std::nullopt,
+               true // interactive
+               )
+        .model("assets/models/SimpleOldTownAssets/ChairCafeBrown01.obj", "chair",
+               glm::vec3(5.0f, 0.0f, 5.0f))
+        .model("assets/models/SimpleOldTownAssets/TableSmall1.obj", "small_table",
+               glm::vec3(5.0f, 0.0f, -4.0f))
+        .model("assets/models/SimpleOldTownAssets/leaves.obj", "leaves",
+               glm::vec3(3.0f, 0.0f, -6.0f))
+        .model("assets/models/SimpleOldTownAssets/Flokati.obj", "flokati",
+               glm::vec3(5.0f, 0.0f, 0.0f), glm::vec3(5.5f, 1.0f, 5.5f))
+        .model("assets/models/SimpleOldTownAssets/Bed02.obj", "bed", glm::vec3(5.0f, 0.0f, 0.0f),
+               glm::vec3(1.2f, 1.2f, 1.2f))
+        .walls(wall, "wall", room_size);
 
-    auto      leaves2     = Models::Model("assets/models/SimpleOldTownAssets/leaves.obj", prefix + "leaves");
-    glm::vec3 leaves_pos2 = room_offset2 + glm::vec3(3.0f, 0.0f, -6.0f);
-    glm::mat4 leaves_tf2  = glm::translate(leaves2.get_local_transform(), leaves_pos2);
-    leaves_tf2            = glm::scale(leaves_tf2, glm::vec3(1.2f));
-    leaves2.set_local_transform(leaves_tf2);
-    leaves2.set_interactivity(false);
-    game_state.add_model(std::move(leaves2), leaves2.name());
+    // Now add all the Room’s non-wall models into the game
+    auto room4_models = room4.models();
+    for (auto& m : room4_models) {
+        std::cout << "Model: " << m->name() << std::endl;
+        game_state.add_model(std::move(m), m->name());
+    }
 
-    auto      flokati2 = Models::Model("assets/models/SimpleOldTownAssets/Flokati.obj", prefix + "flokati");
-    glm::vec3 flokati_pos2 = room_offset2 + glm::vec3(5.0f, 0.0f, 0.0f);
-    glm::mat4 flokati_tf2  = glm::translate(flokati2.get_local_transform(), flokati_pos2);
-    flokati_tf2            = glm::scale(flokati_tf2, glm::vec3(5.5f, 1.0f, 5.5f));
-    flokati2.set_local_transform(flokati_tf2);
-    flokati2.set_interactivity(false);
-    game_state.add_model(std::move(flokati2), flokati2.name());
-
-    auto      bed2     = Models::Model("assets/models/SimpleOldTownAssets/Bed02.obj", prefix + "bed");
-    glm::vec3 bed_pos2 = room_offset2 + glm::vec3(5.0f, 0.0f, 0.0f);
-    glm::mat4 bed_tf2 = glm::translate(bed2.get_local_transform(), bed_pos2);
-    bed_tf2            = glm::scale(bed_tf2, glm::vec3(1.2f, 1.2f, 1.2f));
-    bed2.set_local_transform(bed_tf2);
-    bed2.set_interactivity(false);
-    game_state.add_model(std::move(bed2),prefix+"bed");
-
-    auto page_pos2 = room_offset2 + glm::vec3(5.0f,0.0f,8.0f);
-    scroll.add_instance_transform(glm::translate(scroll.get_local_transform(),page_pos2),"page-8");
-    
+    // scroll.add_instance_transform(glm::translate(scroll.get_local_transform(), page4_pos),
+    //                               "page-10");
 
     game_state.add_model(std::move(scroll), "page");
     game_state.add_model(std::move(wall), "wall");
 
     scene_manager.set_game_state(game_state);
+    struct DoorState {
+        bool      is_open     = false;
+        bool      initialized = false;
+        glm::mat4 closed_xf   = glm::mat4(1.0f);
+        glm::mat4 open_xf     = glm::mat4(1.0f);
+    };
+    constexpr size_t                   NUM_DOORS     = 4;
+    std::array<std::string, NUM_DOORS> doors_of_game = {"room-1-door", "room-2-door", "room-3-door",
+                                                        "room-4-door"};
+    std::array<DoorState, NUM_DOORS>   door_states;
+    for (size_t i = 0; i < NUM_DOORS; ++i) {
+        const auto& door_name = doors_of_game[i];
+        DoorState&  state     = door_states[i];
+        scene_manager.bind_handler_to_model(
+            door_name, [&state, door_name](Game::SceneManager* scene_manager) mutable {
+                auto door_to_toggle = scene_manager->get_game_state()->find_model(door_name);
+                if (!door_to_toggle) {
+                    throw std::runtime_error("Door Model not found: " + door_name);
+                }
 
+                if (!state.initialized) {
+                    state.initialized = true;
+                    state.closed_xf   = door_to_toggle->get_local_transform();
+                    state.open_xf     = glm::rotate(state.closed_xf, glm::radians(-90.0f),
+                                                    glm::vec3(0.0f, 1.0f, 0.0f));
+                }
+                if (state.is_open) {
+                    door_to_toggle->set_local_transform(state.closed_xf);
+                } else {
+                    door_to_toggle->set_local_transform(state.open_xf);
+                }
+                state.is_open = !state.is_open;
+                return true;
+            });
+    }
 
-    scene_manager.bind_handler_to_model("room-2-door", [](Game::SceneManager* scene_manager) {
-        // TODO: fix it so it properly rotates in place like a door
-        auto door_to_toggle = scene_manager->get_game_state()->find_model("room-2-door");
-        if (!door_to_toggle) {
-            throw std::runtime_error("Door Model not found");
-        }
-        static bool      isOpen      = false;
-        static bool      initialized = false;
-        static glm::mat4 closedXf, openXf;
-        static auto      hinge = glm::vec3(-1.0f, 0.0f, 0.0f);
-
-        if (!initialized) {
-            initialized = true;
-            closedXf    = door_to_toggle->get_local_transform();
-            openXf      = glm::rotate(closedXf, glm::radians(-90.0f), {0.0f, 1.0f, 0.0f});
-        }
-
-        if (isOpen) {
-            door_to_toggle->set_local_transform(closedXf);
-        } else {
-            door_to_toggle->set_local_transform(openXf);
-        }
-        isOpen = !isOpen;
-        return true;
-    });
-
-
-    scene_manager.bind_handler_to_model("Door", [](Game::SceneManager* scene_manager) {
-        // TODO: fix it so it properly rotates in place like a door
-        auto door_to_toggle = scene_manager->get_game_state()->find_model("Door");
-        if (!door_to_toggle) {
-            throw std::runtime_error("Door Model not found");
-        }
-        static bool      isOpen      = false;
-        static bool      initialized = false;
-        static glm::mat4 closedXf, openXf;
-        static auto      hinge = glm::vec3(-1.0f, 0.0f, 0.0f);
-
-        if (!initialized) {
-            initialized = true;
-            closedXf    = door_to_toggle->get_local_transform();
-            openXf      = glm::rotate(closedXf, glm::radians(-90.0f), {0.0f, 1.0f, 0.0f});
-        }
-
-        if (isOpen) {
-            door_to_toggle->set_local_transform(closedXf);
-        } else {
-            door_to_toggle->set_local_transform(openXf);
-        }
-        isOpen = !isOpen;
-        return true;
-    });
     for (size_t i = 0; i < 6; i++) {
         auto name = std::string("page-") + std::to_string(i);
         scene_manager.bind_handler_to_model(name, [i](Game::SceneManager* scene_manager) {
