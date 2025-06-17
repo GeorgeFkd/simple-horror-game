@@ -9,15 +9,15 @@
 #include <glm/glm.hpp>
 #include "Model.h"
 
-class Room {
+class Group {
 public:
     using Rotation = std::pair<float, glm::vec3>; // angle in radians, axis
 
-    Room(const std::string& room_name,
+    Group(const std::string& room_name,
          const glm::vec3&   room_position);
 
-    // Add a model entry; optionally scaled, rotated, and interactive
-    Room& model(
+    //All model names get prefixed by room_name + "-"
+    Group& model(
         const std::string&       file,
         const std::string&       model_name,
         const glm::vec3&         position,
@@ -25,7 +25,8 @@ public:
         std::optional<Rotation>  rotation    = std::nullopt,
         bool                     interactive = false
     );
-    Room& walls(Models::Model& wall_model, const std::string& base_name, float room_size);
+    //model id: <room_name> + "-" + <wall_model_name> + "-" + <wall_number>
+    Group& walls(Models::Model& wall_model, float room_size);
 
     // Build and return all models with transforms applied
     std::vector<std::unique_ptr<Models::Model>> models() const;

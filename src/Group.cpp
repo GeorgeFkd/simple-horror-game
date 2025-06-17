@@ -1,11 +1,11 @@
-#include "Room.h"
+#include "Group.h"
 #include <glm/gtc/matrix_transform.hpp>
 
-Room::Room(const std::string& room_name,
+Group::Group(const std::string& room_name,
            const glm::vec3&   room_position)
     : name(room_name), position(room_position) {}
 
-Room& Room::model(
+Group& Group::model(
     const std::string&       file,
     const std::string&       model_name,
     const glm::vec3&         position,
@@ -17,12 +17,11 @@ Room& Room::model(
     return *this;
 }
 
-Room& Room::walls(Models::Model& wall_model,
-                  const std::string& base_name,
+Group& Group::walls(Models::Model& wall_model,
                   float room_size)
 {
     glm::mat4 id(1.0f);
-    std::string prefix = name + "-" + base_name + "-room-";
+    std::string prefix = name + "-" + wall_model.name() + "-";
     wall_model.add_instance_transform(
         glm::translate(id, position + glm::vec3(room_size, 0.0f,  5.0f)),
         prefix + "1"
@@ -62,7 +61,7 @@ Room& Room::walls(Models::Model& wall_model,
 }
 
 
-std::vector<std::unique_ptr<Models::Model>> Room::models() const {
+std::vector<std::unique_ptr<Models::Model>> Group::models() const {
     std::vector<std::unique_ptr<Models::Model>> result;
     result.reserve(entries.size());
 
@@ -74,7 +73,7 @@ std::vector<std::unique_ptr<Models::Model>> Room::models() const {
             xf = glm::scale(xf, *e.scale);
         }
         if (e.rotation) {
-            xf = glm::rotate(xf, e.rotation->first, e.rotation->second);
+            xf = glm::rotate(xf, glm::radians(e.rotation->first), e.rotation->second);
         }
         m->set_local_transform(xf);
         if (e.interactive) {

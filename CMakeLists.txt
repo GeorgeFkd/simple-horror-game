@@ -20,7 +20,7 @@ set(SOURCES
     src/Model.cpp
     src/Shader.cpp
     src/data-structures/Light.cpp
-    src/Room.cpp
+        src/Group.cpp
 )
 
 find_package(OpenGL REQUIRED)
