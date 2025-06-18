@@ -158,19 +158,14 @@ void Game::SceneManager::initialise_shaders() {
     add_shader(textshader);
 }
 
-#define PRINT_VEC4(v) \
-std::cout << #v " = (" \
-<< (v).x << ", " \
-<< (v).y << ", " \
-<< (v).z << ", " \
-<< (v).w << ")" \
-<< "(in main)" \
-<< std::endl
+#define PRINT_VEC4(v)                                                                              \
+    std::cout << #v " = (" << (v).x << ", " << (v).y << ", " << (v).z << ", " << (v).w << ")"      \
+              << "(in main)" << std::endl
 
 void Game::SceneManager::run_game_loop() {
 
     std::cout << "Attempting to load font";
-    textRenderer.load_font();
+    text_renderer.load_font();
 
     Mix_Music* horror_music = Mix_LoadMUS("assets/audio/scary.mp3");
     if (!horror_music) {
@@ -179,17 +174,6 @@ void Game::SceneManager::run_game_loop() {
     }
 
     Mix_Chunk* footsteps_music = Mix_LoadWAV("assets/audio/footsteps.mp3");
-
-    float monster_follow_distance                          = 10.0f;
-    float monster_follow_speed                             = 7.5f;
-    float monster_time_looking_at_it                       = 0.0f;
-    float monster_time_not_looking_at_it                   = 0.0f;
-    int   monster_seconds_per_coinflip                     = 20;
-    float monster_random_dissapear_probability             = 0.35f;
-    float monster_dissapear_probability_when_looking_at_it = 0.75f;
-    float monster_seconds_to_look_at_it_for_coinflip       = 5.0f;
-    float monster_seconds_looking_at_it_for_death          = 7.0f;
-    float monster_seconds_not_looking_at_it_for_death      = 1000.0f;
     // glm::dot(camera_dir,monster), -1 looking away from monster, 1 looking it directly
     float monster_view_dir         = 0.0f;
     auto  monster_initial_position = glm::vec3(5.0f, 0.0f, 5.0f);
@@ -207,14 +191,15 @@ void Game::SceneManager::run_game_loop() {
     monster_model->set_local_transform(last_monster_transform);
     monster_model->update_world_transform(glm::mat4(1.0f));
     Monster monster(monster_model);
-    monster.add_scripted_movement(glm::vec3(1.0f, 0.0f, -1.0f), 5.0f, 5)
+    monster.seconds_for_coinflip(10.0f)
+        .disappear_probability(0.65f)
+        .add_scripted_movement(glm::vec3(1.0f, 0.0f, -1.0f), 5.0f, 5)
         .add_scripted_movement(glm::vec3(1.0f, 0.0f, 1.0f), 5.0f, 5)
         .add_scripted_movement(glm::vec3(-1.0f, 1.0f, 0.0f), 5.0f, 5);
     monster.disappear_probability(0.35f).follow_distance(10.0f);
-    bool                             running             = true;
-    Uint64                           lastTicks           = SDL_GetPerformanceCounter();
-    int                              interactionDistance = 2.0f;
-    auto                             flashlight          = game_state->find_light("flashlight");
+    bool   running    = true;
+    Uint64 lastTicks  = SDL_GetPerformanceCounter();
+    auto   flashlight = game_state->find_light("flashlight");
 
     if (!flashlight) {
         throw std::runtime_error("Could not find flashlight model...");
@@ -233,6 +218,15 @@ void Game::SceneManager::run_game_loop() {
             Mix_HaltChannel(-1);
         }
     });
+    glm::mat4 text_projection = glm::ortho(0.0f, 1280.0f, 0.0f, 720.0f);
+    auto      textShader      = get_shader_by_name("text");
+    monster.on_death_by_looking([this]() {
+        center_text = "The monster melted you by looking at you";
+    });
+
+    monster.on_death_by_not_looking([textShader, text_projection, this]() {
+        center_text = "killed your family while you were not looking";
+    });
 
     while (running) {
         Uint64 now = SDL_GetPerformanceCounter();
@@ -246,23 +240,6 @@ void Game::SceneManager::run_game_loop() {
         auto camera_dir = glm::normalize(camera.get_direction());
         monster.update(dt, camera_dir, last_camera_position);
         PRINT_VEC4(monster.monster_model()->get_local_transform()[3]);
-        auto towards_monster =
-            glm::normalize(glm::vec3(last_monster_transform[3]) - camera.get_position());
-        monster_view_dir = glm::dot(camera_dir, towards_monster);
-
-        // if you dont move the monster does not move, but can dissappear
-        // if (last_camera_position != camera.get_position()) {
-        // auto target_pos = camera.get_position() - camera_dir * monster_follow_distance;
-        // auto new_monster_pos =
-        //     glm::mix(glm::vec3(last_monster_transform[3]), target_pos, monster_follow_speed * dt);
-        // new_monster_pos.y = 0.0f;
-        // auto  forward     = glm::normalize(glm::vec3(camera_dir.x, 0.0f, camera_dir.z));
-        // float angle       = glm::atan(forward.x, forward.z);
-        //
-        // auto tf = glm::translate(glm::mat4(1.0f), new_monster_pos);
-        // tf      = glm::rotate(tf, angle, glm::vec3(0.0f, 1.0f, 0.0f));
-        // monster_model->set_local_transform(tf);
-        // }
 
         // loop over models(collision tests, update closest object
         check_all_models(dt);
@@ -430,7 +407,7 @@ void Game::SceneManager::check_all_models(float dt) {
         std::string name             = "";
         bool        closer           = false;
         float       squared_distance = 0.0f;
-        //game wise it might be more fun if it can go through walls
+        // game wise it might be more fun if it can go through walls
         bool monster_collision_enabled = false;
         // update “closest interactable” tracking
         if (model->can_interact()) {
@@ -453,7 +430,7 @@ void Game::SceneManager::check_all_models(float dt) {
         // monster–AABB collision (skip self)
         if (monster_collision_enabled) {
             auto [monster_is_collided, instance_index_monster] =
-            model->intersect_sphere_aabb(monster_center, monster_sphere_radius);
+                model->intersect_sphere_aabb(monster_center, monster_sphere_radius);
             if (model->name() != monster_name && monster_is_collided) {
                 std::cout << "Name is: " << name << ", monster name: " << monster_name << "\n";
                 monster_model->set_local_transform(last_mon_xform);
@@ -504,8 +481,12 @@ void Game::SceneManager::render(const glm::mat4& view, const glm::mat4& projecti
     glm::mat4   text_projection = glm::ortho(0.0f, 1280.0f, 0.0f, 720.0f);
     auto        textShader      = get_shader_by_name("text");
     std::string displayed_text  = "pages:" + std::to_string(game_state->pages_collected);
-    textRenderer.RenderText(textShader, displayed_text, 50.0f, 720.0f - 50.0f, 1.2f,
+    text_renderer.RenderText(textShader, displayed_text, 50.0f, 720.0f - 50.0f, 1.2f,
                             {1.0f, 0.0f, 0.0f}, text_projection);
+    if(!center_text.empty()){
+        text_renderer.RenderText(textShader, center_text, 60.0f, 720.0f - 250.0f, 1.2f, {1.0f, 0.0f, 0.0f},
+                                text_projection);
+    }
     glUseProgram(0);
 }
 
