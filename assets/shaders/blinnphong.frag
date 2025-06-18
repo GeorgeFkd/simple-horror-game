@@ -13,6 +13,7 @@ struct Material {
     vec3 emissive;     // Ke
     float shininess;   // Ns
     float opacity;     // d
+    bool useBumpMap;
 };
 
 struct Light {
@@ -48,6 +49,8 @@ uniform sampler2D   diffuseMap;
 uniform bool        useDiffuseMap;
 uniform sampler2D   specularMap;
 uniform bool        useSpecularMap;
+uniform sampler2D   bumpMap;
+uniform float       bumpScale; 
 
 // one sampler2D per light (only spot & dir. matter here)
 uniform sampler2D  shadowMap0;
@@ -84,6 +87,7 @@ float LinearizeDepth(float depth, float nearPlane, float farPlane)
 in  vec3  FragPos;
 in  vec3  Normal;
 in  vec2  TexCoord;
+in  mat3  TBN;
 out vec4  FragColor;
 
 //——————————————————————————————————————————————————————————————————————————
@@ -228,6 +232,33 @@ float getVisibilityPointLight(vec3 fragPos, vec3 lightPos, samplerCube shadowMap
 //    return 1.0 - shadow;
 //}
 
+vec3 fetchNormal(){
+    if(!material.useBumpMap){
+        return normalize(Normal);
+    }
+
+    vec2 tex = 1.0 / textureSize(bumpMap, 0);
+
+    float tl = texture(bumpMap, TexCoord + tex * vec2(-1,  1)).r;
+    float  l = texture(bumpMap, TexCoord + tex * vec2(-1,  0)).r;
+    float bl = texture(bumpMap, TexCoord + tex * vec2(-1, -1)).r;
+
+    float tr = texture(bumpMap, TexCoord + tex * vec2( 1,  1)).r;
+    float  r = texture(bumpMap, TexCoord + tex * vec2( 1,  0)).r;
+    float br = texture(bumpMap, TexCoord + tex * vec2( 1, -1)).r;
+
+    float  t = texture(bumpMap, TexCoord + tex * vec2( 0,  1)).r;
+    float  b = texture(bumpMap, TexCoord + tex * vec2( 0, -1)).r;
+
+    float bu = (tr + 2.0*r + br) - (tl + 2.0*l + bl);   // ∂b/∂u
+    float bv = (bl + 2.0*b + br) - (tl + 2.0*t + tr);   // ∂b/∂v
+    bu *= bumpScale / 8.0;   // divide by 8 (sum of kernel weights)
+    bv *= bumpScale / 8.0;
+
+
+    vec3 nTS = normalize(vec3(-bu, -bv, 1.0));
+    return normalize(TBN * nTS);
+}
 void main()
 {
     // 1) sample or fallback
@@ -236,7 +267,10 @@ void main()
     vec3 Ks = useSpecularMap ? texture(specularMap, TexCoord).rgb : material.specular;
 
     // 2) prepare
-    vec3 N = normalize(Normal);
+    vec3 N = fetchNormal();
+    //vec3 debugColor = N * 0.5 + 0.5;  
+    //FragColor = vec4(debugColor, 1.0);
+    //return;
     vec3 V = normalize(viewPos - FragPos);
 
     vec3 ambientAccum = vec3(0.0);

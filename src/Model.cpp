@@ -52,55 +52,102 @@ void Models::Model::move_relative_to(const glm::vec3& direction) {
     this->set_local_transform(tf);
 }
 
-Models::Model::Model(const std::vector<glm::vec3>& positions, const std::vector<glm::vec3>& normals,
-                     const std::vector<glm::vec2>& texcoords, const std::vector<GLuint>& indices,
-                     std::string label, const Material& mat)
-    : local_transform(1.0f), world_transform(1.0f), localaabbmin(std::numeric_limits<float>::max()),
-      localaabbmax(-std::numeric_limits<float>::lowest()), label(std::move(label)) {
-    // Build unique vertex array
+Models::Model::Model(const std::vector<glm::vec3>& positions,
+                     const std::vector<glm::vec3>& normals,
+                     const std::vector<glm::vec2>& texcoords,
+                     const std::vector<GLuint>& indices,
+                     std::string label,
+                     const Material& mat)
+    : local_transform(1.0f)
+    , world_transform(1.0f)
+    , localaabbmin(std::numeric_limits<float>::max())
+    , localaabbmax(std::numeric_limits<float>::lowest())
+    , label(std::move(label))
+{
+
+    unique_vertices.reserve(positions.size());
     for (size_t i = 0; i < positions.size(); ++i) {
         Vertex vert;
         vert.position = positions[i];
-        vert.normal   = (i < normals.size()) ? normals[i] : glm::vec3(0, 1, 0);
-        vert.texcoord = (i < texcoords.size()) ? texcoords[i] : glm::vec2(0, 0);
+        vert.normal   = (i < normals.size())
+                        ? normals[i]
+                        : glm::vec3(0.0f, 1.0f, 0.0f);
+        vert.texcoord = (i < texcoords.size())
+                        ? texcoords[i]
+                        : glm::vec2(0.0f);
+
+        vert.tangent  = glm::vec4(0.0f);
         unique_vertices.push_back(vert);
 
-        // Update local AABB
         localaabbmin = glm::min(localaabbmin, vert.position);
         localaabbmax = glm::max(localaabbmax, vert.position);
     }
 
-    // Single submesh
     SubMesh sm;
     sm.mat          = mat;
     sm.index_offset = 0;
     sm.index_count  = static_cast<GLuint>(indices.size());
     submeshes.push_back(sm);
 
-    // Create & upload GL buffers
+    std::vector<glm::vec3> tan1(unique_vertices.size(), glm::vec3(0.0f));
+    std::vector<glm::vec3> tan2(unique_vertices.size(), glm::vec3(0.0f));
+
+    for (size_t i = 0; i + 2 < indices.size(); i += 3) {
+        GLuint i0 = indices[i + 0];
+        GLuint i1 = indices[i + 1];
+        GLuint i2 = indices[i + 2];
+
+        const auto& v0 = unique_vertices[i0];
+        const auto& v1 = unique_vertices[i1];
+        const auto& v2 = unique_vertices[i2];
+
+        auto [T, B] = calculate_tangent_bitangent(v0, v1, v2);
+
+        tan1[i0] += T;  tan1[i1] += T;  tan1[i2] += T;
+        tan2[i0] += B;  tan2[i1] += B;  tan2[i2] += B;
+    }
+
+    for (size_t i = 0; i < unique_vertices.size(); ++i) {
+        orthogonalize_and_normalize_tb(unique_vertices[i], tan1, tan2, i);
+    }
+
     GLCall(glGenVertexArrays(1, &vao));
-    GLCall(glGenBuffers(1, &vbo));
-    GLCall(glGenBuffers(1, &ebo));
+    GLCall(glGenBuffers(1,         &vbo));
+    GLCall(glGenBuffers(1,         &ebo));
 
     GLCall(glBindVertexArray(vao));
 
     GLCall(glBindBuffer(GL_ARRAY_BUFFER, vbo));
-    GLCall(glBufferData(GL_ARRAY_BUFFER, unique_vertices.size() * sizeof(Vertex),
-                        unique_vertices.data(), GL_STATIC_DRAW));
+    GLCall(glBufferData(GL_ARRAY_BUFFER,
+                        unique_vertices.size() * sizeof(Vertex),
+                        unique_vertices.data(),
+                        GL_STATIC_DRAW));
 
     GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo));
-    GLCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(GLuint), indices.data(),
+    GLCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+                        indices.size() * sizeof(GLuint),
+                        indices.data(),
                         GL_STATIC_DRAW));
 
     GLCall(glEnableVertexAttribArray(0));
-    GLCall(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-                                 (void*)offsetof(Vertex, position)));
+    GLCall(glVertexAttribPointer(
+        0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+        (void*)offsetof(Vertex, position)));
+
     GLCall(glEnableVertexAttribArray(1));
-    GLCall(glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-                                 (void*)offsetof(Vertex, texcoord)));
+    GLCall(glVertexAttribPointer(
+        1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+        (void*)offsetof(Vertex, texcoord)));
+
     GLCall(glEnableVertexAttribArray(2));
-    GLCall(glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-                                 (void*)offsetof(Vertex, normal)));
+    GLCall(glVertexAttribPointer(
+        2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+        (void*)offsetof(Vertex, normal)));
+
+    GLCall(glEnableVertexAttribArray(3));
+    GLCall(glVertexAttribPointer(
+        3, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+        (void*)offsetof(Vertex, tangent)));
 
     GLCall(glBindVertexArray(0));
 }
@@ -181,6 +228,29 @@ Models::Model::Model(const std::string& objFile, const std::string& label)
         submeshes.push_back(sm);
     }
 
+    // storage for accumulating each shared vertex's contributions
+    std::vector<glm::vec3> tan1(unique_vertices.size(), glm::vec3(0.0f));
+    std::vector<glm::vec3> tan2(unique_vertices.size(), glm::vec3(0.0f));
+    
+    for (size_t i = 0; i + 2 < all_indices.size(); i += 3) {
+        GLuint i0 = all_indices[i+0];
+        GLuint i1 = all_indices[i+1];
+        GLuint i2 = all_indices[i+2];
+    
+        auto& v0 = unique_vertices[i0];
+        auto& v1 = unique_vertices[i1];
+        auto& v2 = unique_vertices[i2];
+    
+        auto [T, B] = calculate_tangent_bitangent(v0, v1, v2);
+    
+        tan1[i0] += T;  tan1[i1] += T;  tan1[i2] += T;
+        tan2[i0] += B;  tan2[i1] += B;  tan2[i2] += B;
+    }
+
+    for(int i = 0; i < unique_vertices.size(); i++){
+        orthogonalize_and_normalize_tb(unique_vertices[i], tan1, tan2, i);
+    }
+
     // create & upload VAO/VBO/EBO
     GLCall(glGenVertexArrays(1, &vao));
     GLCall(glGenBuffers(1, &vbo));
@@ -208,6 +278,9 @@ Models::Model::Model(const std::string& objFile, const std::string& label)
     GLCall(glEnableVertexAttribArray(2));
     GLCall(glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
                                  (void*)offsetof(Vertex, normal)));
+    GLCall(glEnableVertexAttribArray(3));
+    GLCall(glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                             (void*)offsetof(Vertex, tangent)));
 
     GLCall(glBindVertexArray(0));
 
@@ -248,6 +321,66 @@ Models::Model::~Model() {
     }
 }
 
+void Models::Model::orthogonalize_and_normalize_tb(
+    Models::Vertex& vertex,
+    const std::vector<glm::vec3>& accumulated_tangent, 
+    const std::vector<glm::vec3>& accumulated_bitangent,
+    const size_t index
+) {
+    const glm::vec3& normal    = vertex.normal;
+    const glm::vec3& tangent   = accumulated_tangent[index];
+    const glm::vec3& bitangent = accumulated_bitangent[index];
+
+    //
+    // Gram–Schmidt orthogonalize the tangent against the normal
+    glm::vec3 orth_tangent = glm::normalize(
+        tangent - normal * glm::dot(normal, tangent)
+    );
+
+    // Compute handedness (±1) so we can reconstruct the bi‐tangent in‐shader if desired
+    float handedness = (glm::dot(glm::cross(normal, orth_tangent), bitangent) < 0.0f)
+                       ? -1.0f
+                       : 1.0f;
+
+    // Store the results back into the vertex
+    vertex.tangent   = glm::vec4(orth_tangent, handedness);
+}
+
+std::pair<glm::vec3, glm::vec3> Models::Model::calculate_tangent_bitangent(
+    Models::Vertex v0, 
+    Models::Vertex v1, 
+    Models::Vertex v2
+){
+
+    glm::vec3 edge1 = v1.position - v0.position;
+    glm::vec3 edge2 = v2.position - v0.position;
+    glm::vec2 uv0   = v0.texcoord;
+    glm::vec2 uv1   = v1.texcoord;
+    glm::vec2 uv2   = v2.texcoord;
+
+    glm::vec2 delta_uv1 = uv1 - uv0;
+    glm::vec2 delta_uv2 = uv2 - uv0;
+    // Compute the inverse of the determinant of the UV matrix (Δ)
+    // This is equivalent to: Δ = 1 / (s1 * t2 - s2 * t1)
+    float r = 1.0f / (delta_uv1.x * delta_uv2.y  - delta_uv2.x * delta_uv1.y);
+
+    // Compute the tangent direction vector (T)
+    // This solves: T = (t2 * Q1 - t1 * Q2) / Δ
+    glm::vec3 tangent = {0.0f, 0.0f, 0.0f};
+    // Compute the bitangent direction vector (B)
+    // This solves: B = (-s2 * Q1 + s1 * Q2) / Δ
+    glm::vec3 bitangent = {0.0f, 0.0f, 0.0f};
+
+    tangent.x = r * (delta_uv2.y * edge1.x - delta_uv1.y * edge2.x);
+    tangent.y = r * (delta_uv2.y * edge1.y- delta_uv1.y * edge2.y);
+    tangent.z = r * (delta_uv2.y * edge1.z - delta_uv1.y * edge2.z);
+    bitangent.x = r * (-delta_uv2.x * edge1.x + delta_uv1.x * edge2.x);
+    bitangent.y = r * (-delta_uv2.x * edge1.y + delta_uv1.x * edge2.y);
+    bitangent.z = r * (-delta_uv2.x * edge1.z + delta_uv1.x * edge2.z);
+
+    return {tangent, bitangent};
+}
+
 void Models::Model::add_child(Model* child) {
     children.push_back(child);
 }
@@ -286,6 +419,7 @@ void Models::Model::draw_instanced(const glm::mat4& view, const glm::mat4& proje
         shader->set_float("material.opacity", sm.mat.d);
         shader->set_int("material.illumModel", sm.mat.illum);
         shader->set_float("material.ior", sm.mat.Ni);
+        shader->set_bool("material.useBumpMap", sm.mat.use_bump_map);
 
         if (sm.mat.tex_Ka) {
             shader->set_texture("ambientMap", sm.mat.tex_Ka, GL_TEXTURE1);
@@ -295,26 +429,23 @@ void Models::Model::draw_instanced(const glm::mat4& view, const glm::mat4& proje
         }
 
         if (sm.mat.tex_Kd) {
-            shader->set_texture("diffuseMap", sm.mat.tex_Kd, GL_TEXTURE0);
+            shader->set_texture("diffuseMap", sm.mat.tex_Kd, GL_TEXTURE2);
             shader->set_bool("useDiffuseMap", true);
         } else {
             shader->set_bool("useDiffuseMap", false);
         }
 
         if (sm.mat.tex_Ks) {
-            shader->set_texture("specularMap", sm.mat.tex_Ks, GL_TEXTURE2);
+            shader->set_texture("specularMap", sm.mat.tex_Ks, GL_TEXTURE3);
             shader->set_bool("useSpecularMap", true);
         } else {
             shader->set_bool("useSpecularMap", false);
         }
 
-        // normal map
-        //  if(sm.mat.tex_Bump) {
-        //     shader->set_texture("normalMap", sm.mat.tex_Bump, GL_TEXTURE3);
-        //     shader->set_bool   ("useNormalMap", true);
-        //  } else {
-        //     shader->set_bool("useNormalMap", false);
-        //  }
+        if(sm.mat.tex_Bump) {
+           shader->set_texture("bumpMap", sm.mat.tex_Bump, GL_TEXTURE4);
+           shader->set_float("bumpScale", 4.0f);
+        } 
 
         void* offsetPtr = (void*)(sm.index_offset * sizeof(GLuint));
         GLCall(glDrawElementsInstanced(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT, offsetPtr,
@@ -346,6 +477,7 @@ void Models::Model::draw(const glm::mat4& view, const glm::mat4& projection,
         shader->set_float("material.opacity", sm.mat.d);
         shader->set_int("material.illumModel", sm.mat.illum);
         shader->set_float("material.ior", sm.mat.Ni);
+        shader->set_bool("material.useBumpMap", sm.mat.use_bump_map);
 
         if (sm.mat.tex_Ka) {
             shader->set_texture("ambientMap", sm.mat.tex_Ka, GL_TEXTURE1);
@@ -355,26 +487,23 @@ void Models::Model::draw(const glm::mat4& view, const glm::mat4& projection,
         }
 
         if (sm.mat.tex_Kd) {
-            shader->set_texture("diffuseMap", sm.mat.tex_Kd, GL_TEXTURE0);
+            shader->set_texture("diffuseMap", sm.mat.tex_Kd, GL_TEXTURE2);
             shader->set_bool("useDiffuseMap", true);
         } else {
             shader->set_bool("useDiffuseMap", false);
         }
 
         if (sm.mat.tex_Ks) {
-            shader->set_texture("specularMap", sm.mat.tex_Ks, GL_TEXTURE2);
+            shader->set_texture("specularMap", sm.mat.tex_Ks, GL_TEXTURE3);
             shader->set_bool("useSpecularMap", true);
         } else {
             shader->set_bool("useSpecularMap", false);
         }
 
-        // normal map
-        // if(sm.mat.tex_Bump) {
-        //    shader->set_texture("normalMap", sm.mat.tex_Bump, GL_TEXTURE3);
-        //    shader->set_bool   ("useNormalMap", true);
-        // } else {
-        //    shader->set_bool("useNormalMap", false);
-        // }
+        if(sm.mat.tex_Bump) {
+           shader->set_texture("bumpMap", sm.mat.tex_Bump, GL_TEXTURE4);
+           shader->set_float("bumpScale", 4.0f);
+        } 
 
         void* offsetPtr = (void*)(sm.index_offset * sizeof(GLuint));
         GLCall(glDrawElements(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT, offsetPtr));
@@ -404,6 +533,8 @@ void Models::Model::draw_depth_instanced(std::shared_ptr<Shader> shader){
     if(instance_data_dirty) update_instance_data();
 
     shader->set_bool("uUseInstancing", true);
+    shader->set_mat4("uModel", world_transform);
+
     GLCall(glBindVertexArray(vao));
 
     for (auto const& sm : submeshes) {
@@ -481,7 +612,7 @@ void Models::Model::init_instancing(size_t max_instances) {
         glBufferData(GL_ARRAY_BUFFER, max_instances * sizeof(glm::mat4), nullptr, GL_DYNAMIC_DRAW));
 
     // Set up the four vec4 attributes (one per column of the mat4)
-    constexpr GLuint loc = 3; // choose free attribute locations
+    constexpr GLuint loc = 4; // choose free attribute locations
     for (int i = 0; i < 4; ++i) {
         GLuint attrib = loc + i;
         GLCall(glEnableVertexAttribArray(attrib));

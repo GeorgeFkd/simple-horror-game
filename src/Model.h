@@ -32,6 +32,7 @@ namespace Models {
         glm::vec3 position;
         glm::vec2 texcoord;
         glm::vec3 normal;
+        glm::vec4 tangent;
 
         bool operator==(Vertex const& o) const {
             return glm::all(glm::epsilonEqual(position, o.position, glm::epsilon<float>())) &&
@@ -68,6 +69,8 @@ namespace Models {
         void add_child(Model* child);
         void debug_dump() const;
         void move_relative_to(const glm::vec3& direction);
+        std::pair<glm::vec3, glm::vec3> calculate_tangent_bitangent(Models::Vertex v0, Models::Vertex v1, Models::Vertex v2);
+        void orthogonalize_and_normalize_tb(Models::Vertex& vertex, const std::vector<glm::vec3>& accumulated_tangent, const std::vector<glm::vec3>& accumulated_bitangent, const size_t index);
         void add_instance_transform(const glm::mat4& transform,const std::string& suffix);
         void compute_transformed_aabb(const glm::mat4& xf, glm::vec3& out_min, glm::vec3& out_max);
         void init_instancing(size_t max_instances);
