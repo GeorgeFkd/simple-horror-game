@@ -429,21 +429,21 @@ void Models::Model::draw_instanced(const glm::mat4& view, const glm::mat4& proje
         }
 
         if (sm.mat.tex_Kd) {
-            shader->set_texture("diffuseMap", sm.mat.tex_Kd, GL_TEXTURE0);
+            shader->set_texture("diffuseMap", sm.mat.tex_Kd, GL_TEXTURE2);
             shader->set_bool("useDiffuseMap", true);
         } else {
             shader->set_bool("useDiffuseMap", false);
         }
 
         if (sm.mat.tex_Ks) {
-            shader->set_texture("specularMap", sm.mat.tex_Ks, GL_TEXTURE2);
+            shader->set_texture("specularMap", sm.mat.tex_Ks, GL_TEXTURE3);
             shader->set_bool("useSpecularMap", true);
         } else {
             shader->set_bool("useSpecularMap", false);
         }
 
         if(sm.mat.tex_Bump) {
-           shader->set_texture("bumpMap", sm.mat.tex_Bump, GL_TEXTURE3);
+           shader->set_texture("bumpMap", sm.mat.tex_Bump, GL_TEXTURE4);
            shader->set_float("bumpScale", 4.0f);
         } 
 
@@ -487,21 +487,21 @@ void Models::Model::draw(const glm::mat4& view, const glm::mat4& projection,
         }
 
         if (sm.mat.tex_Kd) {
-            shader->set_texture("diffuseMap", sm.mat.tex_Kd, GL_TEXTURE0);
+            shader->set_texture("diffuseMap", sm.mat.tex_Kd, GL_TEXTURE2);
             shader->set_bool("useDiffuseMap", true);
         } else {
             shader->set_bool("useDiffuseMap", false);
         }
 
         if (sm.mat.tex_Ks) {
-            shader->set_texture("specularMap", sm.mat.tex_Ks, GL_TEXTURE2);
+            shader->set_texture("specularMap", sm.mat.tex_Ks, GL_TEXTURE3);
             shader->set_bool("useSpecularMap", true);
         } else {
             shader->set_bool("useSpecularMap", false);
         }
 
         if(sm.mat.tex_Bump) {
-           shader->set_texture("bumpMap", sm.mat.tex_Bump, GL_TEXTURE3);
+           shader->set_texture("bumpMap", sm.mat.tex_Bump, GL_TEXTURE4);
            shader->set_float("bumpScale", 4.0f);
         } 
 
@@ -533,6 +533,8 @@ void Models::Model::draw_depth_instanced(std::shared_ptr<Shader> shader){
     if(instance_data_dirty) update_instance_data();
 
     shader->set_bool("uUseInstancing", true);
+    shader->set_mat4("uModel", world_transform);
+
     GLCall(glBindVertexArray(vao));
 
     for (auto const& sm : submeshes) {

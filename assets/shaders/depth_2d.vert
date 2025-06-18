@@ -2,10 +2,10 @@
 
 layout (location = 0) in vec3 aPos;
 
-layout(location = 3) in vec4 iModelCol0;
-layout(location = 4) in vec4 iModelCol1;
-layout(location = 5) in vec4 iModelCol2;
-layout(location = 6) in vec4 iModelCol3;
+layout(location = 4) in vec4 iModelCol0;
+layout(location = 5) in vec4 iModelCol1;
+layout(location = 6) in vec4 iModelCol2;
+layout(location = 7) in vec4 iModelCol3;
 
 uniform mat4 uModel;
 uniform mat4 uProj;
