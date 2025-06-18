@@ -24,9 +24,8 @@ class Monster {
     bool     no_scripts_left();
 
     Monster& follow_distance(float dist);
-    // Monster& follow_speed(float speed);
     Monster& disappear_probability(float pr);
-    // Monster& seconds_per_coinflip(float s);
+    Monster& seconds_for_coinflip(float s);
 
     void teleport_at(const glm::vec3& world_position);
     void disappear();
@@ -34,8 +33,12 @@ class Monster {
 
     void update(float dt,const glm::vec3& player_view_direction,const glm::vec3& player_position);
 
-    void on_death_by_not_looking(std::function<void()> fn);
-    void on_death_by_looking(std::function<void()> fn);
+    inline void on_death_by_not_looking(std::function<void()> fn){
+        on_not_looking_death = fn;
+    }
+    inline void on_death_by_looking(std::function<void()> fn){
+        on_looking_death = fn;
+    }
     
     inline void on_monster_active(std::function<void()> fn){
         on_active = fn;
@@ -55,13 +58,12 @@ class Monster {
     };
 
     float distance_from_player                          = 10.0f;
-    // those will be inside the class 
     float time_looking_at_it                       = 0.0f;
     float time_not_looking_at_it                   = 0.0f;
     int   seconds_per_coinflip                     = 20;
-    float random_dissapear_probability             = 0.55f;
-    float dissapear_probability_when_looking_at_it = 0.75f;
-    float seconds_to_look_at_it_for_coinflip       = 5.0f;
+    float random_disappear_probability             = 0.55f;
+    float disappear_probability_when_looking_at_it = 0.75f;
+    float seconds_looking_at_it_for_coinflip       = 5.0f;
     float seconds_looking_at_it_for_death          = 7.0f;
     float seconds_not_looking_at_it_for_death      = 10.0f;
     float elapsed_time = 0.0f;
@@ -73,5 +75,7 @@ class Monster {
     std::uniform_real_distribution<> uniform_rand;
     std::function<void()> on_active;
     std::function<void()> on_disabled;
+    std::function<void()> on_looking_death;
+    std::function<void()> on_not_looking_death;
     float generate_random_number();
 };

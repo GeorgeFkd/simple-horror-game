@@ -129,8 +129,9 @@ namespace Game {
         Camera::CameraObj camera;
         SDL_Window* window;
         SDL_GLContext glCtx;
-        TextRenderer textRenderer;
+        TextRenderer text_renderer;
         Monster monster;
+        std::string center_text = "";
         glm::vec3 last_camera_position;
         glm::mat4 last_monster_transform;
     };
