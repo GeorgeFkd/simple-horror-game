@@ -14,6 +14,7 @@
 #include <sstream>
 #include "TextRenderer.h"
 #include <string>
+#include "Monster.h"
 // REWRITE 1: Use instance suffix-based identification for interaction
 // This avoids incorrect handler dispatch after vector shifts due to instance removal
 namespace Game {
@@ -129,7 +130,7 @@ namespace Game {
         SDL_Window* window;
         SDL_GLContext glCtx;
         TextRenderer textRenderer;
-
+        Monster monster;
         glm::vec3 last_camera_position;
         glm::mat4 last_monster_transform;
     };
