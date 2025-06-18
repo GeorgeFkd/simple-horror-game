@@ -21,6 +21,7 @@ set(SOURCES
     src/Shader.cpp
     src/data-structures/Light.cpp
         src/Group.cpp
+        src/Monster.cpp
 )
 
 find_package(OpenGL REQUIRED)
