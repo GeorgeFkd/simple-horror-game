@@ -235,12 +235,14 @@ void ObjectLoader::OBJLoader::load_textures() {
             material.tex_Ks = id;
         }
 
-        if (!material.map_Bump.empty()) {
+        if (!material.map_Bump.empty() && material.map_Bump != material.map_Kd) {
+            // only load a bump map if it's a different file from the diffuse
             GLuint id = load_texture_from_file(material.map_Bump);
-            #ifdef DEBUG_OBJLOADER
-            std::cout << "Loaded map_Bump: " << material.map_Bump << " → ID " << id << std::endl;
-            #endif
-            material.tex_Bump = id;
+            material.tex_Bump   = id;
+            material.use_bump_map = true;
+        } else {
+            // either no bump entry, or they're re-using the diffuse as bump: disable it
+            material.use_bump_map = false;
         }
     }
   

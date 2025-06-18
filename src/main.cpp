@@ -133,6 +133,7 @@ Models::Model createCeiling(float roomSize, float height) {
     floor_material.Ns    = 16.0f;                          // shininess
     floor_material.d     = 1.0f;                           // opacity
     floor_material.illum = 2;                              // standard Phong
+    floor_material.use_bump_map = false;
 
     return Models::Model(floor_verts, floor_normals, floor_uvs, floor_indices, std::move("Ceiling"),
                          floor_material);

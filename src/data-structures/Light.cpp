@@ -233,7 +233,7 @@ void Light::bind_shadow_map(std::shared_ptr<Shader> shader, const std::string& b
         //shader->set_int(base + "shadowMapCube", index);
         shader->set_texture(base,
                             get_depth_texture(),
-                            GL_TEXTURE3 + index,
+                            GL_TEXTURE4 + index,
                             GL_TEXTURE_CUBE_MAP);
     }else{
         // spot or directional use a 2D depth map
@@ -241,7 +241,7 @@ void Light::bind_shadow_map(std::shared_ptr<Shader> shader, const std::string& b
         std::string base = "shadowMap" + std::to_string(index);
         shader->set_texture(base,
                             get_depth_texture(),
-                            GL_TEXTURE3 + index,
+                            GL_TEXTURE4 + index,
                             GL_TEXTURE_2D);
     }
 }
