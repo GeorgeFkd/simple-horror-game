@@ -1,5 +1,6 @@
 // main.cpp
 #include "Camera.h"
+#include "Group.h"
 #include "Light.h"
 #include "SceneManager.h"
 #include "fwd.hpp"
@@ -10,10 +11,8 @@
 #include <string>
 #include <vector>
 
-
 enum class SurfaceType { Floor, Ceiling, WallFront, WallBack, WallLeft, WallRight };
-struct
-Models::Model repeating_tile(SurfaceType surface, float offset, const Material& material) {
+struct Models::Model repeating_tile(SurfaceType surface, float offset, const Material& material) {
     // might be able to constexpr this
     constexpr int   TILE_WIDTH  = 50;
     constexpr int   TILE_HEIGHT = 50;
@@ -113,8 +112,34 @@ Models::Model createFloor(float roomSize) {
     floor_material.d     = 1.0f;                           // opacity
     floor_material.illum = 2;                              // standard Phong
 
-    return Models::Model(floor_verts, floor_normals, floor_uvs, floor_indices, std::move("Floor"), floor_material);
+    return Models::Model(floor_verts, floor_normals, floor_uvs, floor_indices, std::move("Floor"),
+                         floor_material);
 }
+
+Models::Model createCeiling(float roomSize, float height) {
+    std::vector<glm::vec3> floor_verts = {{-roomSize, height, -roomSize},
+                                          {-roomSize, height, roomSize},
+                                          {roomSize, height, roomSize},
+                                          {roomSize, height, -roomSize}};
+    std::vector<glm::vec3> floor_normals(4, glm::vec3(0, -1, 0));
+    std::vector<glm::vec2> floor_uvs = {{0, 0}, {0, 1}, {1, 1}, {1, 0}};
+    // the indices are changed to agree with the normals 0,-1,0 as otherwise it is discarded
+    std::vector<GLuint> floor_indices = {0, 2, 1, 0, 3, 2};
+
+    Material floor_material;
+    floor_material.Ka    = glm::vec3(0.15f, 0.07f, 0.02f); // dark ambient
+    floor_material.Kd    = glm::vec3(0.59f, 0.29f, 0.00f); // brown diffuse
+    floor_material.Ks    = glm::vec3(0.05f, 0.04f, 0.03f); // small specular
+    floor_material.Ns    = 16.0f;                          // shininess
+    floor_material.d     = 1.0f;                           // opacity
+    floor_material.illum = 2;                              // standard Phong
+
+    return Models::Model(floor_verts, floor_normals, floor_uvs, floor_indices, std::move("Ceiling"),
+                         floor_material);
+}
+
+void createRoom2(Game::GameState& game_state) {}
+
 int main() {
 
     Camera::CameraObj  camera(1280, 720, glm::vec3(0.0f, 10.0f, 3.5f));
@@ -125,51 +150,18 @@ int main() {
 
     Game::GameState game_state;
 
-    constexpr float ROOM_HEIGHT = 50.0f;
+    constexpr float ROOM_HEIGHT = 30.0f;
     constexpr float ROOM_WIDTH  = 60.0f;
     constexpr float ROOM_DEPTH  = ROOM_WIDTH;
 
-    auto floor_model = createFloor(ROOM_WIDTH);
-    // floor_model.init_instancing(6);
-    // struct SurfaceConfig {
-    //     glm::vec3 position;
-    //     glm::vec3 rotation_axis;
-    //     float     rotation_deg;
-    // };
-    // //all of the walls walls face the same problem
-    // std::vector<SurfaceConfig> surfaces = {
-    //     // Floor
-    //     {{0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, 0.0f},
-    //
-    //     // //Ceiling
-    //     {{0.0f, ROOM_HEIGHT, 0.0f}, {1.0f, 0.0f, 0.0f}, 180.0f},
-    //     //
-    //     // // Back Wall
-    //     {{0.0f, ROOM_HEIGHT / 2, -ROOM_DEPTH / 2}, {1.0f, 0.0f, 0.0f}, 90.0f},
-    //     //
-    //     // // Front Wall
-    //     {{0.0f, ROOM_HEIGHT / 2, ROOM_DEPTH / 2}, {1.0f, 0.0f, 0.0f}, -90.0f},
-    //     //
-    //     // // Left Wall
-    //     {{-ROOM_WIDTH / 2, ROOM_HEIGHT / 2, 0.0f}, {0.0f, 0.0f, 1.0f}, -90.0f},
-    //     //
-    //     // // Right Wall
-    //     {{ROOM_WIDTH / 2, ROOM_HEIGHT / 2, 0.0f}, {0.0f, 0.0f, 1.0f}, 90.0f},
-    // };
-    //
-    // for (const auto& face : surfaces) {
-    //     glm::mat4 tf = glm::translate(glm::mat4(1.0f), face.position);
-    //     if (glm::length(face.rotation_axis) > 0.0f) {
-    //         tf = glm::rotate(tf, glm::radians(face.rotation_deg), face.rotation_axis);
-    //     }
-    //     floor_model.add_instance_transform(tf);
-    // }
-
-    floor_model.debug_dump();
+    auto floor_model   = createFloor(ROOM_WIDTH);
+    auto ceiling_model = createCeiling(ROOM_WIDTH, 30.0f);
     game_state.add_model(std::move(floor_model), floor_model.name());
+    game_state.add_model(std::move(ceiling_model), ceiling_model.name());
 
-    auto scroll = Models::Model("assets/models/scroll.obj", "page");
-    scroll.init_instancing(6);
+    auto                   scroll        = Models::Model("assets/models/scroll.obj", "page");
+    constexpr unsigned int extra_scrolls = 4;
+    scroll.init_instancing(6 + 4);
     glm::vec3 scroll_positions[6];
     scroll_positions[0] = {-29.0f, 0.0f, -29.0f};
     scroll_positions[1] = {-15.0f, 0.f, 20.0f};
@@ -180,11 +172,11 @@ int main() {
 
     scroll.set_interactivity(true);
     for (int i = 0; i < 6; i++)
-        scroll.add_instance_transform(glm::translate(glm::mat4(1.0f), scroll_positions[i]),"-" + std::to_string(i));
-    scroll.debug_dump();
-    game_state.add_model(std::move(scroll), "page");
+        scroll.add_instance_transform(glm::translate(glm::mat4(1.0f), scroll_positions[i]),
+                                      "-" + std::to_string(i));
 
-    auto wall = Models::Model("assets/models/SimpleOldTownAssets/OldHouseBrownWallLarge.obj", "wall");
+    auto wall =
+        Models::Model("assets/models/SimpleOldTownAssets/OldHouseBrownWallLarge.obj", "wall");
     constexpr int   grid_rows                               = 10;
     constexpr int   grid_columns                            = 7;
     constexpr float wall_y                                  = 0.0f;
@@ -240,7 +232,8 @@ int main() {
     vertical[1][3] = true;
     vertical[8][4] = true;
 
-    wall.init_instancing(grid_rows * grid_columns * 2);
+    unsigned int extraWalls = 10;
+    wall.init_instancing(grid_rows * grid_columns * 2 + extraWalls);
 
     float half_width  = (grid_columns - 1) * spacing_x / 2.0f;
     float half_height = (grid_rows - 1) * spacing_z / 2.0f;
@@ -254,12 +247,8 @@ int main() {
 
                 glm::vec3 pos = glm::vec3(x, wall_y, z);
                 glm::mat4 tf  = glm::translate(glm::mat4(1.0f), pos);
-                // tf = glm::scale(glm::mat4(1.0f),{1.0f,1.0f,1.35f}) * tf;
-                std::cout << "[H] Placing wall between row " << (row - 1) << " and " << row
-                          << " at col " << col << " -> Position: (" << x << ", " << wall_y << ", "
-                          << z << ")\n";
-
-                wall.add_instance_transform(tf,"-h-" + std::to_string(row) + "-" + std::to_string(col));
+                wall.add_instance_transform(tf, "-h-" + std::to_string(row) + "-" +
+                                                    std::to_string(col));
             }
         }
     }
@@ -274,22 +263,18 @@ int main() {
                 glm::vec3 pos = glm::vec3(x, wall_y, z);
                 glm::mat4 tf  = glm::translate(glm::mat4(1.0f), pos);
                 tf            = glm::rotate(tf, glm::radians(90.0f), glm::vec3(0, 1, 0));
-                std::cout << "[V] Placing wall between col " << (col - 1) << " and " << col
-                          << " at row " << row << " -> Position: (" << x << ", " << wall_y << ", "
-                          << z << ")\n";
 
-                wall.add_instance_transform(tf,"-v-" + std::to_string(row) + "-" + std::to_string(col));
-
+                wall.add_instance_transform(tf, "-v-" + std::to_string(row) + "-" +
+                                                    std::to_string(col));
             }
         }
     };
 
-    game_state.add_model(std::move(wall), "wall");
-
     auto right_light = Models::Model("assets/models/light_sphere.obj", "sphere");
     auto overhead_point_light_model =
         Models::Model("assets/models/light_sphere.obj", "overhead_point_light");
-    auto  right_spot_light_model = Models::Model("assets/models/light_sphere.obj", "right_spot_light");
+    auto right_spot_light_model =
+        Models::Model("assets/models/light_sphere.obj", "right_spot_light");
     Light flashlight(LightType::SPOT,
                      glm::vec3(0.0f),               // position
                      glm::vec3(0.0f, 0.0f, -1.0f),  // direction
@@ -324,25 +309,175 @@ int main() {
     // right_spot_light_model.set_local_transform(
     //     glm::translate(glm::mat4(1.0f), right_spotlight.get_position()));
 
-    // gameState.add_model(overhead_point_light_model);
-    // gameState.add_model(right_spot_light_model);
     // scene_manager.add_light(overhead_point_light);
     game_state.add_light(std::move(flashlight), "flashlight");
-    // gameState.add_light(right_spotlight);
+
+    // ROOMS
+    float     room_size   = 10.0f;
+    glm::vec3 room_offset = glm::vec3(ROOM_WIDTH - room_size, 0.0f, ROOM_DEPTH - room_size);
+    Group     room1("room-1", room_offset);
+    room1
+        .model("assets/models/SimpleOldTownAssets/OldHouseDoorWoodDarkRed.obj", "door",
+               glm::vec3(0.0f), {}, {}, true)
+        .walls(wall, room_size)
+        .model("assets/models/SimpleOldTownAssets/ChairCafeBrown01.obj", "chair",
+               glm::vec3(5.0f, 0.0f, 5.0f))
+        .model("assets/models/SimpleOldTownAssets/TableSmall1.obj", "small_table",
+               glm::vec3(5.0f, 0.0f, -4.0f))
+        .model("assets/models/SimpleOldTownAssets/leaves.obj", "leaves",
+               glm::vec3(3.0f, 0.0f, -6.0f))
+        .model("assets/models/SimpleOldTownAssets/Flokati.obj", "flokati",
+               glm::vec3(5.0f, 0.0f, 0.0f), glm::vec3(5.5f, 1.0f, 5.5f))
+        .model("assets/models/SimpleOldTownAssets/Bed02.obj", "bed", glm::vec3(5.0f, 0.0f, 0.0f),
+               glm::vec3(1.2f, 1.2f, 1.2f))
+        .model("assets/models/scroll.obj", "page-7", glm::vec3(5.0f, 0.0f, 8.0f));
+    auto room1_models = room1.models();
+    for (auto& m : room1_models) {
+        game_state.add_model(std::move(m), m->name());
+    }
+
+    glm::vec3 room_offset2 = glm::vec3(-ROOM_WIDTH + room_size, 0.0f, -ROOM_DEPTH + room_size * 2);
+    Group     room2("room-2", room_offset2);
+    room2
+        .model("assets/models/SimpleOldTownAssets/OldHouseDoorWoodDarkRed.obj", "door",
+               glm::vec3(0.0f), glm::vec3(1.2f), std::nullopt, true)
+        .walls(wall, room_size)
+
+        .model("assets/models/SimpleOldTownAssets/ChairCafeBrown01.obj", "chair",
+               glm::vec3(5.0f, 0.0f, 5.0f))
+        .model("assets/models/SimpleOldTownAssets/TableSmall1.obj", "small_table",
+               glm::vec3(5.0f, 0.0f, -4.0f))
+        .model("assets/models/SimpleOldTownAssets/leaves.obj", "leaves",
+               glm::vec3(3.0f, 0.0f, -6.0f), glm::vec3(1.2f))
+        .model("assets/models/SimpleOldTownAssets/Flokati.obj", "flokati",
+               glm::vec3(5.0f, 0.0f, 0.0f), glm::vec3(5.5f, 1.0f, 5.5f))
+
+        .model("assets/models/SimpleOldTownAssets/Bed02.obj", "bed", glm::vec3(5.0f, 0.0f, 0.0f),
+               glm::vec3(1.2f, 1.2f, 1.2f));
+
+    for (auto& m : room2.models()) {
+        game_state.add_model(std::move(m), m->name());
+    }
+
+    glm::vec3 room_offset3 = glm::vec3(ROOM_WIDTH - room_size, 0.0f, -ROOM_DEPTH + room_size * 2);
+    Group     room3("room-3", room_offset3);
+    room3
+        .model("assets/models/SimpleOldTownAssets/OldHouseDoorWoodDarkRed.obj", "door",
+               glm::vec3(0.0f), glm::vec3(1.2f), std::nullopt, true)
+        .walls(wall, room_size)
+        .model("assets/models/SimpleOldTownAssets/ChairCafeBrown01.obj", "chair",
+               glm::vec3(5.0f, 0.0f, 5.0f))
+        .model("assets/models/SimpleOldTownAssets/TableSmall1.obj", "small_table",
+               glm::vec3(5.0f, 0.0f, -4.0f))
+        .model("assets/models/SimpleOldTownAssets/leaves.obj", "leaves",
+               glm::vec3(3.0f, 0.0f, -6.0f), glm::vec3(1.2f))
+        .model("assets/models/SimpleOldTownAssets/Flokati.obj", "flokati",
+               glm::vec3(5.0f, 0.0f, 0.0f), glm::vec3(5.5f, 1.0f, 5.5f))
+        .model("assets/models/SimpleOldTownAssets/Bed02.obj", "bed", glm::vec3(5.0f, 0.0f, 0.0f),
+               glm::vec3(1.2f, 1.2f, 1.2f));
+
+    for (auto& m : room3.models()) {
+        game_state.add_model(std::move(m), m->name());
+    }
+
+    glm::vec3 page3_pos = room_offset3 + glm::vec3(5.0f, 0.0f, 8.0f);
+    scroll.add_instance_transform(glm::translate(scroll.get_local_transform(), page3_pos),
+                                  "room-3-page-9");
+
+    glm::vec3 room_offset4 = glm::vec3(-ROOM_WIDTH + room_size, 0.0f, ROOM_DEPTH - room_size);
+    Group     room4("room-4", room_offset4);
+    room4
+        .model("assets/models/SimpleOldTownAssets/OldHouseDoorWoodDarkRed.obj", "door",
+               glm::vec3(0.0f), std::nullopt, std::nullopt,
+               true // interactive
+               )
+        .model("assets/models/SimpleOldTownAssets/ChairCafeBrown01.obj", "chair",
+               glm::vec3(5.0f, 0.0f, 5.0f))
+        .model("assets/models/SimpleOldTownAssets/TableSmall1.obj", "small_table",
+               glm::vec3(5.0f, 0.0f, -4.0f))
+        .model("assets/models/SimpleOldTownAssets/leaves.obj", "leaves",
+               glm::vec3(3.0f, 0.0f, -6.0f))
+        .model("assets/models/SimpleOldTownAssets/Flokati.obj", "flokati",
+               glm::vec3(5.0f, 0.0f, 0.0f), glm::vec3(5.5f, 1.0f, 5.5f))
+        .model("assets/models/SimpleOldTownAssets/Bed02.obj", "bed", glm::vec3(5.0f, 0.0f, 0.0f),
+               glm::vec3(1.2f, 1.2f, 1.2f))
+        .walls(wall, room_size);
+
+    auto room4_models = room4.models();
+    for (auto& m : room4_models) {
+        std::cout << "Model: " << m->name() << std::endl;
+        game_state.add_model(std::move(m), m->name());
+    }
+
+    Group dining_room("dining-room", glm::vec3(ROOM_DEPTH - ROOM_DEPTH / 4, 0.0f, 0.0f));
+    dining_room.model("assets/models/SimpleOldTownAssets/OldHouseDoorWoodDarkRed.obj", "door",
+                      glm::vec3(0.0f), std::nullopt, std::nullopt,
+                      true // interactive
+    );
+    dining_room.model("assets/models/SimpleOldTownAssets/dining-place.obj", "diner",
+                      glm::vec3(4.0f, 0.0f, 4.0f));
+    dining_room.model("assets/models/SimpleOldTownAssets/Flokati.obj", "flokati",
+                      glm::vec3(4.0f, 0.0f, 4.0f), glm::vec3(5.5f, 1.0f, 5.5f),
+                      std::make_pair(90.0f, glm::vec3(0.0f, 1.0f, 0.0f)), false);
+    dining_room.model("assets/models/SimpleOldTownAssets/leaves.obj", "leaves",
+                      glm::vec3(7.0f, 0.0f, 2.0f));
+    dining_room.walls(wall, room_size);
+
+    for (auto& m : dining_room.models()) {
+        game_state.add_model(std::move(m), m->name());
+    }
+
+    game_state.add_model(std::move(scroll), "page");
+    game_state.add_model(std::move(wall), "wall");
 
     scene_manager.set_game_state(game_state);
+    struct DoorState {
+        bool      is_open     = false;
+        bool      initialized = false;
+        glm::mat4 closed_xf   = glm::mat4(1.0f);
+        glm::mat4 open_xf     = glm::mat4(1.0f);
+    };
+    constexpr size_t                   NUM_DOORS     = 5;
+    std::array<std::string, NUM_DOORS> doors_of_game = {
+        "dining-room-door", "room-1-door", "room-2-door", "room-3-door", "room-4-door"};
+    std::array<DoorState, NUM_DOORS> door_states;
+    for (size_t i = 0; i < NUM_DOORS; ++i) {
+        const auto& door_name = doors_of_game[i];
+        DoorState&  state     = door_states[i];
+        scene_manager.bind_handler_to_model(
+            door_name, [&state, door_name](Game::SceneManager* scene_manager) mutable {
+                auto door_to_toggle = scene_manager->get_game_state()->find_model(door_name);
+                if (!door_to_toggle) {
+                    throw std::runtime_error("Door Model not found: " + door_name);
+                }
+
+                if (!state.initialized) {
+                    state.initialized = true;
+                    state.closed_xf   = door_to_toggle->get_local_transform();
+                    state.open_xf     = glm::rotate(state.closed_xf, glm::radians(-90.0f),
+                                                    glm::vec3(0.0f, 1.0f, 0.0f));
+                }
+                if (state.is_open) {
+                    door_to_toggle->set_local_transform(state.closed_xf);
+                } else {
+                    door_to_toggle->set_local_transform(state.open_xf);
+                }
+                state.is_open = !state.is_open;
+                return true;
+            });
+    }
 
     for (size_t i = 0; i < 6; i++) {
         auto name = std::string("page-") + std::to_string(i);
         scene_manager.bind_handler_to_model(name, [i](Game::SceneManager* scene_manager) {
             auto m = scene_manager->get_game_state()->find_model("page");
-            if(!m){
+            if (!m) {
                 throw std::runtime_error("Model not found " + m->name());
             }
             scene_manager->remove_instanced_model_at(m->name(-1), "-" + std::to_string(i));
             scene_manager->get_game_state()->pages_collected += 1;
 
-            if(m->get_active_instance_count() == 0){
+            if (m->get_active_instance_count() == 0) {
                 m->disable();
             }
             return false;
