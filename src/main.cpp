@@ -287,8 +287,8 @@ int main() {
         glm::cos(glm::radians(25.0f)),   // 8: outer_cutoff
         1280,                            // 9: shadow_width
         720,                             // 10: shadow_height
-        1.0f,                            // 11: near_plane
-        100.0f,                          // 12: far_plane
+        0.1f,                            // 11: near_plane
+        50.0f,                          // 12: far_plane
         10.0f,                           // 13: ortho_size
         1.0f,                            // 14: attenuation_constant
         0.35f,                           // 15: attenuation_linear
@@ -418,8 +418,9 @@ int main() {
     // move point‐light there and have it shine down
     pointlight.set_position(point_world2);
     pointlight.set_direction(glm::vec3(0.0f, -1.0f, 0.0f));
+
+    game_state.add_light(std::move(pointlight), "pointlight");
             
-    game_state.add_light(std::move(pointlight), "overhead_pointlight");
 
     for (auto& m : room2.models()) {
         game_state.add_model(std::move(m), m->name());

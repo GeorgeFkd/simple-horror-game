@@ -59,9 +59,12 @@ Light::Light(
             GLCall(glTexImage2D(
                 GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
                 0, GL_DEPTH_COMPONENT,
-                shadow_width, shadow_height,
-                0, GL_DEPTH_COMPONENT,
-                GL_FLOAT, nullptr
+                shadow_width,
+                shadow_height,
+                0, 
+                GL_DEPTH_COMPONENT,
+                GL_FLOAT, 
+                nullptr
             ));
         }
         GLCall(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST));
@@ -82,10 +85,15 @@ Light::Light(
         GLCall(glGenTextures(1, &depth_map));
         GLCall(glBindTexture(GL_TEXTURE_2D, depth_map));
         GLCall(glTexImage2D(
-            GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
-            shadow_width, shadow_height,
-            0, GL_DEPTH_COMPONENT,
-            GL_FLOAT, nullptr
+            GL_TEXTURE_2D, 
+            0,
+            GL_DEPTH_COMPONENT,
+            shadow_width, 
+            shadow_height,
+            0, 
+            GL_DEPTH_COMPONENT,
+            GL_FLOAT, 
+            nullptr
         ));
         GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST));
         GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
@@ -153,6 +161,7 @@ void Light::draw_depth_pass(std::shared_ptr<Shader> shader,
 {
     GLCall(glViewport(0, 0, shadow_width, shadow_height));
     GLCall(glBindFramebuffer(GL_FRAMEBUFFER, depth_map_fbo));
+    GLCall(glClear(GL_DEPTH_BUFFER_BIT));
     GLCall(glEnable(GL_DEPTH_TEST));
     GLCall(glEnable(GL_CULL_FACE));
     GLCall(glCullFace(GL_FRONT));
@@ -166,17 +175,6 @@ void Light::draw_depth_pass(std::shared_ptr<Shader> shader,
 
         // 2) Six passes, one per cube face
         for (int face = 0; face < 6; ++face) {
-            // attach this face
-            GLCall(glFramebufferTexture2D(
-                GL_FRAMEBUFFER,
-                GL_DEPTH_ATTACHMENT,
-                GL_TEXTURE_CUBE_MAP_POSITIVE_X + face,
-                depth_map,
-                0
-            ));
-
-            GLCall(glClear(GL_DEPTH_BUFFER_BIT));
-
             shader->use();
             // update this face's matrix
             shader->set_mat4(
@@ -201,15 +199,16 @@ void Light::draw_depth_pass(std::shared_ptr<Shader> shader,
     }
     else {
         // single 2D pass
-        GLCall(glFramebufferTexture2D(
-            GL_FRAMEBUFFER,
-            GL_DEPTH_ATTACHMENT,
-            GL_TEXTURE_2D,
-            depth_map,
-            0
-        ));
+        //GLCall(
+        //    glFramebufferTexture2D(
+        //        GL_FRAMEBUFFER,
+        //        GL_DEPTH_ATTACHMENT,
+        //        GL_TEXTURE_2D,
+        //        depth_map,
+        //        0
+        //    )
+        //);
 
-        GLCall(glClear(GL_DEPTH_BUFFER_BIT));
 
         shader->use();
         shader->set_mat4("uView", get_light_view());
@@ -256,8 +255,8 @@ void Light::bind_shadow_map(std::shared_ptr<Shader> shader, const std::string& b
 }
 
 
-glm::mat4 Light::get_light_projection() const
-{
+glm::mat4 Light::get_light_projection() const{
+
     switch (type)
     {
         case LightType::DIRECTIONAL:

@@ -15,7 +15,5 @@ void main()
         ? mat4(iModelCol0, iModelCol1, iModelCol2, iModelCol3)
         : uModel;
 
-    vec4 worldPos = modelMatrix * vec4(aPos, 1.0);
-
-    gl_Position = worldPos;
+    gl_Position = modelMatrix * vec4(aPos, 1.0);
 } 
