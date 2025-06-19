@@ -160,8 +160,53 @@ float getVisibilityPointLight(
     // now get current linear depth as the length between the fragment and light position
     float currentDepth = length(fragToLight);
     // now test for shadows
-    float bias = 0.05; 
-    float shadow = currentDepth -  bias > closestDepth ? 1.0 : 0.0;
+    //float bias = 0.05; 
+    //float shadow = currentDepth -  bias > closestDepth ? 1.0 : 0.0;
+
+    //float shadow  = 0.0;
+    //float bias    = 0.05; 
+    //float samples = 4.0;
+    //float offset  = 0.1;
+    float shadow = 0.0;
+    float bias   = 0.15;
+    int samples  = 20;
+    float viewDistance = length(viewPos - fragPos);
+    float diskRadius = 0.05;
+    //float diskRadius = (1.0 + (viewDistance / farPlane)) / 25.0;  
+
+    //for(float x = -offset; x < offset; x += offset / (samples * 0.5))
+    //{
+    //    for(float y = -offset; y < offset; y += offset / (samples * 0.5))
+    //    {
+    //        for(float z = -offset; z < offset; z += offset / (samples * 0.5))
+    //        {
+    //            float closestDepth = texture(shadowMap, fragToLight + vec3(x, y, z)).r; 
+    //            closestDepth *= farPlane;   // undo mapping [0;1]
+    //            if(currentDepth - bias > closestDepth)
+    //                shadow += 1.0;
+    //        }
+    //    }
+    //}
+    //shadow /= (samples * samples * samples);
+
+    vec3 sampleOffsetDirections[20] = vec3[]
+    (
+       vec3( 1,  1,  1), vec3( 1, -1,  1), vec3(-1, -1,  1), vec3(-1,  1,  1), 
+       vec3( 1,  1, -1), vec3( 1, -1, -1), vec3(-1, -1, -1), vec3(-1,  1, -1),
+       vec3( 1,  1,  0), vec3( 1, -1,  0), vec3(-1, -1,  0), vec3(-1,  1,  0),
+       vec3( 1,  0,  1), vec3(-1,  0,  1), vec3( 1,  0, -1), vec3(-1,  0, -1),
+       vec3( 0,  1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0,  1, -1)
+    );   
+
+    for(int i = 0; i < samples; ++i)
+    {
+        float closestDepth = texture(shadowMap, fragToLight + sampleOffsetDirections[i] * diskRadius).r;
+        closestDepth *= farPlane;   // undo mapping [0;1]
+        if(currentDepth - bias > closestDepth)
+            shadow += 1.0;
+        }
+
+    shadow /= float(samples);
 
     return 1 - shadow;
 }

@@ -293,8 +293,8 @@ int main() {
         1.0f,                            // 14: attenuation_constant
         0.35f,                           // 15: attenuation_linear
         0.05f,                           // 16: attenuation_quadratic
-        0.0f,                            // 17: attenuation_power
-        4.0f,                            // 18: light_power
+        1.0f,                            // 17: attenuation_power
+        1.0f,                            // 18: light_power
         true,                            // 19: is_on
         "flashlight",                    // 20: label
         glm::vec3(1.0f)                  // 21: color
@@ -335,16 +335,16 @@ int main() {
         2048,                               // 9: shadow_width
         2048,                               // 10: shadow_height
         1.0f,                               // 11: near_plane
-        30.0f,                              // 12: far_plane
+        25.0f,                              // 12: far_plane
         10.0f,                              // 13: ortho_size       — unused for POINT
         1.0f,                               // 14: attenuation_constant
         0.35f,                              // 15: attenuation_linear
         0.01f,                              // 16: attenuation_quadratic
         1.0f,                               // 17: attenuation_power
-        1.0f,                               // 18: light_power
+        3.0f,                               // 18: light_power
         true,                               // 19: is_on
         "overhead_pointlight",              // 20: label
-        glm::vec3(1.0f)                     // 21: color tint
+        glm::vec3(0.4f)                     // 21: color tint
     );
 
     game_state.add_light(std::move(flashlight), "flashlight");
