@@ -455,7 +455,8 @@ int main() {
                 if (!state.initialized) {
                     state.initialized = true;
                     state.closed_xf   = door_to_toggle->get_local_transform();
-                    state.open_xf     = glm::rotate(state.closed_xf, glm::radians(-90.0f),
+                    //TODO door does not open to the correct side, it needs a couple extra transforms
+                    state.open_xf     = glm::rotate(state.closed_xf, glm::radians(90.0f),
                                                     glm::vec3(0.0f, 1.0f, 0.0f));
                 }
                 if (state.is_open) {
