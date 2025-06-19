@@ -162,6 +162,15 @@ void Game::SceneManager::initialise_shaders() {
     std::cout << #v " = (" << (v).x << ", " << (v).y << ", " << (v).z << ", " << (v).w << ")"      \
               << "(in main)" << std::endl
 
+void Game::SceneManager::terminate_game(const std::string& text) {
+    center_text = text;
+    running = false;
+}
+
+bool Game::SceneManager::has_user_won(){
+    return game_state->pages_collected >= game_state->pages_collected_to_win;
+}
+
 void Game::SceneManager::run_game_loop() {
 
     std::cout << "Attempting to load font";
@@ -174,8 +183,6 @@ void Game::SceneManager::run_game_loop() {
     }
 
     Mix_Chunk* footsteps_music = Mix_LoadWAV("assets/audio/footsteps.mp3");
-    // glm::dot(camera_dir,monster), -1 looking away from monster, 1 looking it directly
-    float monster_view_dir         = 0.0f;
     auto  monster_initial_position = glm::vec3(5.0f, 0.0f, 5.0f);
     last_monster_transform         = glm::translate(glm::mat4(1.0f), monster_initial_position);
     auto monster_init              = Models::Model("assets/models/monster.obj", "monster");
@@ -191,13 +198,17 @@ void Game::SceneManager::run_game_loop() {
     monster_model->set_local_transform(last_monster_transform);
     monster_model->update_world_transform(glm::mat4(1.0f));
     Monster monster(monster_model);
-    monster.seconds_for_coinflip(10.0f)
-        .disappear_probability(0.65f)
+    monster.disappear_probability(0.65f)
         .add_scripted_movement(glm::vec3(1.0f, 0.0f, -1.0f), 5.0f, 5)
         .add_scripted_movement(glm::vec3(1.0f, 0.0f, 1.0f), 5.0f, 5)
         .add_scripted_movement(glm::vec3(-1.0f, 1.0f, 0.0f), 5.0f, 5);
-    monster.disappear_probability(0.35f).follow_distance(10.0f);
-    bool   running    = true;
+
+    monster.seconds_for_coinflip(10.0f)
+        .disappear_probability(0.35f)
+        .follow_distance(10.0f)
+        .should_not_look_at_it_more_than(10.0f)
+        .should_look_at_it_every(10.0f);
+    running           = true;
     Uint64 lastTicks  = SDL_GetPerformanceCounter();
     auto   flashlight = game_state->find_light("flashlight");
 
@@ -218,17 +229,19 @@ void Game::SceneManager::run_game_loop() {
             Mix_HaltChannel(-1);
         }
     });
-    glm::mat4 text_projection = glm::ortho(0.0f, 1280.0f, 0.0f, 720.0f);
-    auto      textShader      = get_shader_by_name("text");
     monster.on_death_by_looking([this]() {
-        center_text = "The monster melted you by looking at you";
+        terminate_game("The monster melted you by looking at you");
     });
 
-    monster.on_death_by_not_looking([textShader, text_projection, this]() {
-        center_text = "killed your family while you were not looking";
+    monster.on_death_by_not_looking([this]() {
+        terminate_game("killed your family while you were not looking");
     });
 
     while (running) {
+        if(has_user_won()){
+            //runs one more iteration so it can display the text
+            terminate_game("You survived and recovered the sacred text");
+        }
         Uint64 now = SDL_GetPerformanceCounter();
         float  dt  = float(now - lastTicks) / float(SDL_GetPerformanceFrequency());
         lastTicks  = now;
@@ -263,6 +276,7 @@ void Game::SceneManager::run_game_loop() {
     }
     Mix_FreeChunk(footsteps_music);
     Mix_FreeMusic(horror_music);
+    SDL_Delay(seconds_to_wait_before_termination * 1000);
 }
 
 std::shared_ptr<Shader> Game::SceneManager::get_shader_by_name(const std::string& shader_name) {
@@ -481,11 +495,11 @@ void Game::SceneManager::render(const glm::mat4& view, const glm::mat4& projecti
     glm::mat4   text_projection = glm::ortho(0.0f, 1280.0f, 0.0f, 720.0f);
     auto        textShader      = get_shader_by_name("text");
     std::string displayed_text  = "pages:" + std::to_string(game_state->pages_collected);
-    text_renderer.RenderText(textShader, displayed_text, 50.0f, 720.0f - 50.0f, 1.2f,
-                            {1.0f, 0.0f, 0.0f}, text_projection);
-    if(!center_text.empty()){
-        text_renderer.RenderText(textShader, center_text, 60.0f, 720.0f - 250.0f, 1.2f, {1.0f, 0.0f, 0.0f},
-                                text_projection);
+    text_renderer.render_text(textShader, displayed_text, 50.0f, 720.0f - 50.0f, 1.2f,
+                             {1.0f, 0.0f, 0.0f}, text_projection);
+    if (!center_text.empty()) {
+        text_renderer.render_text(textShader, center_text, 60.0f, 720.0f - 250.0f, 1.2f,
+                                 {1.0f, 0.0f, 0.0f}, text_projection);
     }
     glUseProgram(0);
 }

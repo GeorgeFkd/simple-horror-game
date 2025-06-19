@@ -109,7 +109,7 @@ void TextRenderer::load_font() {
     GLCall(glBindVertexArray(0));
 }
 
-void TextRenderer::RenderText(std::shared_ptr<Shader> s,
+void TextRenderer::render_text(std::shared_ptr<Shader> s,
                               const std::string& text,
                               float x,
                               float y,

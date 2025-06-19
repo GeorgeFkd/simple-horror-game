@@ -1,4 +1,5 @@
 #include "Group.h"
+#include "ext/matrix_transform.hpp"
 #include <glm/gtc/matrix_transform.hpp>
 
 Group::Group(const std::string& room_name,
@@ -22,41 +23,60 @@ Group& Group::walls(Models::Model& wall_model,
 {
     glm::mat4 id(1.0f);
     std::string prefix = name + "-" + wall_model.name() + "-";
+    //opposite side of the door,left side as you look at it
+    auto wall_1_transform = glm::translate(id, position + glm::vec3(room_size, 0.0f,  4.6f));
+    wall_1_transform = glm::scale(wall_1_transform,glm::vec3(1.0f,1.005f,1.1f));
     wall_model.add_instance_transform(
-        glm::translate(id, position + glm::vec3(room_size, 0.0f,  5.0f)),
+        wall_1_transform,
         prefix + "1"
     );
+
+    //same side as the door, on its right
+    auto wall_2_transform = glm::translate(id, position + glm::vec3(0.0f,       0.0f,  4.8f));
+    wall_2_transform = glm::scale(wall_2_transform,glm::vec3(1.0f,1.005f,1.04f));
     wall_model.add_instance_transform(
-        glm::translate(id, position + glm::vec3(0.0f,       0.0f,  4.8f)),
+        wall_2_transform,
         prefix + "2"
     );
+
+    //same side as the door,on its left
+    auto wall_3_transform = glm::translate(id, position + glm::vec3(0.0f,       0.0f, -6.8f));
+    wall_3_transform = glm::scale(wall_3_transform,glm::vec3(1.0f,1.005f,1.0015f));
     wall_model.add_instance_transform(
-        glm::translate(id, position + glm::vec3(0.0f,       0.0f, -6.75f)),
+        wall_3_transform,
         prefix + "3"
     );
+    
+    //opposite side of the door, right side as you look at it
+    auto wall_4_transform = glm::translate(id, position + glm::vec3(room_size, 0.0f, -6.25f));
+    wall_4_transform = glm::scale(wall_4_transform,glm::vec3(1.0f,1.005f,1.1f));
     wall_model.add_instance_transform(
-        glm::translate(id, position + glm::vec3(room_size, 0.0f, -5.0f)),
+        wall_4_transform,
         prefix + "4"
     );
-    wall_model.add_instance_transform(
-        glm::rotate(
+    
+    //5,6 are the sides orthogonal to the door side
+    auto wall_5_transform = glm::rotate(
             glm::translate(id, position + glm::vec3(5.5f, 0.0f,  room_size)),
             glm::radians(90.0f), glm::vec3(0.0f,1.0f,0.0f)
-        ),
+        );
+    wall_5_transform = glm::scale(wall_5_transform,glm::vec3(1.0f,1.005f,1.0f));
+    wall_model.add_instance_transform(
+        wall_5_transform,
         prefix + "5"
     );
-    wall_model.add_instance_transform(
-        glm::rotate(
+    auto wall_6_transform = glm::rotate(
             glm::translate(id, position + glm::vec3(5.5f, 0.0f, -12.0f)),
             glm::radians(90.0f), glm::vec3(0.0f,1.0f,0.0f)
-        ),
+        );
+    wall_model.add_instance_transform(
+        wall_6_transform,
         prefix + "6"
     );
-    // roof piece
-    glm::mat4 roof = glm::translate(id, position + glm::vec3(0.0f, 3.75f, -0.6f));
-    roof = glm::rotate(roof, glm::radians(-90.0f), glm::vec3(0.0f,0.0f,1.0f));
-    roof = glm::scale(roof, glm::vec3(1.0f,2.8f,2.2f));
-    wall_model.add_instance_transform(roof, prefix + "7");
+    glm::mat4 roof_transform = glm::translate(id, position + glm::vec3(0.0f, 3.75f, -0.6f));
+    roof_transform = glm::rotate(roof_transform, glm::radians(-90.0f), glm::vec3(0.0f,0.0f,1.0f));
+    roof_transform = glm::scale(roof_transform, glm::vec3(1.0f,2.95f,2.21f));
+    wall_model.add_instance_transform(roof_transform, prefix + "7");
     return *this;
 }
 

@@ -127,12 +127,12 @@ Models::Model createCeiling(float roomSize, float height) {
     std::vector<GLuint> floor_indices = {0, 2, 1, 0, 3, 2};
 
     Material floor_material;
-    floor_material.Ka    = glm::vec3(0.15f, 0.07f, 0.02f); // dark ambient
-    floor_material.Kd    = glm::vec3(0.59f, 0.29f, 0.00f); // brown diffuse
-    floor_material.Ks    = glm::vec3(0.05f, 0.04f, 0.03f); // small specular
-    floor_material.Ns    = 16.0f;                          // shininess
-    floor_material.d     = 1.0f;                           // opacity
-    floor_material.illum = 2;                              // standard Phong
+    floor_material.Ka           = glm::vec3(0.15f, 0.07f, 0.02f); // dark ambient
+    floor_material.Kd           = glm::vec3(0.59f, 0.29f, 0.00f); // brown diffuse
+    floor_material.Ks           = glm::vec3(0.05f, 0.04f, 0.03f); // small specular
+    floor_material.Ns           = 16.0f;                          // shininess
+    floor_material.d            = 1.0f;                           // opacity
+    floor_material.illum        = 2;                              // standard Phong
     floor_material.use_bump_map = false;
 
     return Models::Model(floor_verts, floor_normals, floor_uvs, floor_indices, std::move("Ceiling"),
@@ -313,13 +313,69 @@ int main() {
     // scene_manager.add_light(overhead_point_light);
     game_state.add_light(std::move(flashlight), "flashlight");
 
+    std::vector<std::string> random_objects = {"assets/models/SimpleOldTownAssets/TableSmall1.obj",
+                                               "assets/models/SimpleOldTownAssets/PotNtural.obj",
+                                               "assets/models/SimpleOldTownAssets/workbench01.obj",
+                                               "assets/models/SimpleOldTownAssets/watering-can.obj",
+                                               "assets/models/axe.obj"};
+
+    auto scatter_fn = [&](float radius, const glm::vec3& center,
+                          const std::vector<std::string>& objects) {
+        std::random_device                    rd;
+        std::mt19937                          rng(rd());
+        std::uniform_real_distribution<float> dist(-radius, radius);
+        // Build the Group
+        Group group("scatter-objects", center);
+
+        // Shuffle paths
+        auto shuffled = objects;
+        std::shuffle(shuffled.begin(), shuffled.end(), rng);
+
+        for (int i = 0; i < (int)shuffled.size(); ++i) {
+            // random translation
+            glm::vec3 offset{dist(rng), 0.0f, dist(rng)};
+
+            group.model(shuffled[i],                    
+                        "scatter-" + std::to_string(i), 
+                        offset                          
+            );
+        }
+
+        return group;
+    };
+
+    auto scattered_group_1 = scatter_fn(4.0f, {30.0f, 0.0f, -15.0f}, random_objects);
+    for (auto& m : scattered_group_1.models()) {
+        game_state.add_model(std::move(m), m->name());
+    }
+
+    auto scattered_group_2 = scatter_fn(4.0f, {30.0f, 0.0f, -45.0f}, random_objects);
+    for (auto& m : scattered_group_2.models()) {
+        game_state.add_model(std::move(m), m->name());
+    }
+
+    std::vector<std::string> random_objects_2 = {
+        "assets/models/old_office.obj", "assets/models/surgery_tools.obj",
+        "assets/models/SimpleOldTownAssets/workbench01.obj"};
+
+    auto scattered_group_3 = scatter_fn(6.0f, {-10.0f, 0.0f, -45.0f}, random_objects_2);
+    for (auto& m : scattered_group_3.models()) {
+        game_state.add_model(std::move(m), m->name());
+    }
+
+
+    auto scattered_group_4 = scatter_fn(4.0f, {-30.0f, 0.0f, 10.0f}, random_objects);
+    for (auto& m : scattered_group_4.models()) {
+        game_state.add_model(std::move(m), m->name());
+    }
     // ROOMS
     float     room_size   = 10.0f;
+    auto      door_scale  = glm::vec3(1.3f, 1.45f, 1.3f);
     glm::vec3 room_offset = glm::vec3(ROOM_WIDTH - room_size, 0.0f, ROOM_DEPTH - room_size);
     Group     room1("room-1", room_offset);
     room1
         .model("assets/models/SimpleOldTownAssets/OldHouseDoorWoodDarkRed.obj", "door",
-               glm::vec3(0.0f), {}, {}, true)
+               glm::vec3(0.0f), door_scale, {}, true)
         .walls(wall, room_size)
         .model("assets/models/SimpleOldTownAssets/ChairCafeBrown01.obj", "chair",
                glm::vec3(5.0f, 0.0f, 5.0f))
@@ -341,9 +397,8 @@ int main() {
     Group     room2("room-2", room_offset2);
     room2
         .model("assets/models/SimpleOldTownAssets/OldHouseDoorWoodDarkRed.obj", "door",
-               glm::vec3(0.0f), glm::vec3(1.2f), std::nullopt, true)
+               glm::vec3(0.0f), door_scale, std::nullopt, true)
         .walls(wall, room_size)
-
         .model("assets/models/SimpleOldTownAssets/ChairCafeBrown01.obj", "chair",
                glm::vec3(5.0f, 0.0f, 5.0f))
         .model("assets/models/SimpleOldTownAssets/TableSmall1.obj", "small_table",
@@ -364,7 +419,7 @@ int main() {
     Group     room3("room-3", room_offset3);
     room3
         .model("assets/models/SimpleOldTownAssets/OldHouseDoorWoodDarkRed.obj", "door",
-               glm::vec3(0.0f), glm::vec3(1.2f), std::nullopt, true)
+               glm::vec3(0.0f), door_scale, std::nullopt, true)
         .walls(wall, room_size)
         .model("assets/models/SimpleOldTownAssets/ChairCafeBrown01.obj", "chair",
                glm::vec3(5.0f, 0.0f, 5.0f))
@@ -389,7 +444,7 @@ int main() {
     Group     room4("room-4", room_offset4);
     room4
         .model("assets/models/SimpleOldTownAssets/OldHouseDoorWoodDarkRed.obj", "door",
-               glm::vec3(0.0f), std::nullopt, std::nullopt,
+               glm::vec3(0.0f), door_scale, std::nullopt,
                true // interactive
                )
         .model("assets/models/SimpleOldTownAssets/ChairCafeBrown01.obj", "chair",
@@ -412,7 +467,7 @@ int main() {
 
     Group dining_room("dining-room", glm::vec3(ROOM_DEPTH - ROOM_DEPTH / 4, 0.0f, 0.0f));
     dining_room.model("assets/models/SimpleOldTownAssets/OldHouseDoorWoodDarkRed.obj", "door",
-                      glm::vec3(0.0f), std::nullopt, std::nullopt,
+                      glm::vec3(0.0f), door_scale, std::nullopt,
                       true // interactive
     );
     dining_room.model("assets/models/SimpleOldTownAssets/dining-place.obj", "diner",
@@ -455,8 +510,10 @@ int main() {
                 if (!state.initialized) {
                     state.initialized = true;
                     state.closed_xf   = door_to_toggle->get_local_transform();
-                    state.open_xf     = glm::rotate(state.closed_xf, glm::radians(-90.0f),
-                                                    glm::vec3(0.0f, 1.0f, 0.0f));
+                    // TODO door does not open to the correct side, it needs a couple extra
+                    // transforms
+                    state.open_xf = glm::rotate(state.closed_xf, glm::radians(-90.0f),
+                                                glm::vec3(0.0f, 1.0f, 0.0f));
                 }
                 if (state.is_open) {
                     door_to_toggle->set_local_transform(state.closed_xf);

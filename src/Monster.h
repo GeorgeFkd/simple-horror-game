@@ -26,7 +26,8 @@ class Monster {
     Monster& follow_distance(float dist);
     Monster& disappear_probability(float pr);
     Monster& seconds_for_coinflip(float s);
-
+    Monster& should_look_at_it_every(float s);
+    Monster& should_not_look_at_it_more_than(float s);
     void teleport_at(const glm::vec3& world_position);
     void disappear();
     void appear_at(const glm::vec3& world_position);
