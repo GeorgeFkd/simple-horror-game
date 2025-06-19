@@ -421,12 +421,12 @@ void Models::Model::draw_instanced(const glm::mat4& view, const glm::mat4& proje
         shader->set_float("material.ior", sm.mat.Ni);
         shader->set_bool("material.useBumpMap", sm.mat.use_bump_map);
 
-        //if (sm.mat.tex_Ka) {
-        //    shader->set_texture("ambientMap", sm.mat.tex_Ka, GL_TEXTURE1);
-        //    shader->set_bool("useAmbientMap", true);
-        //} else {
-        //    shader->set_bool("useAmbientMap", false);
-        //}
+        if (sm.mat.tex_Ka) {
+            shader->set_texture("ambientMap", sm.mat.tex_Ka, GL_TEXTURE1);
+            shader->set_bool("useAmbientMap", true);
+        } else {
+            shader->set_bool("useAmbientMap", false);
+        }
 
         if (sm.mat.tex_Kd) {
             shader->set_texture("diffuseMap", sm.mat.tex_Kd, GL_TEXTURE2);
@@ -479,12 +479,12 @@ void Models::Model::draw(const glm::mat4& view, const glm::mat4& projection,
         shader->set_float("material.ior", sm.mat.Ni);
         shader->set_bool("material.useBumpMap", sm.mat.use_bump_map);
 
-        //if (sm.mat.tex_Ka) {
-        //    shader->set_texture("ambientMap", sm.mat.tex_Ka, GL_TEXTURE1);
-        //    shader->set_bool("useAmbientMap", true);
-        //} else {
-        //    shader->set_bool("useAmbientMap", false);
-        //}
+        if (sm.mat.tex_Ka) {
+            shader->set_texture("ambientMap", sm.mat.tex_Ka, GL_TEXTURE1);
+            shader->set_bool("useAmbientMap", true);
+        } else {
+            shader->set_bool("useAmbientMap", false);
+        }
 
         if (sm.mat.tex_Kd) {
             shader->set_texture("diffuseMap", sm.mat.tex_Kd, GL_TEXTURE2);
