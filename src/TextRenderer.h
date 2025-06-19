@@ -20,7 +20,7 @@ class TextRenderer {
 public:
     // Public interface: identical signatures as before
     void load_font();
-    void RenderText(std::shared_ptr<Shader> s,
+    void render_text(std::shared_ptr<Shader> s,
                     const std::string& text,
                     float x,
                     float y,

@@ -28,6 +28,16 @@ Monster& Monster::add_scripted_movement(const glm::vec3& direction, float speed,
     return *this;
 }
 
+Monster& Monster::should_look_at_it_every(float s){
+    seconds_looking_at_it_for_death = s;
+    return *this;
+}
+
+Monster& Monster::should_not_look_at_it_more_than(float s) {
+    seconds_not_looking_at_it_for_death = s;
+    return *this;
+}
+
 void Monster::clear_scripted_movements() {
     while (!scripts.empty()) {
         scripts.pop();

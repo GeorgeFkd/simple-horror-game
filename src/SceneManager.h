@@ -56,7 +56,7 @@ namespace Game {
         const std::vector<std::unique_ptr<Light>>& get_lights() const;
 
         unsigned int pages_collected = 0;
-
+        unsigned int pages_collected_to_win = 6;
         void clear_models() {
             models.clear();          // the unique_ptrs—and hence the Model objects—are destroyed
             model_names.clear();     // clear the name list
@@ -112,7 +112,7 @@ namespace Game {
         void initialise_shaders();
         void initialise_opengl_sdl();
         void run_game_loop();
-
+        void terminate_game(const std::string& displayed_text);
     private:
         void render_depth_pass();
         void render(const glm::mat4& view, const glm::mat4& projection);
@@ -121,6 +121,7 @@ namespace Game {
         void check_all_models(float dt);
         void run_handler_for(const std::string& m);
         void run_interaction_handlers();
+        bool has_user_won();
 
         GameState* game_state;
         std::vector<std::shared_ptr<Shader>> shaders;
@@ -134,5 +135,7 @@ namespace Game {
         std::string center_text = "";
         glm::vec3 last_camera_position;
         glm::mat4 last_monster_transform;
+        bool running = false;
+        unsigned int seconds_to_wait_before_termination = 5;
     };
 };
