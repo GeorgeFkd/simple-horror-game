@@ -151,33 +151,19 @@ float getVisibilityPointLight(
     samplerCube shadowMap, 
     float farPlane
 ){
+    // get vector between fragment position and light position
     vec3 fragToLight = fragPos - lightPos;
+    // use the light to fragment vector to sample from the depth map    
+    float closestDepth = texture(shadowMap, fragToLight).r;
+    // it is currently in linear range between [0,1]. Re-transform back to original value
+    closestDepth *= farPlane;
+    // now get current linear depth as the length between the fragment and light position
     float currentDepth = length(fragToLight);
-    float viewDistance = length(viewPos - fragPos);
-    float bias = 0.05;
-    int samples = 20;
-    float shadow = 0.0;
+    // now test for shadows
+    float bias = 0.05; 
+    float shadow = currentDepth -  bias > closestDepth ? 1.0 : 0.0;
 
-    vec3 gridSamplingDisk[20] = vec3[]
-    (
-       vec3(1, 1,  1), vec3( 1, -1,  1), vec3(-1, -1,  1), vec3(-1, 1,  1), 
-       vec3(1, 1, -1), vec3( 1, -1, -1), vec3(-1, -1, -1), vec3(-1, 1, -1),
-       vec3(1, 1,  0), vec3( 1, -1,  0), vec3(-1, -1,  0), vec3(-1, 1,  0),
-       vec3(1, 0,  1), vec3(-1,  0,  1), vec3( 1,  0, -1), vec3(-1, 0, -1),
-       vec3(0, 1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0, 1, -1)
-    );
-
-
-    float diskRadius = (1.0 + (viewDistance / farPlane)) / 25.0;
-    for(int i = 0; i < samples; ++i)
-    {
-        float closestDepth = texture(shadowMap, fragToLight + gridSamplingDisk[i] * diskRadius).r;
-        closestDepth *= farPlane;   // undo mapping [0;1]
-        if(currentDepth - bias > closestDepth)
-            shadow += 1.0;
-    }
-    shadow /= float(samples);
-    return 1.0 - shadow;
+    return 1 - shadow;
 }
 
 //float getVisibility(vec4 fragPosLightSpace, sampler2D shadowMap)
@@ -416,13 +402,10 @@ void main()
     //vec3 fragToLight = FragPos - lights[2].position;
     ////fragToLight = FragPos - lights[2].position;
 
-    ////make sure you use the *same* index for your sampler & farPlane:
-    //float storedDepth = texture(
-    //    shadowMapCube2,  
-    //    fragToLight
-    //).r;   
+    ////make sure you use the *same* index for sampler & farPlane:
+    //float storedDepth = texture(shadowMapCube2,  fragToLight).r;   
     ////it's already in [0,1], but if you need real distance:
-    //storedDepth *= lights[2].farPlane;
+    ////storedDepth *= lights[2].farPlane;
 
     //FragColor = vec4(vec3(storedDepth), 1.0);
     //return;
