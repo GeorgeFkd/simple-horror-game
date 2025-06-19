@@ -4,6 +4,7 @@
   "cmake.buildDirectory": "${workspaceFolder}/build",
   "files.associations": {
     "charconv": "cpp",
-    "random": "cpp"
+    "random": "cpp",
+    "cmath": "cpp"
   }
 }

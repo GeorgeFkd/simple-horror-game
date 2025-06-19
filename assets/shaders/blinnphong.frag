@@ -313,7 +313,7 @@ void main()
             float atten = 1.0
                 / (L.attenuation_constant
                 + L.attenuation_linear   * d
-                + L.attenuation_quadratic* d * d);
+                + L.attenuation_quadratic * d * d);
             intensity = pow(atten, L.attenuation_power) * L.power;
         }
 
@@ -344,7 +344,7 @@ void main()
         //FragColor = vec4(vec3(visibility), 1.0);
         //return;
         // ambient term (ambient unaffected by shadows)
-        ambientAccum += visibility * intensity * Ka;
+        ambientAccum += visibility * intensity * spotFactor * Ka;
 
         // diffuse term (modulated by shadow visibility)
         float diff = max(dot(N, Ldir), 0.0);
@@ -369,7 +369,7 @@ void main()
 
     // 4) combine
     vec3 color = material.emissive
-               //+ ambientAccum * 0.1
+               + ambientAccum * 0.05
                + diffuseAccum
                + specAccum * 0.1;
 
@@ -398,7 +398,7 @@ void main()
     //vec3 fragToLight = FragPos - lights[0].position;
     //float currentDepth = length(fragToLight);
 
-    //float closestDepth = texture(shadowMapCube0, fragToLight).r;
+    //float closestDepth = texture(shadowMap0, fragToLight).r;
     //closestDepth *= lights[0].farPlane; // convert from [0,1] to actual distance
 
     //float bias = 0.05;
