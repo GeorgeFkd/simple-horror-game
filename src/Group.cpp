@@ -32,16 +32,16 @@ Group& Group::walls(Models::Model& wall_model,
     );
 
     //same side as the door, on its right
-    auto wall_2_transform = glm::translate(id, position + glm::vec3(0.0f,       0.0f,  5.0f));
-    wall_2_transform = glm::scale(wall_2_transform,glm::vec3(1.0f,1.005f,1.035f));
+    auto wall_2_transform = glm::translate(id, position + glm::vec3(0.0f,       0.0f,  4.8f));
+    wall_2_transform = glm::scale(wall_2_transform,glm::vec3(1.0f,1.005f,1.04f));
     wall_model.add_instance_transform(
         wall_2_transform,
         prefix + "2"
     );
 
     //same side as the door,on its left
-    auto wall_3_transform = glm::translate(id, position + glm::vec3(0.0f,       0.0f, -6.65f));
-    wall_3_transform = glm::scale(wall_3_transform,glm::vec3(1.0f,1.005f,1.05f));
+    auto wall_3_transform = glm::translate(id, position + glm::vec3(0.0f,       0.0f, -6.8f));
+    wall_3_transform = glm::scale(wall_3_transform,glm::vec3(1.0f,1.005f,1.0015f));
     wall_model.add_instance_transform(
         wall_3_transform,
         prefix + "3"
