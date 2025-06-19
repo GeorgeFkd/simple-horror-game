@@ -293,7 +293,7 @@ int main() {
         1.0f,                            // 14: attenuation_constant
         0.35f,                           // 15: attenuation_linear
         0.05f,                           // 16: attenuation_quadratic
-        1.0f,                            // 17: attenuation_power
+        0.0f,                            // 17: attenuation_power
         4.0f,                            // 18: light_power
         true,                            // 19: is_on
         "flashlight",                    // 20: label
@@ -335,7 +335,7 @@ int main() {
         2048,                               // 9: shadow_width
         2048,                               // 10: shadow_height
         1.0f,                               // 11: near_plane
-        10.0f,                              // 12: far_plane
+        30.0f,                              // 12: far_plane
         10.0f,                              // 13: ortho_size       — unused for POINT
         1.0f,                               // 14: attenuation_constant
         0.35f,                              // 15: attenuation_linear
@@ -411,7 +411,7 @@ int main() {
                glm::vec3(1.2f, 1.2f, 1.2f));
 
     // pick a local position inside the 10×10 room, say 3 units in on X/Z and 5 up:
-    glm::vec3 point_local2 = glm::vec3(3.0f, 2.0f, 3.0f);
+    glm::vec3 point_local2 = glm::vec3(5.0f, 2.0f, 3.0f);
     // convert to world space
     glm::vec3 point_world2 = room_offset2 + point_local2;
             
@@ -419,7 +419,12 @@ int main() {
     pointlight.set_position(point_world2);
     pointlight.set_direction(glm::vec3(0.0f, -1.0f, 0.0f));
 
+    overhead_point_light_model.set_local_transform(
+        glm::translate(glm::mat4(1.0f), point_world2)
+    );
+
     game_state.add_light(std::move(pointlight), "pointlight");
+    //game_state.add_model(std::move(overhead_point_light_model), "overhead_pointlight_model");
             
 
     for (auto& m : room2.models()) {

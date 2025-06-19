@@ -145,26 +145,39 @@ float getVisibility(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir, sampler2
     return visibility;
 }
 
-float getVisibilityPointLight(vec3 fragPos, vec3 lightPos, samplerCube shadowMap, float farPlane)
-{
+float getVisibilityPointLight(
+    vec3 fragPos, 
+    vec3 lightPos, 
+    samplerCube shadowMap, 
+    float farPlane
+){
     vec3 fragToLight = fragPos - lightPos;
     float currentDepth = length(fragToLight);
-
-    // Bias to prevent shadow acne
+    float viewDistance = length(viewPos - fragPos);
     float bias = 0.05;
+    int samples = 20;
+    float shadow = 0.0;
 
-    // Create Poisson-sphere sample directions in 3D
-    vec3 sampleDirs[20] = vec3[](
-        vec3( 1,  0,  0), vec3(-1,  0,  0), vec3( 0,  1,  0), vec3( 0, -1,  0),
-        vec3( 0,  0,  1), vec3( 0,  0, -1), vec3( 1,  1,  0), vec3(-1,  1,  0),
-        vec3( 1, -1,  0), vec3(-1, -1,  0), vec3( 1,  0,  1), vec3(-1,  0,  1),
-        vec3( 1,  0, -1), vec3(-1,  0, -1), vec3( 0,  1,  1), vec3( 0, -1,  1),
-        vec3( 0,  1, -1), vec3( 0, -1, -1), vec3( 1,  1,  1), vec3(-1, -1, -1)
+    vec3 gridSamplingDisk[20] = vec3[]
+    (
+       vec3(1, 1,  1), vec3( 1, -1,  1), vec3(-1, -1,  1), vec3(-1, 1,  1), 
+       vec3(1, 1, -1), vec3( 1, -1, -1), vec3(-1, -1, -1), vec3(-1, 1, -1),
+       vec3(1, 1,  0), vec3( 1, -1,  0), vec3(-1, -1,  0), vec3(-1, 1,  0),
+       vec3(1, 0,  1), vec3(-1,  0,  1), vec3( 1,  0, -1), vec3(-1, 0, -1),
+       vec3(0, 1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0, 1, -1)
     );
 
 
-    float closestDepth = texture(shadowMap, fragToLight).r * farPlane;
-    return (currentDepth - bias > closestDepth) ? 0.0 : 1.0; 
+    float diskRadius = (1.0 + (viewDistance / farPlane)) / 25.0;
+    for(int i = 0; i < samples; ++i)
+    {
+        float closestDepth = texture(shadowMap, fragToLight + gridSamplingDisk[i] * diskRadius).r;
+        closestDepth *= farPlane;   // undo mapping [0;1]
+        if(currentDepth - bias > closestDepth)
+            shadow += 1.0;
+    }
+    shadow /= float(samples);
+    return 1.0 - shadow;
 }
 
 //float getVisibility(vec4 fragPosLightSpace, sampler2D shadowMap)
@@ -393,15 +406,25 @@ void main()
     //{
     //    FragColor = vec4(1.0, 0.0, 1.0, 1.0); // outside light frustum
     //}
-    //vec3 fragToLight = FragPos - lights[0].position;
-    //float currentDepth = length(fragToLight);
+    //vec3 fragToLight = FragPos - lights[2].position;
 
-    //float closestDepth = texture(shadowMap0, fragToLight).r;
-    //closestDepth *= lights[0].farPlane; // convert from [0,1] to actual distance
+    //float linearDepth = length(fragToLight) / lights[2].farPlane;
+    //FragColor = vec4(vec3(linearDepth), 1.0);
+    //return;
 
-    //float bias = 0.05;
-    //float visibility = currentDepth - bias > closestDepth ? 0.0 : 1.0;
+    // --- DEBUG: visualize the stored shadow‐map depth ---
+    //vec3 fragToLight = FragPos - lights[2].position;
+    ////fragToLight = FragPos - lights[2].position;
 
-    //FragColor = vec4(vec3(visibility), 1);
+    ////make sure you use the *same* index for your sampler & farPlane:
+    //float storedDepth = texture(
+    //    shadowMapCube2,  
+    //    fragToLight
+    //).r;   
+    ////it's already in [0,1], but if you need real distance:
+    //storedDepth *= lights[2].farPlane;
+
+    //FragColor = vec4(vec3(storedDepth), 1.0);
+    //return;
     FragColor = vec4(color, material.opacity);
 }
