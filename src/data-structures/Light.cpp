@@ -121,7 +121,7 @@ void Light::draw_lighting(std::shared_ptr<Shader> shader, const std::string &bas
     if (type != LightType::POINT){
         shader->set_vec3(base + "direction", direction);
     }
-    shader->set_vec3(base + "ambient", ambient);
+    //shader->set_vec3(base + "ambient", ambient);
     shader->set_vec3(base + "diffuse", diffuse);
     shader->set_vec3(base + "specular", specular);
     if (type == LightType::SPOT)
@@ -131,6 +131,15 @@ void Light::draw_lighting(std::shared_ptr<Shader> shader, const std::string &bas
     }
 
     shader->set_int(base + "type", int(type));
+
+    shader->set_float(base + "attenuation_constant",
+                      attenuation_constant);
+    shader->set_float(base + "attenuation_linear",
+                      attenuation_linear);
+    shader->set_float(base + "attenuation_quadratic",
+                      attenuation_quadratic);
+    shader->set_float(base + "attenuation_power",
+                      attenuation_power);
 
     shader->set_mat4(base + "view", get_light_view());
     shader->set_mat4(base + "proj", get_light_projection());
@@ -233,7 +242,7 @@ void Light::bind_shadow_map(std::shared_ptr<Shader> shader, const std::string& b
         //shader->set_int(base + "shadowMapCube", index);
         shader->set_texture(base,
                             get_depth_texture(),
-                            GL_TEXTURE0 + index,
+                            GL_TEXTURE5 + index,
                             GL_TEXTURE_CUBE_MAP);
     }else{
         // spot or directional use a 2D depth map

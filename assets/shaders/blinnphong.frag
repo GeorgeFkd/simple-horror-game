@@ -31,6 +31,11 @@ struct Light {
     float farPlane;
     float power;
     vec3 color;
+
+    float attenuation_constant;
+    float attenuation_linear;
+    float attenuation_quadratic;
+    float attenuation_power;
 };
 
 uniform Material    material;
@@ -301,10 +306,16 @@ void main()
         
         // distance attenuation for non-directional lights
         float intensity = 1.0;
-        //if (L.type != 1) {
-        //    float distance = length(L.position - FragPos);
-        //    intensity      = (1.0 / (0.3 * distance)) * 0.8;
-        //}
+        //float intensity = 1;
+        if (L.type != 1) {
+            float d   = length(L.position - FragPos);
+            // classic 1/(c + l·d + q·d²) attenuation:
+            float atten = 1.0
+                / (L.attenuation_constant
+                + L.attenuation_linear   * d
+                + L.attenuation_quadratic* d * d);
+            intensity = pow(atten, L.attenuation_power) * L.power;
+        }
 
         // calculate shadow visibility (only for spot & directional)
         float visibility = 1.0;
@@ -330,27 +341,38 @@ void main()
         //}
 
         //visibility = getVisibilityPointLight(FragPos, L.position, shadowMapCube0, L.farPlane);
+        //FragColor = vec4(vec3(visibility), 1.0);
+        //return;
         // ambient term (ambient unaffected by shadows)
-        ambientAccum += visibility * intensity * spotFactor * L.ambient * Ka;
+        ambientAccum += visibility * intensity * Ka;
 
         // diffuse term (modulated by shadow visibility)
         float diff = max(dot(N, Ldir), 0.0);
-        diffuseAccum += visibility * intensity * spotFactor * L.power * L.color * L.diffuse * Kd * diff;
+        diffuseAccum += visibility * intensity * spotFactor * L.color * Kd * diff;
+
+        //FragColor = vec4(diffuseAccum, 1.0);
+        //return;
 
         // specular term (modulated by shadow visibility)
         vec3 H    = normalize(Ldir + V);
         float spec = pow(max(dot(N, H), 0.0), material.shininess);
-        specAccum += visibility * intensity * spotFactor * L.power * L.color * L.specular * Ks * spec;
+        specAccum += visibility * intensity * spotFactor * L.color * Ks * spec;
 
-        //FragColor = vec4(vec3(visibility), 1.0);
+        //FragColor = vec4(specAccum * Ks, 1.0);
+        //return;
+
+        //FragColor = vec4(specAccum, 1.0);
+        //return FragColor;
+
         
     }
 
     // 4) combine
     vec3 color = material.emissive
-               + ambientAccum * 0.4
-               + diffuseAccum * 0.8
-               + specAccum    * 0.1;
+               //+ ambientAccum * 0.1
+               + diffuseAccum
+               + specAccum * 0.1;
+
 
     //vec3 color = material.emissive
     //           + ambientAccum

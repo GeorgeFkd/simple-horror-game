@@ -276,34 +276,82 @@ int main() {
         Models::Model("assets/models/light_sphere.obj", "overhead_point_light");
     auto right_spot_light_model =
         Models::Model("assets/models/light_sphere.obj", "right_spot_light");
-    Light flashlight(LightType::SPOT,
-                     glm::vec3(0.0f),               // position
-                     glm::vec3(0.0f, 0.0f, -1.0f),  // direction
-                     glm::vec3(0.1f),               // ambient
-                     glm::vec3(1.0f),               // diffuse
-                     glm::vec3(1.0f),               // specular
-                     glm::cos(glm::radians(10.0f)), // cutoff
-                     glm::cos(glm::radians(20.0f)), // outer cutoff
-                     1280, 720, 0.1f, 500.0f, 10.0f, 1.0f, 0.35f, 0.44f, 1.0f, 1.0f);
-    flashlight.set_name("flashlight");
-    // Light right_spotlight(LightType::SPOT, glm::vec3(5.0f, 1.5f, 0.0f), // position: to the right
-    //                       glm::vec3(1.0f, 0.0f, -1.0f),                 // direction: pointing
-    //                       left glm::vec3(0.1f), glm::vec3(1.0f), glm::vec3(1.0f),
-    //                       glm::cos(glm::radians(10.0f)), // inner cone
-    //                       glm::cos(glm::radians(30.0f)), // outer cone
-    //                       2048, 2048, 1.0f, 10.0f, 10.0f, 1.0f, 0.35f, 0.44f, 1.0f, 1.0f);
-    //
-    // Light overhead_pointlight(LightType::POINT, glm::vec3(0.0f, 5.0f, 0.0f), // above the object
-    //                           glm::vec3(0.0f, -1.0f, 0.0f), // pointing straight down
-    //                           glm::vec3(0.1f), glm::vec3(1.0f), glm::vec3(1.0f),
-    //                           glm::cos(glm::radians(10.0f)), // inner cone
-    //                           glm::cos(glm::radians(30.0f)), // outer cone
-    //                           2048, 2048, 0.1f, 10.0f, 10.0f, 1.0f, 0.35f, 0.44f, 1.0f, 1.0f);
-    //
-    // glm::vec3 overhead_spotlight = glm::vec3(15.0f, 5.0f, -20.0f);
-    // overhead_pointlight.set_position(overhead_spotlight);
-    // overhead_point_light_model.set_local_transform(
-    //     glm::translate(glm::mat4(1.0f), overhead_pointlight.get_position()));
+    Light flashlight(
+        LightType::SPOT,                 // 1
+        glm::vec3(0.0f),                 // 2: position
+        glm::vec3(0.0f, 0.0f, -1.0f),    // 3: direction
+        glm::vec3(0.1f),                 // 4: ambient
+        glm::vec3(1.0f),                 // 5: diffuse
+        glm::vec3(1.0f),                 // 6: specular
+        glm::cos(glm::radians(5.0f)),    // 7: cutoff (inner cone)
+        glm::cos(glm::radians(20.0f)),   // 8: outer_cutoff
+        1280,                            // 9: shadow_width
+        720,                             // 10: shadow_height
+        0.1f,                            // 11: near_plane
+        500.0f,                          // 12: far_plane
+        10.0f,                           // 13: ortho_size
+        1.0f,                            // 14: attenuation_constant
+        0.35f,                           // 15: attenuation_linear
+        0.01f,                           // 16: attenuation_quadratic
+        1.0f,                            // 17: attenuation_power
+        5.0f,                            // 18: light_power
+        true,                            // 19: is_on
+        "flashlight",                    // 20: label
+        glm::vec3(1.0f)                  // 21: color
+    );
+    Light right_spotlight(
+        LightType::SPOT,                 // 1: light type
+        glm::vec3(10.0f, 10.0f, 0.0f),    // 2: position (to the right)
+        glm::vec3(0.0f, -1.0f, 0.0f),    // 3: direction (pointing down)
+        glm::vec3(0.1f),                 // 4: ambient
+        glm::vec3(1.0f),                 // 5: diffuse
+        glm::vec3(1.0f),                 // 6: specular
+        glm::cos(glm::radians(10.0f)),   // 7: inner cone (cutoff)
+        glm::cos(glm::radians(30.0f)),   // 8: outer cone
+        2048,                            // 9: shadow_width
+        2048,                            // 10: shadow_height
+        1.0f,                            // 11: near_plane
+        10.0f,                           // 12: far_plane
+        10.0f,                           // 13: ortho_size
+        1.0f,                            // 14: attenuation_constant
+        0.35f,                           // 15: attenuation_linear
+        0.01f,                           // 16: attenuation_quadratic
+        1.0f,                            // 17: attenuation_power
+        3.0f,                            // 18: light_power
+        true,                            // 19: is_on
+        "right_spotlight",               // 20: label
+        glm::vec3(1.0f)                  // 21: color
+    );
+    
+    Light overhead_pointlight(
+        LightType::POINT,                   // 1: light type
+        glm::vec3(0.0f, 5.0f, 0.0f),        // 2: position (above the object)
+        glm::vec3(0.0f, -1.0f, 0.0f),       // 3: direction (pointing straight down)
+        glm::vec3(0.1f),                    // 4: ambient color
+        glm::vec3(1.0f),                    // 5: diffuse color
+        glm::vec3(1.0f),                    // 6: specular color
+        glm::cos(glm::radians(10.0f)),      // 7: cutoff (inner cone) — unused for POINT
+        glm::cos(glm::radians(30.0f)),      // 8: outer_cutoff — unused for POINT
+        2048,                               // 9: shadow_width
+        2048,                               // 10: shadow_height
+        0.1f,                               // 11: near_plane
+        10.0f,                              // 12: far_plane
+        10.0f,                              // 13: ortho_size       — unused for POINT
+        1.0f,                               // 14: attenuation_constant
+        0.35f,                              // 15: attenuation_linear
+        0.44f,                              // 16: attenuation_quadratic
+        1.0f,                               // 17: attenuation_power
+        1.0f,                               // 18: light_power
+        true,                               // 19: is_on
+        "overhead_pointlight",              // 20: label
+        glm::vec3(1.0f)                     // 21: color tint
+    );
+
+    glm::vec3 overhead_point = glm::vec3(15.0f, 5.0f, -20.0f);
+    overhead_pointlight.set_position(overhead_point);
+    overhead_point_light_model.set_local_transform(
+        glm::translate(glm::mat4(1.0f), overhead_pointlight.get_position()));
+    //game_state.add_light(std::move(overhead_pointlight), "overhead_pointlight");
     //
     // glm::vec3 right_light_spot = glm::vec3(15.0f, 2.0f, -25.0f);
     // right_spotlight.set_position(right_light_spot);
@@ -311,6 +359,7 @@ int main() {
     //     glm::translate(glm::mat4(1.0f), right_spotlight.get_position()));
 
     // scene_manager.add_light(overhead_point_light);
+    game_state.add_light(std::move(right_spotlight), "right_spotlight");
     game_state.add_light(std::move(flashlight), "flashlight");
 
     // ROOMS
