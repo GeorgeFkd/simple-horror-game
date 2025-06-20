@@ -402,6 +402,7 @@ void Models::Model::update_world_transform(const glm::mat4& parent_transform) {
 void Models::Model::draw_instanced(const glm::mat4& view, const glm::mat4& projection,
                                    std::shared_ptr<Shader> shader){
 
+    //CARE WITH THIS IS MIGHT CAUSE A BUG
     if(instance_data_dirty) update_instance_data();
 
 

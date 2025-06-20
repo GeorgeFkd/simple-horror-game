@@ -116,6 +116,8 @@ void Game::SceneManager::initialise_opengl_sdl() {
 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
     // SDL_Window*
@@ -469,6 +471,7 @@ void Game::SceneManager::check_all_models(float dt) {
 void Game::SceneManager::render(const glm::mat4& view, const glm::mat4& projection) {
 
     GLCall(glViewport(0, 0, screen_width, screen_height));
+    GLCall(glEnable(GL_MULTISAMPLE));  
     GLCall(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
 
     auto shader = get_shader_by_name("blinn-phong");
@@ -490,6 +493,7 @@ void Game::SceneManager::render(const glm::mat4& view, const glm::mat4& projecti
         }
     }
 
+    GLCall(glDisable(GL_MULTISAMPLE));
     glUseProgram(0);
 
     GLCall(glViewport(0, 0, screen_width, screen_height));
