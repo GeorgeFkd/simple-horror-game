@@ -352,8 +352,10 @@ void Game::SceneManager::render_depth_pass() {
     for (auto& light : game_state->get_lights()) {
         std::shared_ptr<Shader> sh;
         if (light->get_type() == LightType::POINT) {
+            auto depthCube = get_shader_by_name("depth_cube");
             sh = depthCube;
         } else {
+            auto depth2D   = get_shader_by_name("depth_2d");
             sh = depth2D;
         }
         light->draw_depth_pass(sh, game_state->get_models());
@@ -477,14 +479,13 @@ void Game::SceneManager::render(const glm::mat4& view, const glm::mat4& projecti
     for (size_t i = 0; i < game_state->get_lights().size(); ++i) {
         auto        light = game_state->get_lights()[i].get();
         std::string base  = "lights[" + std::to_string(i) + "].";
-        light->draw_lighting(shader, base, i);
         light->bind_shadow_map(shader, base, i);
+        light->draw_lighting(shader, base, i);
     }
 
     for (auto const& model : game_state->get_models()) {
         if (model->is_active()) {
             model->update_world_transform(glm::mat4(1.0f));
-            // instancing is an impl detail
             model->draw(view, projection, shader);
         }
     }

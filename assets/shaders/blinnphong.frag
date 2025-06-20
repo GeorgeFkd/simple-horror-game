@@ -31,6 +31,11 @@ struct Light {
     float farPlane;
     float power;
     vec3 color;
+
+    float attenuation_constant;
+    float attenuation_linear;
+    float attenuation_quadratic;
+    float attenuation_power;
 };
 
 uniform Material    material;
@@ -140,26 +145,70 @@ float getVisibility(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir, sampler2
     return visibility;
 }
 
-float getVisibilityPointLight(vec3 fragPos, vec3 lightPos, samplerCube shadowMap, float farPlane)
-{
+float getVisibilityPointLight(
+    vec3 fragPos, 
+    vec3 lightPos, 
+    samplerCube shadowMap, 
+    float farPlane
+){
+    // get vector between fragment position and light position
     vec3 fragToLight = fragPos - lightPos;
+    // use the light to fragment vector to sample from the depth map    
+    float closestDepth = texture(shadowMap, fragToLight).r;
+    // it is currently in linear range between [0,1]. Re-transform back to original value
+    closestDepth *= farPlane;
+    // now get current linear depth as the length between the fragment and light position
     float currentDepth = length(fragToLight);
+    // now test for shadows
+    //float bias = 0.05; 
+    //float shadow = currentDepth -  bias > closestDepth ? 1.0 : 0.0;
 
-    // Bias to prevent shadow acne
-    float bias = 0.05;
+    //float shadow  = 0.0;
+    //float bias    = 0.05; 
+    //float samples = 4.0;
+    //float offset  = 0.1;
+    float shadow = 0.0;
+    float bias   = 0.15;
+    int samples  = 20;
+    float viewDistance = length(viewPos - fragPos);
+    float diskRadius = 0.05;
+    //float diskRadius = (1.0 + (viewDistance / farPlane)) / 25.0;  
 
-    // Create Poisson-sphere sample directions in 3D
-    vec3 sampleDirs[20] = vec3[](
-        vec3( 1,  0,  0), vec3(-1,  0,  0), vec3( 0,  1,  0), vec3( 0, -1,  0),
-        vec3( 0,  0,  1), vec3( 0,  0, -1), vec3( 1,  1,  0), vec3(-1,  1,  0),
-        vec3( 1, -1,  0), vec3(-1, -1,  0), vec3( 1,  0,  1), vec3(-1,  0,  1),
-        vec3( 1,  0, -1), vec3(-1,  0, -1), vec3( 0,  1,  1), vec3( 0, -1,  1),
-        vec3( 0,  1, -1), vec3( 0, -1, -1), vec3( 1,  1,  1), vec3(-1, -1, -1)
-    );
+    //for(float x = -offset; x < offset; x += offset / (samples * 0.5))
+    //{
+    //    for(float y = -offset; y < offset; y += offset / (samples * 0.5))
+    //    {
+    //        for(float z = -offset; z < offset; z += offset / (samples * 0.5))
+    //        {
+    //            float closestDepth = texture(shadowMap, fragToLight + vec3(x, y, z)).r; 
+    //            closestDepth *= farPlane;   // undo mapping [0;1]
+    //            if(currentDepth - bias > closestDepth)
+    //                shadow += 1.0;
+    //        }
+    //    }
+    //}
+    //shadow /= (samples * samples * samples);
 
+    vec3 sampleOffsetDirections[20] = vec3[]
+    (
+       vec3( 1,  1,  1), vec3( 1, -1,  1), vec3(-1, -1,  1), vec3(-1,  1,  1), 
+       vec3( 1,  1, -1), vec3( 1, -1, -1), vec3(-1, -1, -1), vec3(-1,  1, -1),
+       vec3( 1,  1,  0), vec3( 1, -1,  0), vec3(-1, -1,  0), vec3(-1,  1,  0),
+       vec3( 1,  0,  1), vec3(-1,  0,  1), vec3( 1,  0, -1), vec3(-1,  0, -1),
+       vec3( 0,  1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0,  1, -1)
+    );   
 
-    float closestDepth = texture(shadowMap, fragToLight).r * farPlane;
-    return (currentDepth - bias > closestDepth) ? 0.0 : 1.0; 
+    for(int i = 0; i < samples; ++i)
+    {
+        float closestDepth = texture(shadowMap, fragToLight + sampleOffsetDirections[i] * diskRadius).r;
+        closestDepth *= farPlane;   // undo mapping [0;1]
+        if(currentDepth - bias > closestDepth)
+            shadow += 1.0;
+        }
+
+    shadow /= float(samples);
+
+    return 1 - shadow;
 }
 
 //float getVisibility(vec4 fragPosLightSpace, sampler2D shadowMap)
@@ -301,10 +350,16 @@ void main()
         
         // distance attenuation for non-directional lights
         float intensity = 1.0;
-        //if (L.type != 1) {
-        //    float distance = length(L.position - FragPos);
-        //    intensity      = (1.0 / (0.3 * distance)) * 0.8;
-        //}
+        //float intensity = 1;
+        if (L.type != 1) {
+            float d   = length(L.position - FragPos);
+            // classic 1/(c + l·d + q·d²) attenuation:
+            float atten = 1.0
+                / (L.attenuation_constant
+                + L.attenuation_linear   * d
+                + L.attenuation_quadratic * d * d);
+            intensity = pow(atten, L.attenuation_power) * L.power;
+        }
 
         // calculate shadow visibility (only for spot & directional)
         float visibility = 1.0;
@@ -318,39 +373,48 @@ void main()
             else if (i == 6) visibility = getVisibility(fragPosLightSpace, Normal, Ldir, shadowMap6);
             else if (i == 7) visibility = getVisibility(fragPosLightSpace, Normal, Ldir, shadowMap7);
         }
-        //else if(L.type == 0){
-        //    if      (i == 0) visibility = getVisibilityPointLight(FragPos, L.position, shadowMapCube0, L.farPlane);
-        //    //else if (i == 1) visibility = getVisibilityPointLight(FragPos, L.position, shadowMapCube1, L.farPlane);
-        //    //else if (i == 2) visibility = getVisibilityPointLight(FragPos, L.position, shadowMapCube2, L.farPlane);
-        //    //else if (i == 3) visibility = getVisibilityPointLight(FragPos, L.position, shadowMapCube3, L.farPlane);
-        //    //else if (i == 4) visibility = getVisibilityPointLight(FragPos, L.position, shadowMapCube4, L.farPlane);
-        //    //else if (i == 5) visibility = getVisibilityPointLight(FragPos, L.position, shadowMapCube5, L.farPlane);
-        //    //else if (i == 6) visibility = getVisibilityPointLight(FragPos, L.position, shadowMapCube6, L.farPlane);
-        //    //else if (i == 7) visibility = getVisibilityPointLight(FragPos, L.position, shadowMapCube7, L.farPlane);
-        //}
+        else if(L.type == 0){
+            //if      (i == 0) visibility = getVisibilityPointLight(FragPos, L.position, shadowMapCube0, L.farPlane);
+            //else if (i == 1) visibility = getVisibilityPointLight(FragPos, L.position, shadowMapCube1, L.farPlane);
+            if (i == 2) visibility = getVisibilityPointLight(FragPos, L.position, shadowMapCube2, L.farPlane);
+            //else if (i == 3) visibility = getVisibilityPointLight(FragPos, L.position, shadowMapCube3, L.farPlane);
+            //else if (i == 4) visibility = getVisibilityPointLight(FragPos, L.position, shadowMapCube4, L.farPlane);
+            //else if (i == 5) visibility = getVisibilityPointLight(FragPos, L.position, shadowMapCube5, L.farPlane);
+            //else if (i == 6) visibility = getVisibilityPointLight(FragPos, L.position, shadowMapCube6, L.farPlane);
+            //else if (i == 7) visibility = getVisibilityPointLight(FragPos, L.position, shadowMapCube7, L.farPlane);
+        }
 
         //visibility = getVisibilityPointLight(FragPos, L.position, shadowMapCube0, L.farPlane);
+        //FragColor = vec4(vec3(visibility), 1.0);
+        //return;
         // ambient term (ambient unaffected by shadows)
-        ambientAccum += visibility * intensity * spotFactor * L.ambient * Ka;
+        ambientAccum += visibility * intensity * spotFactor * Ka;
 
         // diffuse term (modulated by shadow visibility)
         float diff = max(dot(N, Ldir), 0.0);
-        diffuseAccum += visibility * intensity * spotFactor * L.power * L.color * L.diffuse * Kd * diff;
+        diffuseAccum += visibility * intensity * spotFactor * L.color * Kd * diff;
+
+        //FragColor = vec4(diffuseAccum, 1.0);
+        //return;
 
         // specular term (modulated by shadow visibility)
         vec3 H    = normalize(Ldir + V);
         float spec = pow(max(dot(N, H), 0.0), material.shininess);
-        specAccum += visibility * intensity * spotFactor * L.power * L.color * L.specular * Ks * spec;
+        specAccum += visibility * intensity * spotFactor * L.color * Ks * spec;
 
-        //FragColor = vec4(vec3(visibility), 1.0);
-        
+        //FragColor = vec4(specAccum * Ks, 1.0);
+        //return;
+
+        //FragColor = vec4(specAccum, 1.0);
+        //return FragColor;
     }
 
     // 4) combine
     vec3 color = material.emissive
-               + ambientAccum * 0.4
-               + diffuseAccum * 0.8
-               + specAccum    * 0.1;
+               + ambientAccum * 0.05
+               + diffuseAccum
+               + specAccum * 0.1;
+
 
     //vec3 color = material.emissive
     //           + ambientAccum
@@ -373,15 +437,22 @@ void main()
     //{
     //    FragColor = vec4(1.0, 0.0, 1.0, 1.0); // outside light frustum
     //}
-    //vec3 fragToLight = FragPos - lights[0].position;
-    //float currentDepth = length(fragToLight);
+    //vec3 fragToLight = FragPos - lights[2].position;
 
-    //float closestDepth = texture(shadowMapCube0, fragToLight).r;
-    //closestDepth *= lights[0].farPlane; // convert from [0,1] to actual distance
+    //float linearDepth = length(fragToLight) / lights[2].farPlane;
+    //FragColor = vec4(vec3(linearDepth), 1.0);
+    //return;
 
-    //float bias = 0.05;
-    //float visibility = currentDepth - bias > closestDepth ? 0.0 : 1.0;
+    // --- DEBUG: visualize the stored shadow‐map depth ---
+    //vec3 fragToLight = FragPos - lights[2].position;
+    ////fragToLight = FragPos - lights[2].position;
 
-    //FragColor = vec4(vec3(visibility), 1);
+    ////make sure you use the *same* index for sampler & farPlane:
+    //float storedDepth = texture(shadowMapCube2,  fragToLight).r;   
+    ////it's already in [0,1], but if you need real distance:
+    ////storedDepth *= lights[2].farPlane;
+
+    //FragColor = vec4(vec3(storedDepth), 1.0);
+    //return;
     FragColor = vec4(color, material.opacity);
 }

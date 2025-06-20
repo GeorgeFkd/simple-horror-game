@@ -530,8 +530,8 @@ void Models::Model::draw_depth(std::shared_ptr<Shader> shader){
 }
 
 void Models::Model::draw_depth_instanced(std::shared_ptr<Shader> shader){
-    if(instance_data_dirty) update_instance_data();
-
+    //if(instance_data_dirty) update_instance_data();
+    update_instance_data();
     shader->set_bool("uUseInstancing", true);
     shader->set_mat4("uModel", world_transform);
 
