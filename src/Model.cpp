@@ -734,11 +734,7 @@ std::tuple<std::string, bool, float> Models::Model::is_closer_than_current_model
     return {name(instance_index), squared_distance < current_distance_to_closest_model, squared_distance};
 }
 
-bool Models::Model::aabb_in_frustum(
-    const std::array<glm::vec4,6>& P,
-    const glm::vec3& minB,
-    const glm::vec3& maxB)
-{
+bool Models::Model::aabb_in_frustum(const std::array<glm::vec4,6>& P, const glm::vec3& minB, const glm::vec3& maxB) const{
     for (auto& plane : P) {
         // pick the “positive‐vertex” for this plane normal
         glm::vec3 n(plane);
@@ -754,8 +750,7 @@ bool Models::Model::aabb_in_frustum(
     return true;
 }
 
-void Models::Model::in_frustum(const std::array<glm::vec4,6>& P)
-{
+void Models::Model::in_frustum(const std::array<glm::vec4,6>& P){
     // clear previous state
     inside_frustum_ = false;
     if (is_instanced())
@@ -781,6 +776,7 @@ void Models::Model::in_frustum(const std::array<glm::vec4,6>& P)
             inside_frustum_ = true;  // model is “in” if any instance is
     }
 }
+
 
 
 void Models::Model::remove_instance_transform(const std::string& suffix){

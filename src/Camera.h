@@ -29,6 +29,27 @@ namespace Camera{
         float collision_radius = 0.6f;    // how “fat” the camera is
 
     public: 
+
+        const static std::array<glm::vec4, 6> extract_frustum_planes(const glm::mat4& M){
+            std::array<glm::vec4,6> P;
+
+            glm::mat4 T = glm::transpose(M);
+            P[0] = T[3] + T[0];  // left
+            P[1] = T[3] - T[0];  // right
+            P[2] = T[3] + T[1];  // bottom
+            P[3] = T[3] - T[1];  // top
+            P[4] = T[3] + T[2];  // near
+            P[5] = T[3] - T[2];  // far
+
+            // Normalize
+            for (auto& p: P) {
+                float len = glm::length(glm::vec3(p));
+                p /= len;
+            }
+
+            return P;
+
+        }
         
         CameraObj(int window_width, int window_height,glm::vec3 position): 
         position(position),

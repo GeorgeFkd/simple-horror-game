@@ -258,7 +258,6 @@ void Game::SceneManager::run_game_loop() {
 
         // loop over models(collision tests, update closest object
         check_collisions(dt);
-        perform_culling();
         glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         // glEnable(GL_BLEND);
@@ -273,6 +272,7 @@ void Game::SceneManager::run_game_loop() {
         render_depth_pass();
         glm::mat4 view = camera.get_view_matrix();
         glm::mat4 proj = camera.get_projection_matrix();
+        perform_culling();
         render(view, proj);
         run_interaction_handlers();
         SDL_GL_SwapWindow(window);
@@ -501,7 +501,7 @@ void Game::SceneManager::render(const glm::mat4& view, const glm::mat4& projecti
             continue;
         }
 
-        if(!model->in_frustum()){
+        if(!model->is_in_frustum()){
             //std::cout << model->name() << std::endl;
             continue;
         }

@@ -76,7 +76,7 @@ namespace Models {
         void init_instancing(size_t max_instances);
         void update_instance_data();
         void in_frustum(const std::array<glm::vec4,6>& P);
-        bool aabb_in_frustum(const std::array<glm::vec4,6>& P, const glm::vec3& minB, const glm::vec3& maxB);
+        bool aabb_in_frustum(const std::array<glm::vec4,6>& P, const glm::vec3& minB, const glm::vec3& maxB) const;
 
         std::tuple<std::string, bool, float> is_closer_than_current_model(const glm::vec3& point_to_check, float current_distance_from_closest_model);
         std::pair<bool, int> intersect_sphere_aabb(const glm::vec3& point, float radius);
@@ -120,7 +120,7 @@ namespace Models {
             this->interactable = is_interactive;
         }
 
-        inline bool in_frustum() const{
+        inline bool is_in_frustum() const{
 
             if(!is_instanced()){
                 return inside_frustum_;
