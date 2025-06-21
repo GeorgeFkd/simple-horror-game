@@ -115,6 +115,7 @@ void Light::draw_depth_pass(
             for (auto& m : models) {
                 //m->update_world_transform(glm::mat4(1.0f));
                 if (!m->is_active()) continue;
+                //if (!m->in_frustum()) continue;
                 if (m->is_instanced()) {
                     m->draw_depth_instanced(shader);
                 } else {
@@ -127,6 +128,7 @@ void Light::draw_depth_pass(
         shader->set_mat4("uProj", get_light_projection());
         for (auto& m : models) {
             if (!m->is_active()) continue;
+            //if (!m->in_frustum()) continue;
             if (m->is_instanced()) {
                 m->draw_depth_instanced(shader);
             } else {

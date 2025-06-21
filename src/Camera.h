@@ -8,23 +8,6 @@
 
 namespace Camera{
 
-    inline float distance_from_using_aabb(const glm::vec3& cen,const glm::vec3& bmin,const glm::vec3& bmax) {
-                
-            // Raise the center to make the "sphere" collision behave taller
-            // Might be used for interaction radius 
-            glm::vec3 convenience_offset = glm::vec3(0.0f,-0.6f,0.0f);
-            glm::vec3 offset_cen = cen + convenience_offset;
-            glm::vec3 closest = glm::clamp(offset_cen, bmin, bmax);
-            float dist2 = glm::length2(closest - offset_cen);
-            return dist2;
-    }
-
-    inline bool intersects_sphere_aabb(const glm::vec3& cen, float r, const glm::vec3& bmin, const glm::vec3& bmax)
-        {
-            
-            return distance_from_using_aabb(cen, bmin, bmax)<= r * r;
-        }
-
     class CameraObj{
     private: 
         glm::vec3 position;
@@ -35,9 +18,9 @@ namespace Camera{
         float mouse_sensitivity;
 
         float fov    = glm::radians(45.0f);
-        float aspect = 16.0f / 9.0f;
-        float near_z  = 0.1f;
-        float far_z   = 500.0f;
+        float aspect = 0.0f;
+        float near_z  = 1.0f;
+        float far_z   = 1000.0f;
         // euler angles
         // yaw represents the magnitude of looking left to right
         // pitch represents how much we are looking up or down 
@@ -45,7 +28,6 @@ namespace Camera{
 
         float collision_radius = 0.6f;    // how “fat” the camera is
 
-        Light* flashlight; 
     public: 
         
         CameraObj(int window_width, int window_height,glm::vec3 position): 
@@ -62,12 +44,10 @@ namespace Camera{
             SDL_SetRelativeMouseMode(SDL_TRUE);
         }
 
-          
-        
-
         void update(float delta_time);
-
         void process_input(const SDL_Event& event);
+        const std::array<glm::vec4,6> extract_frustum_planes() const;
+
         inline glm::mat4 get_view_matrix() const {
             return glm::lookAt(position, position + front, up);
         }
@@ -102,23 +82,6 @@ namespace Camera{
 
         inline float get_radius() const {
             return collision_radius;
-        }
-        
-        
-        float distance_from_camera_using_AABB(const glm::vec3& cen,const glm::vec3& bmin,const glm::vec3& bmax) {
-                
-            // Raise the center to make the "sphere" collision behave taller
-            // Might be used for interaction radius 
-            glm::vec3 convenience_offset = glm::vec3(0.0f,-0.6f,0.0f);
-            glm::vec3 offset_cen = cen + convenience_offset;
-            glm::vec3 closest = glm::clamp(offset_cen, bmin, bmax);
-            float dist2 = glm::length2(closest - offset_cen);
-            return dist2;
-        }
-        
-        bool intersect_sphere_aabb(const glm::vec3& cen, float r, const glm::vec3& bmin, const glm::vec3& bmax){
-            
-            return this->distance_from_camera_using_AABB(cen, bmin, bmax)<= r * r;
         }
 
         void updateCameraVectors();

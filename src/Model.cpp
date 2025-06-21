@@ -403,7 +403,8 @@ void Models::Model::draw_instanced(const glm::mat4& view, const glm::mat4& proje
                                    std::shared_ptr<Shader> shader){
 
     //CARE WITH THIS IS MIGHT CAUSE A BUG
-    if(instance_data_dirty) update_instance_data();
+    //if(instance_data_dirty) update_instance_data();
+    update_instance_data();
 
 
     shader->set_mat4("uView", view);
@@ -628,6 +629,7 @@ void Models::Model::init_instancing(size_t max_instances) {
     instance_aabb_min.reserve(max_instances);
     instance_aabb_max.reserve(max_instances);
     instance_modifications.reserve(max_instances);
+    instance_in_frustum.reserve(max_instances);
     GLCall(glBindVertexArray(0));
 }
 
@@ -644,9 +646,16 @@ void Models::Model::update_instance_data(){
     std::vector<glm::mat4> active;
     active.reserve(instance_transforms.size());
     for (size_t i = 0; i < instance_transforms.size(); ++i) {
-        if (instance_modifications[i] != InstanceModifiedTypes::REMOVED) {
-            active.push_back(instance_transforms[i]);
+
+        if(instance_modifications[i] == InstanceModifiedTypes::REMOVED){
+            continue;
         }
+
+        if(!instance_in_frustum[i]){
+            continue;
+        }
+
+        active.push_back(instance_transforms[i]);
     }
 
     // upload only the active list
@@ -672,6 +681,7 @@ void Models::Model::add_instance_transform(const glm::mat4& xf, const std::strin
     instance_aabb_max.push_back(wmax);
     instance_suffixes.push_back(suffix);
     instance_modifications.push_back(InstanceModifiedTypes::NOT_MODIFIED);
+    instance_in_frustum.push_back(true);
     instance_data_dirty = true;
 }
 
@@ -724,6 +734,54 @@ std::tuple<std::string, bool, float> Models::Model::is_closer_than_current_model
     return {name(instance_index), squared_distance < current_distance_to_closest_model, squared_distance};
 }
 
+bool Models::Model::aabb_in_frustum(
+    const std::array<glm::vec4,6>& P,
+    const glm::vec3& minB,
+    const glm::vec3& maxB)
+{
+    for (auto& plane : P) {
+        // pick the “positive‐vertex” for this plane normal
+        glm::vec3 n(plane);
+        glm::vec3 positive = {
+            n.x > 0.0f ? maxB.x : minB.x,
+            n.y > 0.0f ? maxB.y : minB.y,
+            n.z > 0.0f ? maxB.z : minB.z
+        };
+        // if that vertex is outside, the whole box is outside
+        if (glm::dot(n, positive) + plane.w < 0.0f)
+            return false;
+    }
+    return true;
+}
+
+void Models::Model::in_frustum(const std::array<glm::vec4,6>& P)
+{
+    // clear previous state
+    inside_frustum_ = false;
+    if (is_instanced())
+        instance_in_frustum.assign(get_instance_count(), false);
+
+    // non-instanced: single AABB
+    if (!is_instanced()) {
+        inside_frustum_ = aabb_in_frustum(P, aabbmin, aabbmax);
+        return;
+    }
+
+    // instanced: test each live instance
+    int N = get_instance_count();
+    for (int i = 0; i < N; ++i) {
+        if (instance_modifications[i] == InstanceModifiedTypes::REMOVED)
+            continue;
+
+        auto minB = get_instance_aabb_min(i);
+        auto maxB = get_instance_aabb_max(i);
+        bool inside = aabb_in_frustum(P, minB, maxB);
+        instance_in_frustum[i] = inside;
+        if (inside)
+            inside_frustum_ = true;  // model is “in” if any instance is
+    }
+}
+
 
 void Models::Model::remove_instance_transform(const std::string& suffix){
     auto it = std::find(instance_suffixes.begin(), instance_suffixes.end(), suffix);
@@ -734,5 +792,6 @@ void Models::Model::remove_instance_transform(const std::string& suffix){
 
     size_t i = std::distance(instance_suffixes.begin(), it);
     instance_modifications[i] = InstanceModifiedTypes::REMOVED;
+    instance_in_frustum[i] = false;
     instance_data_dirty = true;
 }

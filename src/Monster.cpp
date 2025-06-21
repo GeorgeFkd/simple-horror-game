@@ -59,7 +59,7 @@ void Monster::move_towards(const glm::vec3& direction, float speed, float dt) {
 
     tf[3] = glm::vec4(new_pos, 1.0f);
 
-    std::cout << "Monster moving (via mix)\n";
+    //std::cout << "Monster moving (via mix)\n";
     model_ref->set_local_transform(tf);
 }
 
@@ -102,7 +102,7 @@ void Monster::update(float dt, const glm::vec3& player_view_direction,
     if (!scripts.empty()) {
         auto current_script = &scripts.front();
         if (current_script->elapsed_secs < current_script->duration_secs) {
-            PRINT_VEC4(monster_model()->get_local_transform()[3]);
+            //PRINT_VEC4(monster_model()->get_local_transform()[3]);
             move_towards(current_script->direction, current_script->speed, dt);
             current_script->elapsed_secs = current_script->elapsed_secs + dt;
         } else {
@@ -111,9 +111,9 @@ void Monster::update(float dt, const glm::vec3& player_view_direction,
     }
 
     elapsed_time = elapsed_time + dt;
-    std::cout << "Elapsed time is: " << elapsed_time << "\n";
+    //std::cout << "Elapsed time is: " << elapsed_time << "\n";
     if (elapsed_time > seconds_per_coinflip) {
-        std::cout << "10 seconds have passed at the monster";
+        //std::cout << "10 seconds have passed at the monster";
         float randNum = generate_random_number();
         float probs   = 0.0f;
         if (model_ref->is_active()) {
@@ -137,11 +137,11 @@ void Monster::update(float dt, const glm::vec3& player_view_direction,
     auto towards_monster  = glm::normalize(monster_pos - player_position);
     auto monster_view_dir = glm::dot(player_view_direction, towards_monster);
     if (monster_view_dir > 0) {
-        std::cout << "You are looking at the monster\n";
+        //std::cout << "You are looking at the monster\n";
         time_looking_at_it += dt;
         time_not_looking_at_it = 0;
     } else {
-        std::cout << "You are not looking at the monster\n";
+        //std::cout << "You are not looking at the monster\n";
         time_not_looking_at_it += dt;
         time_looking_at_it = 0;
     }
@@ -150,7 +150,7 @@ void Monster::update(float dt, const glm::vec3& player_view_direction,
         if (rand_num_for_death < 0.65f)
             return;
         on_looking_death();
-        std::cout << "You died because you looked at it too much\n";
+        //std::cout << "You died because you looked at it too much\n";
         return;
     }
 
@@ -158,7 +158,7 @@ void Monster::update(float dt, const glm::vec3& player_view_direction,
         if (rand_num_for_death < 0.65f)
             return;
         on_not_looking_death();
-        std::cout << "You died because you did not keep it in check\n";
+        //std::cout << "You died because you did not keep it in check\n";
         return;
     }
     if (monster_model()->is_active()) {

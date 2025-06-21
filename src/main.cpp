@@ -284,7 +284,7 @@ int main() {
         glm::vec3(1.0f),                 // 5: diffuse
         glm::vec3(1.0f),                 // 6: specular
         glm::cos(glm::radians(5.0f)),    // 7: cutoff (inner cone)
-        glm::cos(glm::radians(25.0f)),   // 8: outer_cutoff
+        glm::cos(glm::radians(15.0f)),   // 8: outer_cutoff
         1280,                            // 9: shadow_width
         720,                             // 10: shadow_height
         0.1f,                            // 11: near_plane
@@ -294,11 +294,12 @@ int main() {
         0.35f,                           // 15: attenuation_linear
         0.05f,                           // 16: attenuation_quadratic
         1.0f,                            // 17: attenuation_power
-        1.0f,                            // 18: light_power
+        10.0f,                            // 18: light_power
         true,                            // 19: is_on
         "flashlight",                    // 20: label
         glm::vec3(1.0f)                  // 21: color
     );
+
     Light spotlight(
         LightType::SPOT,                 // 1: light type
         glm::vec3(10.0f, 10.0f, 0.0f),    // 2: position (to the right)
@@ -533,7 +534,7 @@ int main() {
 
     auto room4_models = room4.models();
     for (auto& m : room4_models) {
-        std::cout << "Model: " << m->name() << std::endl;
+        //std::cout << "Model: " << m->name() << std::endl;
         game_state.add_model(std::move(m), m->name());
     }
 
