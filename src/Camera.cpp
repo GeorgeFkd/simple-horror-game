@@ -70,3 +70,28 @@ void Camera::CameraObj::process_input(const SDL_Event &event){
         break;
     }
 }
+
+
+
+const std::array<glm::vec4,6> Camera::CameraObj::extract_frustum_planes() const{
+
+    const glm::mat4 M = get_projection_matrix() * get_view_matrix();
+
+    std::array<glm::vec4,6> P;
+
+    glm::mat4 T = glm::transpose(M);
+    P[0] = T[3] + T[0];  // left
+    P[1] = T[3] - T[0];  // right
+    P[2] = T[3] + T[1];  // bottom
+    P[3] = T[3] - T[1];  // top
+    P[4] = T[3] + T[2];  // near
+    P[5] = T[3] - T[2];  // far
+
+    // Normalize
+    for (auto& p: P) {
+        float len = glm::length(glm::vec3(p));
+        p /= len;
+    }
+
+    return P;
+}

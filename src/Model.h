@@ -75,6 +75,8 @@ namespace Models {
         void compute_transformed_aabb(const glm::mat4& xf, glm::vec3& out_min, glm::vec3& out_max);
         void init_instancing(size_t max_instances);
         void update_instance_data();
+        void in_frustum(const std::array<glm::vec4,6>& P);
+        bool aabb_in_frustum(const std::array<glm::vec4,6>& P, const glm::vec3& minB, const glm::vec3& maxB) const;
 
         std::tuple<std::string, bool, float> is_closer_than_current_model(const glm::vec3& point_to_check, float current_distance_from_closest_model);
         std::pair<bool, int> intersect_sphere_aabb(const glm::vec3& point, float radius);
@@ -113,8 +115,18 @@ namespace Models {
         inline bool is_instanced() const {
             return is_instanced_;
         }
+
         inline void set_interactivity(bool is_interactive) {
             this->interactable = is_interactive;
+        }
+
+        inline bool is_in_frustum() const{
+
+            if(!is_instanced()){
+                return inside_frustum_;
+            }
+
+            return std::any_of(instance_in_frustum.begin(), instance_in_frustum.end(), [](bool v){return v;});
         }
 
         inline bool can_interact() {
@@ -203,6 +215,9 @@ namespace Models {
         std::vector<glm::vec3> instance_aabb_min;
         std::vector<glm::vec3> instance_aabb_max;
         std::vector<InstanceModifiedTypes> instance_modifications;
+        std::vector<bool> instance_in_frustum;
+
+        bool inside_frustum_ = true;
         bool instance_data_dirty = true;
 
         void draw_instanced(const glm::mat4& view, const glm::mat4& projection,

@@ -118,7 +118,8 @@ namespace Game {
         void render(const glm::mat4& view, const glm::mat4& projection);
         std::shared_ptr<Shader> get_shader_by_name(const std::string& shader_name);
         void handle_sdl_events(bool& running);
-        void check_all_models(float dt);
+        void check_collisions(float dt);
+        void perform_culling();
         void run_handler_for(const std::string& m);
         void run_interaction_handlers();
         bool has_user_won();
