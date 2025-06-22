@@ -381,30 +381,30 @@ int main() {
         return group;
     };
 
-    auto scattered_group_1 = scatter_fn(4.0f, {30.0f, 0.0f, -15.0f}, random_objects);
-    for (auto& m : scattered_group_1.models()) {
-        game_state.add_model(std::move(m), m->name());
-    }
-
-    auto scattered_group_2 = scatter_fn(4.0f, {30.0f, 0.0f, -45.0f}, random_objects);
-    for (auto& m : scattered_group_2.models()) {
-        game_state.add_model(std::move(m), m->name());
-    }
-
-    std::vector<std::string> random_objects_2 = {
-        "assets/models/old_office.obj", "assets/models/surgery_tools.obj",
-        "assets/models/SimpleOldTownAssets/workbench01.obj"};
-
-    auto scattered_group_3 = scatter_fn(6.0f, {-10.0f, 0.0f, -45.0f}, random_objects_2);
-    for (auto& m : scattered_group_3.models()) {
-        game_state.add_model(std::move(m), m->name());
-    }
-
-
-    auto scattered_group_4 = scatter_fn(4.0f, {-30.0f, 0.0f, 10.0f}, random_objects);
-    for (auto& m : scattered_group_4.models()) {
-        game_state.add_model(std::move(m), m->name());
-    }
+    // auto scattered_group_1 = scatter_fn(4.0f, {30.0f, 0.0f, -15.0f}, random_objects);
+    // for (auto& m : scattered_group_1.models()) {
+    //     game_state.add_model(std::move(m), m->name());
+    // }
+    //
+    // auto scattered_group_2 = scatter_fn(4.0f, {30.0f, 0.0f, -45.0f}, random_objects);
+    // for (auto& m : scattered_group_2.models()) {
+    //     game_state.add_model(std::move(m), m->name());
+    // }
+    //
+    // std::vector<std::string> random_objects_2 = {
+    //     "assets/models/old_office.obj", "assets/models/surgery_tools.obj",
+    //     "assets/models/SimpleOldTownAssets/workbench01.obj"};
+    //
+    // auto scattered_group_3 = scatter_fn(6.0f, {-10.0f, 0.0f, -45.0f}, random_objects_2);
+    // for (auto& m : scattered_group_3.models()) {
+    //     game_state.add_model(std::move(m), m->name());
+    // }
+    //
+    //
+    // auto scattered_group_4 = scatter_fn(4.0f, {-30.0f, 0.0f, 10.0f}, random_objects);
+    // for (auto& m : scattered_group_4.models()) {
+    //     game_state.add_model(std::move(m), m->name());
+    // }
     glm::vec3 overhead_point = glm::vec3(15.0f, -4.0f, -20.0f);
     pointlight.set_position(overhead_point);
     overhead_point_light_model.set_local_transform(

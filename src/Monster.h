@@ -47,6 +47,17 @@ class Monster {
     inline void on_monster_not_active(std::function<void()> fn){
         on_disabled = fn;
     }
+    inline void start_chasing_player(){
+        monster_chasing_player = true;
+    }
+
+    inline void stop_chasing_player() {
+        monster_chasing_player = false;
+    }
+
+    inline void set_chasing_speed(float sp){
+        chase_speed = sp;
+    }
 
     Models::Model* monster_model();
 
@@ -57,7 +68,7 @@ class Monster {
         float duration_secs;
         float elapsed_secs;
     };
-
+    bool monster_chasing_player = false;
     float distance_from_player                          = 10.0f;
     float time_looking_at_it                       = 0.0f;
     float time_not_looking_at_it                   = 0.0f;
@@ -68,6 +79,9 @@ class Monster {
     float seconds_looking_at_it_for_death          = 7.0f;
     float seconds_not_looking_at_it_for_death      = 10.0f;
     float elapsed_time = 0.0f;
+    float chasing_elapsed_time = 0.0f;
+    //should be lower than the camera's.
+    float chase_speed = 5.0f;
     Models::Model*                        model_ref;
     bool                                  is_scripted            = false;
     std::queue<Scripted>                 scripts;

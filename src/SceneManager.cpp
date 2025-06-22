@@ -179,12 +179,14 @@ void Game::SceneManager::run_game_loop() {
     text_renderer.load_font();
 
     Mix_Music* horror_music = Mix_LoadMUS("assets/audio/scary.mp3");
+    int horror_music_channel = 2;
     if (!horror_music) {
         std::cerr << "Failed to load music: " << Mix_GetError() << std::endl;
         return;
     }
 
     Mix_Chunk* footsteps_music = Mix_LoadWAV("assets/audio/footsteps.mp3");
+    int footsteps_music_channel = 3;
     auto  monster_initial_position = glm::vec3(5.0f, 0.0f, 5.0f);
     last_monster_transform         = glm::translate(glm::mat4(1.0f), monster_initial_position);
     auto monster_init              = Models::Model("assets/models/monster.obj", "monster");
@@ -200,10 +202,10 @@ void Game::SceneManager::run_game_loop() {
     monster_model->set_local_transform(last_monster_transform);
     monster_model->update_world_transform(glm::mat4(1.0f));
     Monster monster(monster_model);
-    //monster.disappear_probability(0.65f)
-    //    .add_scripted_movement(glm::vec3(1.0f, 0.0f, -1.0f), 5.0f, 5)
-    //    .add_scripted_movement(glm::vec3(1.0f, 0.0f, 1.0f), 5.0f, 5)
-    //    .add_scripted_movement(glm::vec3(-1.0f, 1.0f, 0.0f), 5.0f, 5);
+    monster.disappear_probability(0.65f)
+       .add_scripted_movement(glm::vec3(1.0f, 0.0f, -1.0f), 5.0f, 5.0f)
+       .add_scripted_movement(glm::vec3(1.0f, 0.0f, 1.0f), 5.0f, 5.0f)
+        .add_scripted_movement(glm::vec3(0.5f,0.0f,2.0f),5.0f,5.0f);
 
     //monster.seconds_for_coinflip(10.0f)
     //    .disappear_probability(0.35f)
@@ -218,27 +220,28 @@ void Game::SceneManager::run_game_loop() {
         throw std::runtime_error("Could not find flashlight model...");
     }
 
-    //monster.on_monster_active([horror_music, footsteps_music]() {
-    //    if (Mix_PlayingMusic() == 0) {
-    //        Mix_PlayMusic(horror_music, -1);          // -1 = loop forever
-    //        Mix_PlayChannel(-1, footsteps_music, -1); //-1 as channel means that sdl allocates it
-    //    }
-    //});
+    monster.on_monster_active([horror_music, footsteps_music]() {
+       if (Mix_PlayingMusic() == 0) {
+           Mix_PlayMusic(horror_music, -1);          // -1 = loop forever
+           Mix_PlayChannel(-1, footsteps_music, -1); //-1 as channel means that sdl allocates it
+       }
+    });
 
-    //monster.on_monster_not_active([]() {
-    //    if (Mix_PlayingMusic()) {
-    //        Mix_HaltMusic();
-    //        Mix_HaltChannel(-1);
-    //    }
-    //});
-    //monster.on_death_by_looking([this]() {
-    //    terminate_game("The monster melted you by looking at you");
-    //});
+    monster.on_monster_not_active([]() {
+       if (Mix_PlayingMusic()) {
+           Mix_HaltMusic();
+           Mix_HaltChannel(-1);
+       }
+    });
+    monster.on_death_by_looking([this]() {
+       terminate_game("The monster melted you by looking at you");
+    });
 
-    //monster.on_death_by_not_looking([this]() {
-    //    terminate_game("killed your family while you were not looking");
-    //});
+    monster.on_death_by_not_looking([this]() {
+       terminate_game("killed your family while you were not looking");
+    });
 
+        monster.set_chasing_speed(4.0f);
     while (running) {
         if(has_user_won()){
             //runs one more iteration so it can display the text
@@ -253,7 +256,7 @@ void Game::SceneManager::run_game_loop() {
         camera.update(dt);
         // std::cout << "Last camera position and current: \n";
         auto camera_dir = glm::normalize(camera.get_direction());
-        //monster.update(dt, camera_dir, last_camera_position);
+        monster.update(dt, camera_dir, last_camera_position);
         //PRINT_VEC4(monster.monster_model()->get_local_transform()[3]);
 
         // loop over models(collision tests, update closest object
@@ -450,6 +453,11 @@ void Game::SceneManager::check_collisions(float dt) {
         // camera–AABB collision
         auto [is_collided, instance_index_camera] =
             model->intersect_sphere_aabb(camera_pos, camera_radius);
+        //game logic
+        if(is_collided && model->name() == "monster"){
+            terminate_game("You have been caught by the monster");
+            return false;
+        }
         if (is_collided) {
             camera.set_position(last_cam_pos);
             return true;

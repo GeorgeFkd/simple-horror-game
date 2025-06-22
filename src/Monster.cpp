@@ -28,7 +28,7 @@ Monster& Monster::add_scripted_movement(const glm::vec3& direction, float speed,
     return *this;
 }
 
-Monster& Monster::should_look_at_it_every(float s){
+Monster& Monster::should_look_at_it_every(float s) {
     seconds_looking_at_it_for_death = s;
     return *this;
 }
@@ -58,8 +58,7 @@ void Monster::move_towards(const glm::vec3& direction, float speed, float dt) {
     tf                       = glm::rotate(tf, yaw, glm::vec3(0.0f, 1.0f, 0.0f));
 
     tf[3] = glm::vec4(new_pos, 1.0f);
-
-    //std::cout << "Monster moving (via mix)\n";
+    // std::cout << "Monster moving (via mix)\n";
     model_ref->set_local_transform(tf);
 }
 
@@ -83,7 +82,7 @@ Monster& Monster::follow_distance(float dist) {
     return *this;
 }
 
-Monster& Monster::seconds_for_coinflip(float secs){
+Monster& Monster::seconds_for_coinflip(float secs) {
     seconds_per_coinflip = secs;
     return *this;
 }
@@ -99,10 +98,29 @@ Monster& Monster::disappear_probability(float pr) {
 
 void Monster::update(float dt, const glm::vec3& player_view_direction,
                      const glm::vec3& player_position) {
-    if (!scripts.empty()) {
+    
+    elapsed_time = elapsed_time + dt;
+    chasing_elapsed_time = chasing_elapsed_time + dt;
+    if(chasing_elapsed_time > 15.0f){
+        float rand = generate_random_number();
+        if(rand > 0.35f){
+            start_chasing_player();
+        }else{
+            stop_chasing_player();
+        }
+    }
+    if (monster_chasing_player) {
+        // grab current monster world‐position
+        glm::mat4 tf          = model_ref->get_local_transform();
+        glm::vec3 monster_pos = glm::vec3(tf[3]);
+
+        glm::vec3 dir = glm::normalize(player_position - monster_pos);
+        move_towards(dir, chase_speed, dt);
+    }
+    if (!scripts.empty() && !monster_chasing_player) {
         auto current_script = &scripts.front();
         if (current_script->elapsed_secs < current_script->duration_secs) {
-            //PRINT_VEC4(monster_model()->get_local_transform()[3]);
+            // PRINT_VEC4(monster_model()->get_local_transform()[3]);
             move_towards(current_script->direction, current_script->speed, dt);
             current_script->elapsed_secs = current_script->elapsed_secs + dt;
         } else {
@@ -110,10 +128,9 @@ void Monster::update(float dt, const glm::vec3& player_view_direction,
         }
     }
 
-    elapsed_time = elapsed_time + dt;
-    //std::cout << "Elapsed time is: " << elapsed_time << "\n";
+    // std::cout << "Elapsed time is: " << elapsed_time << "\n";
     if (elapsed_time > seconds_per_coinflip) {
-        //std::cout << "10 seconds have passed at the monster";
+        // std::cout << "10 seconds have passed at the monster";
         float randNum = generate_random_number();
         float probs   = 0.0f;
         if (model_ref->is_active()) {
@@ -129,37 +146,39 @@ void Monster::update(float dt, const glm::vec3& player_view_direction,
                 time_not_looking_at_it = 0.0f;
             }
         }
-        //after coinflip restart time
+        // after coinflip restart time
         elapsed_time = 0.0f;
     }
 
-    auto monster_pos      = glm::vec3(monster_model()->get_local_transform()[3]);
-    auto towards_monster  = glm::normalize(monster_pos - player_position);
-    auto monster_view_dir = glm::dot(player_view_direction, towards_monster);
-    if (monster_view_dir > 0) {
-        //std::cout << "You are looking at the monster\n";
-        time_looking_at_it += dt;
-        time_not_looking_at_it = 0;
-    } else {
-        //std::cout << "You are not looking at the monster\n";
-        time_not_looking_at_it += dt;
-        time_looking_at_it = 0;
-    }
-    float rand_num_for_death = generate_random_number();
-    if (time_looking_at_it > seconds_looking_at_it_for_death) {
-        if (rand_num_for_death < 0.65f)
+    if (false) {
+        auto monster_pos      = glm::vec3(monster_model()->get_local_transform()[3]);
+        auto towards_monster  = glm::normalize(monster_pos - player_position);
+        auto monster_view_dir = glm::dot(player_view_direction, towards_monster);
+        if (monster_view_dir > 0) {
+            // std::cout << "You are looking at the monster\n";
+            time_looking_at_it += dt;
+            time_not_looking_at_it = 0;
+        } else {
+            // std::cout << "You are not looking at the monster\n";
+            time_not_looking_at_it += dt;
+            time_looking_at_it = 0;
+        }
+        float rand_num_for_death = generate_random_number();
+        if (time_looking_at_it > seconds_looking_at_it_for_death) {
+            if (rand_num_for_death < 0.65f)
+                return;
+            on_looking_death();
+            // std::cout << "You died because you looked at it too much\n";
             return;
-        on_looking_death();
-        //std::cout << "You died because you looked at it too much\n";
-        return;
-    }
+        }
 
-    if (time_not_looking_at_it > seconds_not_looking_at_it_for_death) {
-        if (rand_num_for_death < 0.65f)
+        if (time_not_looking_at_it > seconds_not_looking_at_it_for_death) {
+            if (rand_num_for_death < 0.65f)
+                return;
+            on_not_looking_death();
+            // std::cout << "You died because you did not keep it in check\n";
             return;
-        on_not_looking_death();
-        //std::cout << "You died because you did not keep it in check\n";
-        return;
+        }
     }
     if (monster_model()->is_active()) {
         on_active();
@@ -167,5 +186,5 @@ void Monster::update(float dt, const glm::vec3& player_view_direction,
         on_disabled();
     }
 
-    //TODO when looking at the monster, make it disappear with a low probability
+    // TODO when looking at the monster, make it disappear with a low probability
 }
