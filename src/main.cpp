@@ -139,6 +139,7 @@ Models::Model createCeiling(float roomSize, float height) {
                          floor_material);
 }
 
+
 void createRoom2(Game::GameState& game_state) {}
 
 int main() {
@@ -156,7 +157,7 @@ int main() {
     constexpr float ROOM_DEPTH  = ROOM_WIDTH;
 
     auto floor_model   = createFloor(ROOM_WIDTH);
-    auto ceiling_model = createCeiling(ROOM_WIDTH, 30.0f);
+    auto ceiling_model = createCeiling(ROOM_WIDTH, ROOM_HEIGHT);
     game_state.add_model(std::move(floor_model), floor_model.name());
     game_state.add_model(std::move(ceiling_model), ceiling_model.name());
 

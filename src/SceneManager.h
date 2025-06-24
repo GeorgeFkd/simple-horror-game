@@ -134,6 +134,7 @@ namespace Game {
         TextRenderer text_renderer;
         Monster monster;
         std::string center_text = "";
+        std::string bottom_text_hints = "";
         glm::vec3 last_camera_position;
         glm::mat4 last_monster_transform;
         bool running = false;
