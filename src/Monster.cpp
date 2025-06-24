@@ -28,15 +28,6 @@ Monster& Monster::add_scripted_movement(const glm::vec3& direction, float speed,
     return *this;
 }
 
-Monster& Monster::should_look_at_it_every(float s) {
-    seconds_looking_at_it_for_death = s;
-    return *this;
-}
-
-Monster& Monster::should_not_look_at_it_more_than(float s) {
-    seconds_not_looking_at_it_for_death = s;
-    return *this;
-}
 
 void Monster::clear_scripted_movements() {
     while (!scripts.empty()) {
@@ -58,7 +49,8 @@ void Monster::move_towards(const glm::vec3& direction, float speed, float dt) {
     tf                       = glm::rotate(tf, yaw, glm::vec3(0.0f, 1.0f, 0.0f));
 
     tf[3] = glm::vec4(new_pos, 1.0f);
-    // std::cout << "Monster moving (via mix)\n";
+    //keeps the monster on the floor level
+    tf[3][1] = 0.0f;
     model_ref->set_local_transform(tf);
 }
 
@@ -77,8 +69,13 @@ void Monster::appear_at(const glm::vec3& world_position) {
     model_ref->enable();
 }
 
-Monster& Monster::follow_distance(float dist) {
-    distance_from_player = dist;
+
+
+Monster& Monster::restrict_monster_within(float xmin, float xmax, float zmin, float zmax) {
+    min_x = xmin;
+    max_x = xmax;
+    max_z = zmax;
+    min_z = zmin;
     return *this;
 }
 
@@ -98,36 +95,57 @@ Monster& Monster::disappear_probability(float pr) {
 
 void Monster::update(float dt, const glm::vec3& player_view_direction,
                      const glm::vec3& player_position) {
-    
-    elapsed_time = elapsed_time + dt;
+
+    elapsed_time         = elapsed_time + dt;
     chasing_elapsed_time = chasing_elapsed_time + dt;
-    if(chasing_elapsed_time > 15.0f){
+    if (chasing_elapsed_time > 15.0f) {
         float rand = generate_random_number();
-        if(rand > 0.35f){
+        if (rand > 0.35f) {
             start_chasing_player();
-        }else{
+        } else {
             stop_chasing_player();
         }
+        chasing_elapsed_time = 0.0f;
     }
     if (monster_chasing_player) {
-        // grab current monster world‐position
         glm::mat4 tf          = model_ref->get_local_transform();
         glm::vec3 monster_pos = glm::vec3(tf[3]);
 
         glm::vec3 dir = glm::normalize(player_position - monster_pos);
-        move_towards(dir, chase_speed, dt);
-    }
-    if (!scripts.empty() && !monster_chasing_player) {
-        auto current_script = &scripts.front();
-        if (current_script->elapsed_secs < current_script->duration_secs) {
-            // PRINT_VEC4(monster_model()->get_local_transform()[3]);
-            move_towards(current_script->direction, current_script->speed, dt);
-            current_script->elapsed_secs = current_script->elapsed_secs + dt;
+        //can get slightly more than the camera's to ensure a proper chase
+        auto speed = chase_speed + uniform_rand(el) *(14.0f - chase_speed);
+        move_towards(dir, speed, dt);
+    } else {
+        if (!scripts.empty()) {
+            auto current_script = &scripts.front();
+            if (current_script->elapsed_secs < current_script->duration_secs) {
+                // PRINT_VEC4(monster_model()->get_local_transform()[3]);
+                move_towards(current_script->direction, current_script->speed, dt);
+                current_script->elapsed_secs = current_script->elapsed_secs + dt;
+            } else {
+                scripts.pop();
+            }
         } else {
-            scripts.pop();
+
+            glm::vec3 pos = glm::vec3(monster_model()->get_local_transform()[3]);
+
+            // pick a random target inside [min_x..max_x]×[min_z..max_z]
+            float     u1 = uniform_rand(el);
+            float     u2 = uniform_rand(el);
+            float     tx = min_x + u1 * (max_x - min_x);
+            float     tz = min_z + u2 * (max_z - min_z);
+            glm::vec3 target{tx, pos.y, tz};
+
+            glm::vec3 dir   = glm::normalize(target - pos);
+            //speed can get slightly higher than camera for difficulty
+            float     speed = 5.0f + uniform_rand(el) * (14.0f-5.0f);
+
+            float distance = glm::distance(target, pos);
+            float duration = distance / speed;
+
+            add_scripted_movement(dir, speed, duration);
         }
     }
-
     // std::cout << "Elapsed time is: " << elapsed_time << "\n";
     if (elapsed_time > seconds_per_coinflip) {
         // std::cout << "10 seconds have passed at the monster";
@@ -150,41 +168,9 @@ void Monster::update(float dt, const glm::vec3& player_view_direction,
         elapsed_time = 0.0f;
     }
 
-    if (false) {
-        auto monster_pos      = glm::vec3(monster_model()->get_local_transform()[3]);
-        auto towards_monster  = glm::normalize(monster_pos - player_position);
-        auto monster_view_dir = glm::dot(player_view_direction, towards_monster);
-        if (monster_view_dir > 0) {
-            // std::cout << "You are looking at the monster\n";
-            time_looking_at_it += dt;
-            time_not_looking_at_it = 0;
-        } else {
-            // std::cout << "You are not looking at the monster\n";
-            time_not_looking_at_it += dt;
-            time_looking_at_it = 0;
-        }
-        float rand_num_for_death = generate_random_number();
-        if (time_looking_at_it > seconds_looking_at_it_for_death) {
-            if (rand_num_for_death < 0.65f)
-                return;
-            on_looking_death();
-            // std::cout << "You died because you looked at it too much\n";
-            return;
-        }
-
-        if (time_not_looking_at_it > seconds_not_looking_at_it_for_death) {
-            if (rand_num_for_death < 0.65f)
-                return;
-            on_not_looking_death();
-            // std::cout << "You died because you did not keep it in check\n";
-            return;
-        }
-    }
     if (monster_model()->is_active()) {
         on_active();
     } else {
         on_disabled();
     }
-
-    // TODO when looking at the monster, make it disappear with a low probability
 }

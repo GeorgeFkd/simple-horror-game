@@ -155,6 +155,7 @@ int main() {
     constexpr float ROOM_HEIGHT = 30.0f;
     constexpr float ROOM_WIDTH  = 60.0f;
     constexpr float ROOM_DEPTH  = ROOM_WIDTH;
+    scene_manager.room_dimensions(ROOM_WIDTH,ROOM_HEIGHT,ROOM_DEPTH); 
 
     auto floor_model   = createFloor(ROOM_WIDTH);
     auto ceiling_model = createCeiling(ROOM_WIDTH, ROOM_HEIGHT);

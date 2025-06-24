@@ -23,23 +23,16 @@ class Monster {
     void     clear_scripted_movements();
     bool     no_scripts_left();
 
-    Monster& follow_distance(float dist);
     Monster& disappear_probability(float pr);
     Monster& seconds_for_coinflip(float s);
-    Monster& should_look_at_it_every(float s);
-    Monster& should_not_look_at_it_more_than(float s);
+    Monster& restrict_monster_within(float xmin,float xmax,float zmin,float zmax);
+    
     void teleport_at(const glm::vec3& world_position);
     void disappear();
     void appear_at(const glm::vec3& world_position);
 
     void update(float dt,const glm::vec3& player_view_direction,const glm::vec3& player_position);
-
-    inline void on_death_by_not_looking(std::function<void()> fn){
-        on_not_looking_death = fn;
-    }
-    inline void on_death_by_looking(std::function<void()> fn){
-        on_looking_death = fn;
-    }
+    
     
     inline void on_monster_active(std::function<void()> fn){
         on_active = fn;
@@ -68,6 +61,8 @@ class Monster {
         float duration_secs;
         float elapsed_secs;
     };
+    float max_x,min_x,max_z,min_z;
+
     bool monster_chasing_player = false;
     float distance_from_player                          = 10.0f;
     float time_looking_at_it                       = 0.0f;
@@ -80,7 +75,7 @@ class Monster {
     float seconds_not_looking_at_it_for_death      = 10.0f;
     float elapsed_time = 0.0f;
     float chasing_elapsed_time = 0.0f;
-    //should be lower than the camera's.
+    //depending on the camera's speed the user can be caught or not
     float chase_speed = 5.0f;
     Models::Model*                        model_ref;
     bool                                  is_scripted            = false;

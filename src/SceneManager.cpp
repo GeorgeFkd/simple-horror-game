@@ -203,13 +203,13 @@ void Game::SceneManager::run_game_loop() {
     monster_model->update_world_transform(glm::mat4(1.0f));
     Monster monster(monster_model);
     monster.disappear_probability(0.65f)
-        .add_scripted_movement(glm::vec3(1.0f, 0.0f, -1.0f), 5.0f, 5.0f)
-        .add_scripted_movement(glm::vec3(1.0f, 0.0f, 1.0f), 5.0f, 5.0f)
-        .add_scripted_movement(glm::vec3(0.5f, 0.0f, 2.0f), 5.0f, 5.0f);
+        .restrict_monster_within(-room_width, room_width, -room_depth, room_depth);
+        // .add_scripted_movement(glm::vec3(1.0f, 0.0f, -1.0f), 5.0f, 5.0f)
+        // .add_scripted_movement(glm::vec3(1.0f, 0.0f, 1.0f), 5.0f, 5.0f)
+        // .add_scripted_movement(glm::vec3(0.5f, 0.0f, 2.0f), 5.0f, 5.0f);
 
     // monster.seconds_for_coinflip(10.0f)
     //     .disappear_probability(0.35f)
-    //     .follow_distance(10.0f)
     //     .should_not_look_at_it_more_than(10.0f)
     //     .should_look_at_it_every(10.0f);
     running           = true;
@@ -233,11 +233,6 @@ void Game::SceneManager::run_game_loop() {
             Mix_HaltChannel(-1);
         }
     });
-    monster.on_death_by_looking(
-        [this]() { terminate_game("The monster melted you by looking at you"); });
-
-    monster.on_death_by_not_looking(
-        [this]() { terminate_game("killed your family while you were not looking"); });
 
     monster.set_chasing_speed(4.0f);
     while (running) {
@@ -454,7 +449,7 @@ void Game::SceneManager::check_collisions(float dt) {
             model->intersect_sphere_aabb(camera_pos, camera_radius);
         // game logic
         if (is_collided && model->name() == "monster") {
-            terminate_game("You have been caught by the monster");
+            terminate_game("You died");
             return false;
         }
         if (is_collided) {
@@ -527,7 +522,7 @@ void Game::SceneManager::render(const glm::mat4& view, const glm::mat4& projecti
     text_renderer.render_text(textShader, displayed_text, 50.0f, 720.0f - 50.0f, 1.2f,
                               {1.0f, 0.0f, 0.0f}, text_projection);
     if (!center_text.empty()) {
-        text_renderer.render_text(textShader, center_text, 60.0f, 720.0f - 250.0f, 1.2f,
+        text_renderer.render_text(textShader, center_text, 1280.0f/2 - 80.0f, 720.0f - 250.0f, 1.2f,
                                   {1.0f, 0.0f, 0.0f}, text_projection);
     }
 

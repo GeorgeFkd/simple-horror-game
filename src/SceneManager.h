@@ -99,6 +99,12 @@ namespace Game {
             return camera;
         }
 
+        inline void room_dimensions(float width,float height,float depth){
+            room_width = width;
+            room_height = height;
+            room_depth = depth;
+        }
+
         void move_model(const std::string& name, const glm::vec3& direction);
         void move_model_X(const std::string& name, float x);
         void move_model_Y(const std::string& name, float y);
@@ -135,6 +141,9 @@ namespace Game {
         Monster monster;
         std::string center_text = "";
         std::string bottom_text_hints = "";
+        float room_width;
+        float room_height;
+        float room_depth;
         glm::vec3 last_camera_position;
         glm::mat4 last_monster_transform;
         bool running = false;
