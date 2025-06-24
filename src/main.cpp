@@ -166,12 +166,12 @@ int main() {
     constexpr unsigned int extra_scrolls = 4;
     scroll.init_instancing(6 + 4);
     glm::vec3 scroll_positions[6];
-    scroll_positions[0] = {-29.0f, 0.0f, -29.0f};
-    scroll_positions[1] = {-15.0f, 0.f, 20.0f};
-    scroll_positions[2] = {-5.0f, 0.0f, -20.0f};
-    scroll_positions[3] = {5.0f, 0.0f, 20.0f};
-    scroll_positions[4] = {29.0f, 0.0f, -29.0f};
-    scroll_positions[5] = {29.0f, 0.0f, 29.0f};
+    scroll_positions[0] = {-29.0f, 0.15f, -29.0f};
+    scroll_positions[1] = {-15.0f, 0.15f, 20.0f};
+    scroll_positions[2] = {-5.0f, 0.15f, -20.0f};
+    scroll_positions[3] = {5.0f, 0.15f, 20.0f};
+    scroll_positions[4] = {29.0f, 0.15f, -29.0f};
+    scroll_positions[5] = {29.0f, 0.15f, 29.0f};
 
     scroll.set_interactivity(true);
     for (int i = 0; i < 6; i++)
@@ -431,7 +431,7 @@ int main() {
                glm::vec3(5.0f, 0.0f, 0.0f), glm::vec3(5.5f, 1.0f, 5.5f))
         .model("assets/models/SimpleOldTownAssets/Bed02.obj", "bed", glm::vec3(5.0f, 0.0f, 0.0f),
                glm::vec3(1.2f, 1.2f, 1.2f))
-        .model("assets/models/scroll.obj", "page-7", glm::vec3(5.0f, 0.0f, 8.0f));
+        .model("assets/models/scroll.obj", "page-7", glm::vec3(5.0f, 0.15f, 8.0f));
 
     // now pick a local position *inside* the room, e.g. 2 units in front of the door and 3 up:
     glm::vec3 right_light_local = glm::vec3(4.0f, 1.0f, -10.0f);
@@ -511,7 +511,7 @@ int main() {
         game_state.add_model(std::move(m), m->name());
     }
 
-    glm::vec3 page3_pos = room_offset3 + glm::vec3(5.0f, 0.0f, 8.0f);
+    glm::vec3 page3_pos = room_offset3 + glm::vec3(5.0f, 0.15f, 8.0f);
     scroll.add_instance_transform(glm::translate(scroll.get_local_transform(), page3_pos),
                                   "room-3-page-9");
 

@@ -84,6 +84,12 @@ Monster& Monster::seconds_for_coinflip(float secs) {
     return *this;
 }
 
+Monster& Monster::speed_within(float speedmin,float speedmax){
+    min_chase_speed = speedmin;
+    max_chase_speed = speedmax;
+    return *this;
+}
+
 Monster& Monster::disappear_probability(float pr) {
     random_disappear_probability = pr;
     return *this;
@@ -113,7 +119,7 @@ void Monster::update(float dt, const glm::vec3& player_view_direction,
 
         glm::vec3 dir = glm::normalize(player_position - monster_pos);
         //can get slightly more than the camera's to ensure a proper chase
-        auto speed = chase_speed + uniform_rand(el) *(14.0f - chase_speed);
+        auto speed = min_chase_speed + uniform_rand(el) *(max_chase_speed - min_chase_speed);
         move_towards(dir, speed, dt);
     } else {
         if (!scripts.empty()) {

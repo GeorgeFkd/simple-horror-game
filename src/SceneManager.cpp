@@ -203,15 +203,13 @@ void Game::SceneManager::run_game_loop() {
     monster_model->update_world_transform(glm::mat4(1.0f));
     Monster monster(monster_model);
     monster.disappear_probability(0.65f)
+        .seconds_for_coinflip(15.0f)
+        .speed_within(4.0f,10.0f)
         .restrict_monster_within(-room_width, room_width, -room_depth, room_depth);
         // .add_scripted_movement(glm::vec3(1.0f, 0.0f, -1.0f), 5.0f, 5.0f)
         // .add_scripted_movement(glm::vec3(1.0f, 0.0f, 1.0f), 5.0f, 5.0f)
         // .add_scripted_movement(glm::vec3(0.5f, 0.0f, 2.0f), 5.0f, 5.0f);
 
-    // monster.seconds_for_coinflip(10.0f)
-    //     .disappear_probability(0.35f)
-    //     .should_not_look_at_it_more_than(10.0f)
-    //     .should_look_at_it_every(10.0f);
     running           = true;
     Uint64 lastTicks  = SDL_GetPerformanceCounter();
     auto   flashlight = game_state->find_light("flashlight");
@@ -238,7 +236,7 @@ void Game::SceneManager::run_game_loop() {
     while (running) {
         if (has_user_won()) {
             // runs one more iteration so it can display the text
-            terminate_game("You survived and recovered the sacred text");
+            terminate_game("You Won!");
         }
         Uint64 now = SDL_GetPerformanceCounter();
         float  dt  = float(now - lastTicks) / float(SDL_GetPerformanceFrequency());
@@ -252,7 +250,6 @@ void Game::SceneManager::run_game_loop() {
         monster.update(dt, camera_dir, last_camera_position);
         // PRINT_VEC4(monster.monster_model()->get_local_transform()[3]);
 
-        // loop over models(collision tests, update closest object
         check_collisions(dt);
         glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

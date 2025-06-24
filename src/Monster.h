@@ -26,7 +26,9 @@ class Monster {
     Monster& disappear_probability(float pr);
     Monster& seconds_for_coinflip(float s);
     Monster& restrict_monster_within(float xmin,float xmax,float zmin,float zmax);
-    
+    Monster& speed_within(float speedmin,float speedmax);
+
+
     void teleport_at(const glm::vec3& world_position);
     void disappear();
     void appear_at(const glm::vec3& world_position);
@@ -49,7 +51,7 @@ class Monster {
     }
 
     inline void set_chasing_speed(float sp){
-        chase_speed = sp;
+        min_chase_speed = sp;
     }
 
     Models::Model* monster_model();
@@ -76,7 +78,8 @@ class Monster {
     float elapsed_time = 0.0f;
     float chasing_elapsed_time = 0.0f;
     //depending on the camera's speed the user can be caught or not
-    float chase_speed = 5.0f;
+    float min_chase_speed = 5.0f;
+    float max_chase_speed = 12.0f;
     Models::Model*                        model_ref;
     bool                                  is_scripted            = false;
     std::queue<Scripted>                 scripts;
