@@ -3,6 +3,7 @@
 #include "Light.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_mixer.h>
+#include <SDL_keyboard.h>
 #include <SDL_timer.h>
 #include <algorithm>
 #include <chrono>
@@ -178,7 +179,6 @@ void Game::SceneManager::run_game_loop() {
     enum FootstepsState { IDLE, WALKING, RUNNING };
 
     auto footsteps_state = IDLE;
-    std::cout << "Attempting to load font";
     text_renderer.load_font("assets/fonts/scary.ttf");
 
     Mix_Music* horror_music = Mix_LoadMUS("assets/audio/scary.mp3");
@@ -369,7 +369,7 @@ void Game::SceneManager::bind_handler_to_model(const std::string&               
 void Game::SceneManager::run_handler_for(const std::string& m) {
     auto it = event_handlers.find(m);
     if (it != event_handlers.end()) {
-        // std::cout << "Running event handler for: " << m << "\n";
+        std::cout << "Running event handler for: " << m << "\n";
         bool keep = it->second(this);
         if (!keep) {
             it = event_handlers.erase(it);
@@ -384,6 +384,9 @@ void Game::SceneManager::render_depth_pass() {
     auto depthCube = get_shader_by_name("depth_cube");
 
     for (auto& light : game_state->get_lights()) {
+        if(!light->is_turned_on()){
+            continue;
+        } 
         std::shared_ptr<Shader> sh;
         if (light->get_type() == LightType::POINT) {
             auto depthCube = get_shader_by_name("depth_cube");
@@ -422,6 +425,11 @@ void Game::SceneManager::handle_sdl_events(bool& running) {
         if (ev.type == SDL_WINDOWEVENT && ev.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
             int w = ev.window.data1, h = ev.window.data2;
             glViewport(0, 0, w, h);
+        }
+        
+        const auto keys = SDL_GetKeyboardState(nullptr);
+        if(ev.type == SDL_KEYDOWN && ev.key.repeat == 0 && keys[SDL_SCANCODE_M]){
+            std::cout << "Position: " << camera.get_position().x << "," << camera.get_position().y << "," << camera.get_position().z << "\n";
         }
         // feed mouse/window events to the camera
         camera.process_input(ev);
@@ -533,7 +541,8 @@ void Game::SceneManager::render(const glm::mat4& view, const glm::mat4& projecti
         if (!model->is_active()) {
             continue;
         }
-
+        
+        //TODO this has a problem, in the beginning not all things are rendered properly
         if (!model->is_in_frustum()) {
             // std::cout << model->name() << std::endl;
             continue;

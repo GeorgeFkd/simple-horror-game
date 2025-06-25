@@ -810,6 +810,7 @@ Models::Model Models::createFloor(float roomSize) {
     floor_material.Ns    = 16.0f;                          // shininess
     floor_material.d     = 1.0f;                           // opacity
     floor_material.illum = 2;                              // standard Phong
+    floor_material.use_bump_map = false;
 
     return Models::Model(floor_verts, floor_normals, floor_uvs, floor_indices, std::move("Floor"),
                          floor_material);
@@ -879,6 +880,7 @@ Models::Model Models::createWallFront(float roomSize, float roomHeight) {
     wall_material.d     = 1.0f;
     wall_material.illum = 2;
 
+    wall_material.use_bump_map = false;
     return Models::Model(
         wall_verts,
         wall_normals,
@@ -928,6 +930,7 @@ Models::Model Models::createWallRight(float roomSize, float roomHeight) {
     wall_material.d     = 1.0f;
     wall_material.illum = 2;
 
+    wall_material.use_bump_map = false;
     return Models::Model(
         wall_verts,
         wall_normals,
@@ -977,6 +980,7 @@ Models::Model Models::createWallLeft(float roomSize, float roomHeight) {
     wall_material.d     = 1.0f;
     wall_material.illum = 2;
 
+    wall_material.use_bump_map = false;
     return Models::Model(
         wall_verts,
         wall_normals,
@@ -1027,6 +1031,7 @@ Models::Model Models::createWallBack(float roomSize, float roomHeight) {
     wall_material.Ns    = 16.0f;
     wall_material.d     = 1.0f;
     wall_material.illum = 2;
+    wall_material.use_bump_map = false;
 
     return Models::Model(
         wall_verts,

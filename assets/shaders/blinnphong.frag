@@ -330,7 +330,9 @@ void main()
     for (int i = 0; i < numLights; ++i) {
         
         Light L = lights[i];
-
+        if(L.power == 0.0){
+            continue;
+        }
         
         // compute fragment position in light space
         vec4 fragPosLightSpace = L.proj * L.view * vec4(FragPos, 1.0);
