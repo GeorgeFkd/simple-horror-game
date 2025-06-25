@@ -11,190 +11,6 @@
 #include <string>
 #include <vector>
 
-enum class SurfaceType { Floor, Ceiling, WallFront, WallBack, WallLeft, WallRight };
-struct Models::Model repeating_tile(SurfaceType surface, float offset, const Material& material) {
-    // might be able to constexpr this
-    constexpr int   TILE_WIDTH  = 50;
-    constexpr int   TILE_HEIGHT = 50;
-    constexpr float half_width  = TILE_WIDTH / 2.0f;
-    constexpr float half_height = TILE_HEIGHT / 2.0f;
-
-    std::vector<glm::vec3> verts;
-    std::vector<glm::vec2> texcoords;
-    glm::vec3              normal;
-    std::string            label;
-
-    switch (surface) {
-    case SurfaceType::Floor:
-        verts  = {{-half_width, offset, -half_height},
-                  {-half_width, offset, half_height},
-                  {half_width, offset, half_height},
-                  {half_width, offset, -half_height}};
-        label  = "floor";
-        normal = glm::vec3(0, 1, 0);
-        break;
-
-    case SurfaceType::Ceiling:
-        verts  = {{-half_width, offset, -half_height},
-                  {-half_width, offset, half_height},
-                  {half_width, offset, half_height},
-                  {half_width, offset, -half_height}};
-        label  = "ceiling";
-        normal = glm::vec3(0, -1, 0);
-        break;
-
-    case SurfaceType::WallFront:
-        verts  = {{-half_width, -half_height, offset},
-                  {-half_width, half_height, offset},
-                  {half_width, half_height, offset},
-                  {half_width, -half_height, offset}};
-        label  = "wallfront";
-        normal = glm::vec3(0, 0, 1);
-        break;
-
-    case SurfaceType::WallBack:
-        verts  = {{half_width, -half_height, offset},
-                  {-half_width, -half_height, offset},
-                  {-half_width, half_height, offset},
-                  {half_width, half_height, offset}};
-        label  = "wallback";
-        normal = glm::vec3(0, 0, -1);
-        break;
-
-    case SurfaceType::WallLeft:
-        verts  = {{offset, -half_height, half_width},
-                  {offset, half_height, half_width},
-                  {offset, half_height, -half_width},
-                  {offset, -half_height, -half_width}};
-        label  = "wallleft";
-        normal = glm::vec3(1, 0, 0);
-        break;
-
-    case SurfaceType::WallRight:
-        verts  = {{offset, -half_height, -half_width},
-                  {offset, half_height, -half_width},
-                  {offset, half_height, half_width},
-                  {offset, -half_height, half_width}};
-        label  = "wallright";
-        normal = glm::vec3(-1, 0, 0);
-        break;
-    }
-
-    texcoords = {{0, 0}, {0, 1.0f}, {1.0f, 1.0f}, {1.0f, 0}};
-
-    std::vector<glm::vec3> normals(4, normal);
-    std::vector<GLuint>    indices = {0, 1, 2, 0, 2, 3};
-
-    return Models::Model(verts, normals, texcoords, indices, std::move(label), material);
-}
-
-struct State {
-    std::string_view closestModelLabel;
-    float            closestModelDistance;
-};
-
-Models::Model createFloor(float roomSize) {
-
-    float                  y           = 0.0f;
-    std::vector<glm::vec3> floor_verts = {{-roomSize, y, -roomSize},
-                                          {-roomSize, y, roomSize},
-                                          {roomSize, y, roomSize},
-                                          {roomSize, y, -roomSize}};
-    std::vector<glm::vec3> floor_normals(4, glm::vec3(0, 1, 0));
-    std::vector<glm::vec2> floor_uvs     = {{0, 0}, {0, 1}, {1, 1}, {1, 0}};
-    std::vector<GLuint>    floor_indices = {0, 1, 2, 0, 2, 3};
-
-    Material floor_material;
-    floor_material.Ka    = glm::vec3(0.15f, 0.07f, 0.02f); // dark ambient
-    floor_material.Kd    = glm::vec3(0.59f, 0.29f, 0.00f); // brown diffuse
-    floor_material.Ks    = glm::vec3(0.05f, 0.04f, 0.03f); // small specular
-    floor_material.Ns    = 16.0f;                          // shininess
-    floor_material.d     = 1.0f;                           // opacity
-    floor_material.illum = 2;                              // standard Phong
-
-    return Models::Model(floor_verts, floor_normals, floor_uvs, floor_indices, std::move("Floor"),
-                         floor_material);
-}
-
-Models::Model createCeiling(float roomSize, float height) {
-    std::vector<glm::vec3> floor_verts = {{-roomSize, height, -roomSize},
-                                          {-roomSize, height, roomSize},
-                                          {roomSize, height, roomSize},
-                                          {roomSize, height, -roomSize}};
-    std::vector<glm::vec3> floor_normals(4, glm::vec3(0, -1, 0));
-    std::vector<glm::vec2> floor_uvs = {{0, 0}, {0, 1}, {1, 1}, {1, 0}};
-    // the indices are changed to agree with the normals 0,-1,0 as otherwise it is discarded
-    std::vector<GLuint> floor_indices = {0, 2, 1, 0, 3, 2};
-
-    Material floor_material;
-    floor_material.Ka           = glm::vec3(0.15f, 0.07f, 0.02f); // dark ambient
-    floor_material.Kd           = glm::vec3(0.59f, 0.29f, 0.00f); // brown diffuse
-    floor_material.Ks           = glm::vec3(0.05f, 0.04f, 0.03f); // small specular
-    floor_material.Ns           = 16.0f;                          // shininess
-    floor_material.d            = 1.0f;                           // opacity
-    floor_material.illum        = 2;                              // standard Phong
-    floor_material.use_bump_map = false;
-
-    return Models::Model(floor_verts, floor_normals, floor_uvs, floor_indices, std::move("Ceiling"),
-                         floor_material);
-}
-
-
-Models::Model createWallBack(float roomSize, float roomHeight) {
-    // roomSize == half‐width & half‐depth of your room; roomHeight is the height of the wall.
-    float z0 = -roomSize;
-    float y0 = 0.0f;
-    float y1 = roomHeight;
-
-    // bottom‐left, bottom‐right, top‐right, top‐left (CCW when viewed from -Z side)
-    std::vector<glm::vec3> wall_verts = {
-        { -roomSize, y0, z0 },  // BL
-        { +roomSize, y0, z0 },  // BR
-        { +roomSize, y1, z0 },  // TR
-        { -roomSize, y1, z0 }   // TL
-    };
-
-    // normal pointing *into* the room (= –Z)
-    std::vector<glm::vec3> wall_normals(4, glm::vec3(0.0f, 0.0f, 1.0f));
-
-    // standard UVs
-    std::vector<glm::vec2> wall_uvs = {
-        {0.0f, 0.0f},
-        {1.0f, 0.0f},
-        {1.0f, 1.0f},
-        {0.0f, 1.0f}
-    };
-
-    // two triangles, wound CCW from the normal side
-    std::vector<GLuint> wall_indices = {
-        0, 1, 2,
-        0, 2, 3
-    };
-
-    // same material as your floor/ceiling (tweak as needed)
-    Material wall_material;
-    wall_material.Ka    = glm::vec3(0.15f, 0.07f, 0.02f);
-    wall_material.Kd    = glm::vec3(0.59f, 0.29f, 0.00f);
-    wall_material.Ks    = glm::vec3(0.05f, 0.04f, 0.03f);
-    wall_material.Ns    = 16.0f;
-    wall_material.d     = 1.0f;
-    wall_material.illum = 2;
-
-    return Models::Model(
-        wall_verts,
-        wall_normals,
-        wall_uvs,
-        wall_indices,
-        "WallBack",
-        wall_material
-    );
-}
-
-
-
-
-void createRoom2(Game::GameState& game_state) {}
-
 int main() {
 
     Camera::CameraObj  camera(1280, 720, glm::vec3(0.0f, 10.0f, 3.5f));
@@ -210,12 +26,18 @@ int main() {
     constexpr float ROOM_DEPTH  = ROOM_WIDTH;
     scene_manager.room_dimensions(ROOM_WIDTH,ROOM_HEIGHT,ROOM_DEPTH); 
 
-    auto floor_model   = createFloor(ROOM_WIDTH);
-    auto ceiling_model = createCeiling(ROOM_WIDTH, ROOM_HEIGHT);
-    auto wall_front = createWallBack(ROOM_WIDTH,ROOM_HEIGHT);
+    auto floor_model   = Models::createFloor(ROOM_WIDTH);
+    auto ceiling_model = Models::createCeiling(ROOM_WIDTH, ROOM_HEIGHT);
+    auto wall_back = Models::createWallBack(ROOM_WIDTH,ROOM_HEIGHT);
+    auto wall_front = Models::createWallFront(ROOM_WIDTH,ROOM_HEIGHT);
+    auto wall_left = Models::createWallLeft(ROOM_WIDTH,ROOM_HEIGHT);
+    auto wall_right = Models::createWallRight(ROOM_WIDTH,ROOM_HEIGHT);
     game_state.add_model(std::move(floor_model), floor_model.name());
     game_state.add_model(std::move(ceiling_model), ceiling_model.name());
+    game_state.add_model(std::move(wall_back),wall_back.name());
     game_state.add_model(std::move(wall_front),wall_front.name());
+    game_state.add_model(std::move(wall_left),wall_left.name());
+    game_state.add_model(std::move(wall_right),wall_right.name());
 
     auto                   scroll        = Models::Model("assets/models/scroll.obj", "page");
     constexpr unsigned int extra_scrolls = 4;
@@ -243,7 +65,7 @@ int main() {
     bool            horizontal[grid_rows + 1][grid_columns] = {};
     bool            vertical[grid_rows][grid_columns + 1]   = {};
 
-    // === Define internal walls ===
+    // === Define internal walls in grid-like fashion ===
     horizontal[1][1] = true;
     horizontal[2][1] = true;
     horizontal[3][1] = true;

@@ -20,7 +20,6 @@
 #include <algorithm>
 namespace Models {
 
-
     using namespace GlHelpers;
 
     enum class InstanceModifiedTypes{
@@ -241,4 +240,12 @@ namespace Models {
         bool                active       = true;
         std::vector<Model*> children;
     };
+
+    Model createWallFront(float roomSize,float roomHeight);
+    Model createWallBack(float roomSize,float roomHeight);
+    Model createWallLeft(float roomSize,float roomHeight);
+    Model createWallRight(float roomSize,float roomHeight);
+    Model createCeiling(float roomSize,float roomHeight);
+    Model createFloor(float roomSize);
+
 } // namespace Models
