@@ -36,6 +36,14 @@ class Monster {
     void update(float dt,const glm::vec3& player_view_direction,const glm::vec3& player_position);
     
     
+    inline void on_chase_start(std::function<void()> fn){
+        on_starting_chase = fn;
+    }
+
+    inline void on_chase_stop(std::function<void()> fn) {
+        on_stopping_chase = fn;
+    }
+
     inline void on_monster_active(std::function<void(Monster*)> fn){
         on_active = fn;
     }
@@ -90,5 +98,7 @@ class Monster {
     std::function<void(Monster*)> on_disabled;
     std::function<void()> on_looking_death;
     std::function<void()> on_not_looking_death;
+    std::function<void()> on_starting_chase;
+    std::function<void()> on_stopping_chase;
     float generate_random_number();
 };

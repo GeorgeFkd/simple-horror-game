@@ -101,12 +101,14 @@ void Monster::update(float dt, const glm::vec3& player_view_direction,
 
     elapsed_time         = elapsed_time + dt;
     chasing_elapsed_time = chasing_elapsed_time + dt;
-    if (chasing_elapsed_time > 15.0f) {
+    if (chasing_elapsed_time > 15.0f && model_ref->is_active()) {
         float rand = generate_random_number();
         if (rand > 0.35f) {
             start_chasing_player();
+            on_starting_chase();
         } else {
             stop_chasing_player();
+            on_stopping_chase();
         }
         chasing_elapsed_time = 0.0f;
     }

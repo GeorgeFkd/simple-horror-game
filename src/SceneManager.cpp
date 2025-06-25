@@ -176,9 +176,7 @@ bool Game::SceneManager::has_user_won() {
 }
 
 void Game::SceneManager::run_game_loop() {
-    enum FootstepsState { IDLE, WALKING, RUNNING };
 
-    auto footsteps_state = IDLE;
     text_renderer.load_font("assets/fonts/scary.ttf");
 
     Mix_Music* horror_music = Mix_LoadMUS("assets/audio/scary.mp3");
@@ -187,25 +185,12 @@ void Game::SceneManager::run_game_loop() {
         return;
     }
 
-    Mix_Chunk* footsteps_music         = Mix_LoadWAV("assets/audio/footsteps.mp3");
-    int        footsteps_music_channel = 2;
-    if (!footsteps_music) {
+    Mix_Chunk* footsteps_sound         = Mix_LoadWAV("assets/audio/footsteps.mp3");
+    int        footsteps_sound_channel = 2;
+    if (!footsteps_sound) {
         std::cerr << "Failed to load music for footsteps: " << Mix_GetError() << "\n";
         return;
     }
-
-    Mix_Chunk* human_footsteps_sound_walk = Mix_LoadWAV("assets/audio/human-footsteps-walk.mp3");
-    if (!human_footsteps_sound_walk) {
-        std::cerr << "Failed to load sound for walking human footsteps: " << Mix_GetError() << "\n";
-        return;
-    }
-
-    Mix_Chunk* human_footsteps_sound_run = Mix_LoadWAV("assets/audio/human-footsteps-run.mp3");
-    if (!human_footsteps_sound_run) {
-        std::cerr << "Failed to load sound for running human footsteps: " << Mix_GetError() << "\n";
-        return;
-    }
-    int human_footsteps_channel = 2;
 
     auto monster_initial_position = glm::vec3(5.0f, 0.0f, 5.0f);
     last_monster_transform        = glm::translate(glm::mat4(1.0f), monster_initial_position);
@@ -222,9 +207,6 @@ void Game::SceneManager::run_game_loop() {
         .seconds_for_coinflip(15.0f)
         .speed_within(4.0f, 10.0f)
         .restrict_monster_within(-room_width, room_width, -room_depth, room_depth);
-    // .add_scripted_movement(glm::vec3(1.0f, 0.0f, -1.0f), 5.0f, 5.0f)
-    // .add_scripted_movement(glm::vec3(1.0f, 0.0f, 1.0f), 5.0f, 5.0f)
-    // .add_scripted_movement(glm::vec3(0.5f, 0.0f, 2.0f), 5.0f, 5.0f);
 
     running           = true;
     Uint64 lastTicks  = SDL_GetPerformanceCounter();
@@ -238,19 +220,26 @@ void Game::SceneManager::run_game_loop() {
         if (Mix_PlayingMusic() == 0) {
             Mix_PlayMusic(horror_music, -1);// -1 = loop forever
             Mix_VolumeMusic(MIX_MAX_VOLUME/4);
-            Mix_PlayChannel(footsteps_music_channel, footsteps_music, -1);
+            Mix_PlayChannel(footsteps_sound_channel, footsteps_sound, -1);
         }
-        // Mix_PlayChannel(footsteps_music_channel, footsteps_music, -1);
     });
 
-    monster.on_monster_not_active([footsteps_music_channel](auto m) {
+    monster.on_monster_not_active([footsteps_sound_channel](auto m) {
         if (Mix_PlayingMusic()) {
             Mix_HaltMusic();
-            Mix_HaltChannel(footsteps_music_channel);
+            Mix_HaltChannel(footsteps_sound_channel);
         }
-        // Mix_HaltChannel(footsteps_music_channel);
     });
-
+    monster.on_chase_start([](){
+        if(Mix_PlayingMusic()){
+            Mix_VolumeMusic(MIX_MAX_VOLUME);
+        }
+    });
+    monster.on_chase_stop([](){
+        if(Mix_PlayingMusic()){
+            Mix_VolumeMusic(MIX_MAX_VOLUME/4);
+        }
+    });
     monster.set_chasing_speed(4.0f);
 
     while (running) {
@@ -284,7 +273,7 @@ void Game::SceneManager::run_game_loop() {
             distance_f = std::clamp(distance_f, 0.0f, 255.0f);
 
             uint8_t distance_byte = static_cast<uint8_t>(distance_f + 0.5f);
-            Mix_SetPosition(footsteps_music_channel, angle_deg, distance_f);
+            Mix_SetPosition(footsteps_sound_channel, angle_deg, distance_f);
         }
        
 
@@ -308,7 +297,7 @@ void Game::SceneManager::run_game_loop() {
         run_interaction_handlers();
         SDL_GL_SwapWindow(window);
     }
-    Mix_FreeChunk(footsteps_music);
+    Mix_FreeChunk(footsteps_sound);
     Mix_FreeMusic(horror_music);
     SDL_Delay(seconds_to_wait_before_termination * 1000);
 }
@@ -584,6 +573,7 @@ Game::SceneManager::~SceneManager() {
     Mix_CloseAudio();
     SDL_Quit();
     shaders.clear();
-    game_state->clear_models();
-    game_state->clear_lights();
+    // clearing game_state causes a double free
+    // game_state->clear_models();
+    // game_state->clear_lights();
 }
