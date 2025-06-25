@@ -3,9 +3,11 @@
 #include "Light.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_mixer.h>
+#include <SDL_keyboard.h>
 #include <SDL_timer.h>
 #include <algorithm>
 #include <chrono>
+#include <glm/gtx/vector_angle.hpp>
 #include <iostream>
 #include <random>
 
@@ -166,50 +168,46 @@ void Game::SceneManager::initialise_shaders() {
 
 void Game::SceneManager::terminate_game(const std::string& text) {
     center_text = text;
-    running = false;
+    running     = false;
 }
 
-bool Game::SceneManager::has_user_won(){
+bool Game::SceneManager::has_user_won() {
     return game_state->pages_collected >= game_state->pages_collected_to_win;
 }
 
 void Game::SceneManager::run_game_loop() {
 
-    std::cout << "Attempting to load font";
-    text_renderer.load_font();
+    text_renderer.load_font("assets/fonts/scary.ttf");
 
     Mix_Music* horror_music = Mix_LoadMUS("assets/audio/scary.mp3");
     if (!horror_music) {
-        std::cerr << "Failed to load music: " << Mix_GetError() << std::endl;
+        std::cerr << "Failed to load background music: " << Mix_GetError() << "\n";
         return;
     }
 
-    Mix_Chunk* footsteps_music = Mix_LoadWAV("assets/audio/footsteps.mp3");
-    auto  monster_initial_position = glm::vec3(5.0f, 0.0f, 5.0f);
-    last_monster_transform         = glm::translate(glm::mat4(1.0f), monster_initial_position);
-    auto monster_init              = Models::Model("assets/models/monster.obj", "monster");
+    Mix_Chunk* footsteps_sound         = Mix_LoadWAV("assets/audio/footsteps.mp3");
+    int        footsteps_sound_channel = 2;
+    if (!footsteps_sound) {
+        std::cerr << "Failed to load music for footsteps: " << Mix_GetError() << "\n";
+        return;
+    }
 
+    auto monster_initial_position = glm::vec3(5.0f, 0.0f, 5.0f);
+    last_monster_transform        = glm::translate(glm::mat4(1.0f), monster_initial_position);
+    auto monster_init             = Models::Model("assets/models/monster.obj", "monster");
     game_state->add_model(std::move(monster_init), "monster");
-
     auto monster_model = game_state->find_model("monster");
-
     if (!monster_model) {
         throw std::runtime_error("Could not find monster model before starting game...");
     }
-
     monster_model->set_local_transform(last_monster_transform);
     monster_model->update_world_transform(glm::mat4(1.0f));
     Monster monster(monster_model);
-    //monster.disappear_probability(0.65f)
-    //    .add_scripted_movement(glm::vec3(1.0f, 0.0f, -1.0f), 5.0f, 5)
-    //    .add_scripted_movement(glm::vec3(1.0f, 0.0f, 1.0f), 5.0f, 5)
-    //    .add_scripted_movement(glm::vec3(-1.0f, 1.0f, 0.0f), 5.0f, 5);
+    monster.disappear_probability(0.65f)
+        .seconds_for_coinflip(15.0f)
+        .speed_within(4.0f, 10.0f)
+        .restrict_monster_within(-room_width, room_width, -room_depth, room_depth);
 
-    //monster.seconds_for_coinflip(10.0f)
-    //    .disappear_probability(0.35f)
-    //    .follow_distance(10.0f)
-    //    .should_not_look_at_it_more_than(10.0f)
-    //    .should_look_at_it_every(10.0f);
     running           = true;
     Uint64 lastTicks  = SDL_GetPerformanceCounter();
     auto   flashlight = game_state->find_light("flashlight");
@@ -218,31 +216,36 @@ void Game::SceneManager::run_game_loop() {
         throw std::runtime_error("Could not find flashlight model...");
     }
 
-    //monster.on_monster_active([horror_music, footsteps_music]() {
-    //    if (Mix_PlayingMusic() == 0) {
-    //        Mix_PlayMusic(horror_music, -1);          // -1 = loop forever
-    //        Mix_PlayChannel(-1, footsteps_music, -1); //-1 as channel means that sdl allocates it
-    //    }
-    //});
+    monster.on_monster_active([&](auto m) {
+        if (Mix_PlayingMusic() == 0) {
+            Mix_PlayMusic(horror_music, -1);// -1 = loop forever
+            Mix_VolumeMusic(MIX_MAX_VOLUME/4);
+            Mix_PlayChannel(footsteps_sound_channel, footsteps_sound, -1);
+        }
+    });
 
-    //monster.on_monster_not_active([]() {
-    //    if (Mix_PlayingMusic()) {
-    //        Mix_HaltMusic();
-    //        Mix_HaltChannel(-1);
-    //    }
-    //});
-    //monster.on_death_by_looking([this]() {
-    //    terminate_game("The monster melted you by looking at you");
-    //});
-
-    //monster.on_death_by_not_looking([this]() {
-    //    terminate_game("killed your family while you were not looking");
-    //});
+    monster.on_monster_not_active([footsteps_sound_channel](auto m) {
+        if (Mix_PlayingMusic()) {
+            Mix_HaltMusic();
+            Mix_HaltChannel(footsteps_sound_channel);
+        }
+    });
+    monster.on_chase_start([](){
+        if(Mix_PlayingMusic()){
+            Mix_VolumeMusic(MIX_MAX_VOLUME);
+        }
+    });
+    monster.on_chase_stop([](){
+        if(Mix_PlayingMusic()){
+            Mix_VolumeMusic(MIX_MAX_VOLUME/4);
+        }
+    });
+    monster.set_chasing_speed(4.0f);
 
     while (running) {
-        if(has_user_won()){
-            //runs one more iteration so it can display the text
-            terminate_game("You survived and recovered the sacred text");
+        if (has_user_won()) {
+            // runs one more iteration so it can display the text
+            terminate_game("You Won!");
         }
         Uint64 now = SDL_GetPerformanceCounter();
         float  dt  = float(now - lastTicks) / float(SDL_GetPerformanceFrequency());
@@ -253,10 +256,27 @@ void Game::SceneManager::run_game_loop() {
         camera.update(dt);
         // std::cout << "Last camera position and current: \n";
         auto camera_dir = glm::normalize(camera.get_direction());
-        //monster.update(dt, camera_dir, last_camera_position);
-        //PRINT_VEC4(monster.monster_model()->get_local_transform()[3]);
+        monster.update(dt, camera_dir, last_camera_position);
+        if (monster.monster_model()->is_active()) {
+            glm::vec3 cam_pos = camera.get_position();
+            glm::mat4 mon_tf  = monster.monster_model()->get_local_transform();
+            glm::vec3 mon_pos = glm::vec3(mon_tf[3]);
+            glm::vec3 to_monster = mon_pos - cam_pos;
+            glm::vec3 dir_xz     = glm::normalize(glm::vec3(to_monster.x, 0.0f, to_monster.z));
+            glm::vec3 forward    = camera.get_direction();
+            glm::vec3 forward_xz = glm::normalize(glm::vec3(forward.x, 0.0f, forward.z));
 
-        // loop over models(collision tests, update closest object
+            float angle_rad = glm::orientedAngle(forward_xz, dir_xz, glm::vec3(0.0f, 1.0f, 0.0f));
+            float angle_deg = glm::degrees(angle_rad);
+
+            float distance_f = glm::length(to_monster);
+            distance_f = std::clamp(distance_f, 0.0f, 255.0f);
+
+            uint8_t distance_byte = static_cast<uint8_t>(distance_f + 0.5f);
+            Mix_SetPosition(footsteps_sound_channel, angle_deg, distance_f);
+        }
+       
+
         check_collisions(dt);
         glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -277,7 +297,7 @@ void Game::SceneManager::run_game_loop() {
         run_interaction_handlers();
         SDL_GL_SwapWindow(window);
     }
-    Mix_FreeChunk(footsteps_music);
+    Mix_FreeChunk(footsteps_sound);
     Mix_FreeMusic(horror_music);
     SDL_Delay(seconds_to_wait_before_termination * 1000);
 }
@@ -338,7 +358,7 @@ void Game::SceneManager::bind_handler_to_model(const std::string&               
 void Game::SceneManager::run_handler_for(const std::string& m) {
     auto it = event_handlers.find(m);
     if (it != event_handlers.end()) {
-        //std::cout << "Running event handler for: " << m << "\n";
+        std::cout << "Running event handler for: " << m << "\n";
         bool keep = it->second(this);
         if (!keep) {
             it = event_handlers.erase(it);
@@ -353,13 +373,16 @@ void Game::SceneManager::render_depth_pass() {
     auto depthCube = get_shader_by_name("depth_cube");
 
     for (auto& light : game_state->get_lights()) {
+        if(!light->is_turned_on()){
+            continue;
+        } 
         std::shared_ptr<Shader> sh;
         if (light->get_type() == LightType::POINT) {
             auto depthCube = get_shader_by_name("depth_cube");
-            sh = depthCube;
+            sh             = depthCube;
         } else {
-            auto depth2D   = get_shader_by_name("depth_2d");
-            sh = depth2D;
+            auto depth2D = get_shader_by_name("depth_2d");
+            sh           = depth2D;
         }
         light->draw_depth_pass(sh, game_state->get_models());
     }
@@ -371,40 +394,42 @@ void Game::SceneManager::run_interaction_handlers() {
     if (!game_state->closest_model.empty()) {
         SDL_Event ev;
         SDL_PollEvent(&ev);
-        if (ev.type == SDL_KEYDOWN && ev.key.repeat == 0 && keys[SDL_SCANCODE_I]) {
-            if (game_state->distance_from_closest_model < INTERACTION_DISTANCE) {
-                //std::cout << "Running handler for: " << game_state->closest_model << "\n";
+        if (game_state->distance_from_closest_model < INTERACTION_DISTANCE) {
+            if (ev.type == SDL_KEYDOWN && ev.key.repeat == 0 && keys[SDL_SCANCODE_I]) {
                 run_handler_for(game_state->closest_model);
             }
+            bottom_text_hints = "Interact with " + game_state->closest_model + " (Press I)";
+        } else {
+            bottom_text_hints = "";
         }
     }
 }
-
 void Game::SceneManager::handle_sdl_events(bool& running) {
     SDL_Event ev;
     while (SDL_PollEvent(&ev)) {
         if (ev.type == SDL_QUIT) {
-            running = false;
+            terminate_game("Quitting Game...");
         }
-        if (ev.type == SDL_KEYDOWN && ev.key.repeat == 0) {
-            // interaction handlers run after the render
-        }
-        // TODO(optional) fix resizing
+
         if (ev.type == SDL_WINDOWEVENT && ev.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
             int w = ev.window.data1, h = ev.window.data2;
             glViewport(0, 0, w, h);
         }
+        
+        const auto keys = SDL_GetKeyboardState(nullptr);
+        if(ev.type == SDL_KEYDOWN && ev.key.repeat == 0 && keys[SDL_SCANCODE_M]){
+            std::cout << "Position: " << camera.get_position().x << "," << camera.get_position().y << "," << camera.get_position().z << "\n";
+        }
         // feed mouse/window events to the camera
         camera.process_input(ev);
-        // adjust the GL viewport on resize
     }
 }
 
-void Game::SceneManager::perform_culling(){
-    auto frustum_planes = camera.extract_frustum_planes();
+void Game::SceneManager::perform_culling() {
+    auto frustum_planes  = camera.extract_frustum_planes();
     auto camera_position = camera.get_position();
 
-    for(auto& model: game_state->get_models()){
+    for (auto& model : game_state->get_models()) {
         model->in_frustum(frustum_planes);
     }
 }
@@ -450,6 +475,11 @@ void Game::SceneManager::check_collisions(float dt) {
         // camera–AABB collision
         auto [is_collided, instance_index_camera] =
             model->intersect_sphere_aabb(camera_pos, camera_radius);
+        // game logic
+        if (is_collided && model->name() == "monster") {
+            terminate_game("You died");
+            return false;
+        }
         if (is_collided) {
             camera.set_position(last_cam_pos);
             return true;
@@ -460,7 +490,7 @@ void Game::SceneManager::check_collisions(float dt) {
             auto [monster_is_collided, instance_index_monster] =
                 model->intersect_sphere_aabb(monster_center, monster_sphere_radius);
             if (model->name() != monster_name && monster_is_collided) {
-                //std::cout << "Name is: " << name << ", monster name: " << monster_name << "\n";
+                // std::cout << "Name is: " << name << ", monster name: " << monster_name << "\n";
                 monster_model->set_local_transform(last_mon_xform);
                 return true;
             }
@@ -481,7 +511,7 @@ void Game::SceneManager::check_collisions(float dt) {
 void Game::SceneManager::render(const glm::mat4& view, const glm::mat4& projection) {
 
     GLCall(glViewport(0, 0, screen_width, screen_height));
-    GLCall(glEnable(GL_MULTISAMPLE));  
+    GLCall(glEnable(GL_MULTISAMPLE));
     GLCall(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
 
     auto shader = get_shader_by_name("blinn-phong");
@@ -497,12 +527,13 @@ void Game::SceneManager::render(const glm::mat4& view, const glm::mat4& projecti
     }
 
     for (auto const& model : game_state->get_models()) {
-        if(!model->is_active()){
+        if (!model->is_active()) {
             continue;
         }
-
-        if(!model->is_in_frustum()){
-            //std::cout << model->name() << std::endl;
+        
+        //TODO this has a problem, in the beginning not all things are rendered properly
+        if (!model->is_in_frustum()) {
+            // std::cout << model->name() << std::endl;
             continue;
         }
 
@@ -518,10 +549,15 @@ void Game::SceneManager::render(const glm::mat4& view, const glm::mat4& projecti
     auto        textShader      = get_shader_by_name("text");
     std::string displayed_text  = "pages:" + std::to_string(game_state->pages_collected);
     text_renderer.render_text(textShader, displayed_text, 50.0f, 720.0f - 50.0f, 1.2f,
-                             {1.0f, 0.0f, 0.0f}, text_projection);
+                              {1.0f, 0.0f, 0.0f}, text_projection);
     if (!center_text.empty()) {
-        text_renderer.render_text(textShader, center_text, 60.0f, 720.0f - 250.0f, 1.2f,
-                                 {1.0f, 0.0f, 0.0f}, text_projection);
+        text_renderer.render_text(textShader, center_text, 1280.0f / 2 - 80.0f, 720.0f - 250.0f,
+                                  1.2f, {1.0f, 0.0f, 0.0f}, text_projection);
+    }
+
+    if (!bottom_text_hints.empty()) {
+        text_renderer.render_text(textShader, bottom_text_hints, 300.0f, 720.0f - 650.0f, 0.8f,
+                                  {0.5f, 0.5f, 0.0f}, text_projection);
     }
     glUseProgram(0);
 }
@@ -537,6 +573,7 @@ Game::SceneManager::~SceneManager() {
     Mix_CloseAudio();
     SDL_Quit();
     shaders.clear();
-    game_state->clear_models();
-    game_state->clear_lights();
+    // clearing game_state causes a double free
+    // game_state->clear_models();
+    // game_state->clear_lights();
 }

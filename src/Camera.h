@@ -68,6 +68,11 @@ namespace Camera{
         void update(float delta_time);
         void process_input(const SDL_Event& event);
         const std::array<glm::vec4,6> extract_frustum_planes() const;
+        
+
+        inline void set_speed(float speed) {
+            camera_speed = speed;
+    }    
 
         inline glm::mat4 get_view_matrix() const {
             return glm::lookAt(position, position + front, up);

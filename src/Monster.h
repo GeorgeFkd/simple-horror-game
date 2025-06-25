@@ -23,29 +23,43 @@ class Monster {
     void     clear_scripted_movements();
     bool     no_scripts_left();
 
-    Monster& follow_distance(float dist);
     Monster& disappear_probability(float pr);
     Monster& seconds_for_coinflip(float s);
-    Monster& should_look_at_it_every(float s);
-    Monster& should_not_look_at_it_more_than(float s);
+    Monster& restrict_monster_within(float xmin,float xmax,float zmin,float zmax);
+    Monster& speed_within(float speedmin,float speedmax);
+
+
     void teleport_at(const glm::vec3& world_position);
     void disappear();
     void appear_at(const glm::vec3& world_position);
 
     void update(float dt,const glm::vec3& player_view_direction,const glm::vec3& player_position);
-
-    inline void on_death_by_not_looking(std::function<void()> fn){
-        on_not_looking_death = fn;
-    }
-    inline void on_death_by_looking(std::function<void()> fn){
-        on_looking_death = fn;
-    }
     
-    inline void on_monster_active(std::function<void()> fn){
+    
+    inline void on_chase_start(std::function<void()> fn){
+        on_starting_chase = fn;
+    }
+
+    inline void on_chase_stop(std::function<void()> fn) {
+        on_stopping_chase = fn;
+    }
+
+    inline void on_monster_active(std::function<void(Monster*)> fn){
         on_active = fn;
     }
-    inline void on_monster_not_active(std::function<void()> fn){
+    inline void on_monster_not_active(std::function<void(Monster*)> fn){
         on_disabled = fn;
+    }
+    inline void start_chasing_player(){
+        monster_chasing_player = true;
+    }
+
+    inline void stop_chasing_player() {
+        monster_chasing_player = false;
+    }
+
+    inline void set_chasing_speed(float sp){
+        min_chase_speed = sp;
     }
 
     Models::Model* monster_model();
@@ -57,7 +71,9 @@ class Monster {
         float duration_secs;
         float elapsed_secs;
     };
+    float max_x,min_x,max_z,min_z;
 
+    bool monster_chasing_player = false;
     float distance_from_player                          = 10.0f;
     float time_looking_at_it                       = 0.0f;
     float time_not_looking_at_it                   = 0.0f;
@@ -68,15 +84,21 @@ class Monster {
     float seconds_looking_at_it_for_death          = 7.0f;
     float seconds_not_looking_at_it_for_death      = 10.0f;
     float elapsed_time = 0.0f;
+    float chasing_elapsed_time = 0.0f;
+    //depending on the camera's speed the user can be caught or not
+    float min_chase_speed = 5.0f;
+    float max_chase_speed = 12.0f;
     Models::Model*                        model_ref;
     bool                                  is_scripted            = false;
     std::queue<Scripted>                 scripts;
     std::random_device               rand_dev;
     std::default_random_engine       el;
     std::uniform_real_distribution<> uniform_rand;
-    std::function<void()> on_active;
-    std::function<void()> on_disabled;
+    std::function<void(Monster*)> on_active;
+    std::function<void(Monster*)> on_disabled;
     std::function<void()> on_looking_death;
     std::function<void()> on_not_looking_death;
+    std::function<void()> on_starting_chase;
+    std::function<void()> on_stopping_chase;
     float generate_random_number();
 };

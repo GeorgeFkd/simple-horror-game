@@ -791,3 +791,254 @@ void Models::Model::remove_instance_transform(const std::string& suffix){
     instance_in_frustum[i] = false;
     instance_data_dirty = true;
 }
+
+Models::Model Models::createFloor(float roomSize) {
+
+    float                  y           = 0.0f;
+    std::vector<glm::vec3> floor_verts = {{-roomSize, y, -roomSize},
+                                          {-roomSize, y, roomSize},
+                                          {roomSize, y, roomSize},
+                                          {roomSize, y, -roomSize}};
+    std::vector<glm::vec3> floor_normals(4, glm::vec3(0, 1, 0));
+    std::vector<glm::vec2> floor_uvs     = {{0, 0}, {0, 1}, {1, 1}, {1, 0}};
+    std::vector<GLuint>    floor_indices = {0, 1, 2, 0, 2, 3};
+
+    Material floor_material;
+    floor_material.Ka    = glm::vec3(0.15f, 0.07f, 0.02f); // dark ambient
+    floor_material.Kd    = glm::vec3(0.59f, 0.29f, 0.00f); // brown diffuse
+    floor_material.Ks    = glm::vec3(0.05f, 0.04f, 0.03f); // small specular
+    floor_material.Ns    = 16.0f;                          // shininess
+    floor_material.d     = 1.0f;                           // opacity
+    floor_material.illum = 2;                              // standard Phong
+    floor_material.use_bump_map = false;
+
+    return Models::Model(floor_verts, floor_normals, floor_uvs, floor_indices, std::move("Floor"),
+                         floor_material);
+}
+
+Models::Model Models::createCeiling(float roomSize, float height) {
+    std::vector<glm::vec3> floor_verts = {{-roomSize, height, -roomSize},
+                                          {-roomSize, height, roomSize},
+                                          {roomSize, height, roomSize},
+                                          {roomSize, height, -roomSize}};
+    std::vector<glm::vec3> floor_normals(4, glm::vec3(0, -1, 0));
+    std::vector<glm::vec2> floor_uvs = {{0, 0}, {0, 1}, {1, 1}, {1, 0}};
+    // the indices are changed to agree with the normals 0,-1,0 as otherwise it is discarded
+    std::vector<GLuint> floor_indices = {0, 2, 1, 0, 3, 2};
+
+    Material floor_material;
+    floor_material.Ka           = glm::vec3(0.15f, 0.07f, 0.02f); // dark ambient
+    floor_material.Kd           = glm::vec3(0.59f, 0.29f, 0.00f); // brown diffuse
+    floor_material.Ks           = glm::vec3(0.05f, 0.04f, 0.03f); // small specular
+    floor_material.Ns           = 16.0f;                          // shininess
+    floor_material.d            = 1.0f;                           // opacity
+    floor_material.illum        = 2;                              // standard Phong
+    floor_material.use_bump_map = false;
+
+    return Models::Model(floor_verts, floor_normals, floor_uvs, floor_indices, std::move("Ceiling"),
+                         floor_material);
+}
+
+
+Models::Model Models::createWallFront(float roomSize, float roomHeight) {
+    // roomSize == half‐width & half‐depth of your room; roomHeight is the height of the wall.
+    float z0 = roomSize;
+    float y0 = 0.0f;
+    float y1 = roomHeight;
+
+    // bottom‐left, bottom‐right, top‐right, top‐left (CCW when viewed from -Z side)
+    std::vector<glm::vec3> wall_verts = {
+        { -roomSize, y0, z0 },  // BL
+        { +roomSize, y0, z0 },  // BR
+        { +roomSize, y1, z0 },  // TR
+        { -roomSize, y1, z0 }   // TL
+    };
+
+    // normal pointing *into* the room (= –Z)
+    std::vector<glm::vec3> wall_normals(4, glm::vec3(0.0f, 0.0f, -1.0f));
+
+    // standard UVs
+    std::vector<glm::vec2> wall_uvs = {
+        {0.0f, 0.0f},
+        {1.0f, 0.0f},
+        {1.0f, 1.0f},
+        {0.0f, 1.0f}
+    };
+
+    // two triangles, wound CCW from the normal side
+    std::vector<GLuint> wall_indices = {
+        0, 2, 1,
+        0, 3, 2
+    };
+
+    // same material as your floor/ceiling (tweak as needed)
+    Material wall_material;
+    wall_material.Ka    = glm::vec3(0.15f, 0.07f, 0.02f);
+    wall_material.Kd    = glm::vec3(0.59f, 0.29f, 0.00f);
+    wall_material.Ks    = glm::vec3(0.05f, 0.04f, 0.03f);
+    wall_material.Ns    = 16.0f;
+    wall_material.d     = 1.0f;
+    wall_material.illum = 2;
+
+    wall_material.use_bump_map = false;
+    return Models::Model(
+        wall_verts,
+        wall_normals,
+        wall_uvs,
+        wall_indices,
+        "WallFront",
+        wall_material
+    );
+}
+Models::Model Models::createWallRight(float roomSize, float roomHeight) {
+    // roomSize == half‐width & half‐depth of your room; roomHeight is the height of the wall.
+    float z0 = roomSize;
+    float y0 = 0.0f;
+    float y1 = roomHeight;
+
+    // bottom‐left, bottom‐right, top‐right, top‐left (CCW when viewed from -Z side)
+    std::vector<glm::vec3> wall_verts = {
+        { roomSize, y0, -z0 },  // BL
+        { roomSize, y0, z0 },  // BR
+        { roomSize, y1, z0 },  // TR
+        { roomSize, y1, -z0 }   // TL
+    };
+
+    // normal pointing *into* the room (= –Z)
+    std::vector<glm::vec3> wall_normals(4, glm::vec3(0.0f, 0.0f, -1.0f));
+
+    // standard UVs
+    std::vector<glm::vec2> wall_uvs = {
+        {0.0f, 0.0f},
+        {1.0f, 0.0f},
+        {1.0f, 1.0f},
+        {0.0f, 1.0f}
+    };
+
+    // two triangles, wound CCW from the normal side
+    std::vector<GLuint> wall_indices = {
+        0, 1, 2,
+        0, 2, 3
+    };
+
+    // same material as your floor/ceiling (tweak as needed)
+    Material wall_material;
+    wall_material.Ka    = glm::vec3(0.15f, 0.07f, 0.02f);
+    wall_material.Kd    = glm::vec3(0.59f, 0.29f, 0.00f);
+    wall_material.Ks    = glm::vec3(0.05f, 0.04f, 0.03f);
+    wall_material.Ns    = 16.0f;
+    wall_material.d     = 1.0f;
+    wall_material.illum = 2;
+
+    wall_material.use_bump_map = false;
+    return Models::Model(
+        wall_verts,
+        wall_normals,
+        wall_uvs,
+        wall_indices,
+        "WallRight",
+        wall_material
+    );
+}
+Models::Model Models::createWallLeft(float roomSize, float roomHeight) {
+    // roomSize == half‐width & half‐depth of your room; roomHeight is the height of the wall.
+    float z0 = roomSize;
+    float y0 = 0.0f;
+    float y1 = roomHeight;
+
+    // bottom‐left, bottom‐right, top‐right, top‐left (CCW when viewed from -Z side)
+    std::vector<glm::vec3> wall_verts = {
+        { -roomSize, y0, -z0 },  // BL
+        { -roomSize, y0, z0 },  // BR
+        { -roomSize, y1, z0 },  // TR
+        { -roomSize, y1, -z0 }   // TL
+    };
+
+    // normal pointing *into* the room (= –Z)
+    std::vector<glm::vec3> wall_normals(4, glm::vec3(0.0f, 0.0f, 1.0f));
+
+    // standard UVs
+    std::vector<glm::vec2> wall_uvs = {
+        {0.0f, 0.0f},
+        {1.0f, 0.0f},
+        {1.0f, 1.0f},
+        {0.0f, 1.0f}
+    };
+
+    // two triangles, wound CCW from the normal side
+    std::vector<GLuint> wall_indices = {
+        0, 2, 1,
+        0, 3, 2
+    };
+
+    // same material as your floor/ceiling (tweak as needed)
+    Material wall_material;
+    wall_material.Ka    = glm::vec3(0.15f, 0.07f, 0.02f);
+    wall_material.Kd    = glm::vec3(0.59f, 0.29f, 0.00f);
+    wall_material.Ks    = glm::vec3(0.05f, 0.04f, 0.03f);
+    wall_material.Ns    = 16.0f;
+    wall_material.d     = 1.0f;
+    wall_material.illum = 2;
+
+    wall_material.use_bump_map = false;
+    return Models::Model(
+        wall_verts,
+        wall_normals,
+        wall_uvs,
+        wall_indices,
+        "WallLeft",
+        wall_material
+    );
+}
+
+
+Models::Model Models::createWallBack(float roomSize, float roomHeight) {
+    // roomSize == half‐width & half‐depth of your room; roomHeight is the height of the wall.
+    float z0 = -roomSize;
+    float y0 = 0.0f;
+    float y1 = roomHeight;
+
+    // bottom‐left, bottom‐right, top‐right, top‐left (CCW when viewed from -Z side)
+    std::vector<glm::vec3> wall_verts = {
+        { -roomSize, y0, z0 },  // BL
+        { +roomSize, y0, z0 },  // BR
+        { +roomSize, y1, z0 },  // TR
+        { -roomSize, y1, z0 }   // TL
+    };
+
+    // normal pointing *into* the room (= –Z)
+    std::vector<glm::vec3> wall_normals(4, glm::vec3(0.0f, 0.0f, 1.0f));
+
+    // standard UVs
+    std::vector<glm::vec2> wall_uvs = {
+        {0.0f, 0.0f},
+        {1.0f, 0.0f},
+        {1.0f, 1.0f},
+        {0.0f, 1.0f}
+    };
+
+    // two triangles, wound CCW from the normal side
+    std::vector<GLuint> wall_indices = {
+        0, 1, 2,
+        0, 2, 3
+    };
+
+    // same material as your floor/ceiling (tweak as needed)
+    Material wall_material;
+    wall_material.Ka    = glm::vec3(0.15f, 0.07f, 0.02f);
+    wall_material.Kd    = glm::vec3(0.59f, 0.29f, 0.00f);
+    wall_material.Ks    = glm::vec3(0.05f, 0.04f, 0.03f);
+    wall_material.Ns    = 16.0f;
+    wall_material.d     = 1.0f;
+    wall_material.illum = 2;
+    wall_material.use_bump_map = false;
+
+    return Models::Model(
+        wall_verts,
+        wall_normals,
+        wall_uvs,
+        wall_indices,
+        "WallBack",
+        wall_material
+    );
+}

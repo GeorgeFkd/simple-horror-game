@@ -7,14 +7,16 @@
 
 
 void ObjectLoader::OBJLoader::read_from_file(const std::string &filename) {
-  std::cout << "Reading .obj file from: " << filename << "\n";
-
+  #ifdef DEBUG_OBJLOADER
+    std::cout << "Reading .obj file from: " << filename << "\n";
+  #endif
   std::ifstream in(filename);
   if (!in.is_open()) {
       throw std::runtime_error("Failed to open OBJ file: " + filename);
   }
+  #ifdef DEBUG_OBJLOADER
   std::cout << "File is open\n";
-
+  #endif
   std::string line;
 
   int current_mat_id = -1;

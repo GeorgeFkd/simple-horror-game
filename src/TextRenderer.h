@@ -12,14 +12,13 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "Shader.h"       // your Shader wrapper
+#include "Shader.h"       
 
 using namespace GlHelpers;
 
 class TextRenderer {
 public:
-    // Public interface: identical signatures as before
-    void load_font();
+    void load_font(const char* ttf_filepath);
     void render_text(std::shared_ptr<Shader> s,
                     const std::string& text,
                     float x,
