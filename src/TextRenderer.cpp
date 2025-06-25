@@ -1,7 +1,7 @@
 // TextRenderer.cpp
 #include "TextRenderer.h"
 
-void TextRenderer::load_font() {
+void TextRenderer::load_font(const char* fontpath) {
     FT_Library ft;
     if (FT_Init_FreeType(&ft)) {
         std::cout << "ERROR::FREETYPE: Could not initialise FreeType Library\n";
@@ -10,7 +10,7 @@ void TextRenderer::load_font() {
     std::cout << "Successfully initialised FreeType library\n";
 
     FT_Face face;
-    const char* fontpath = "assets/fonts/scary.ttf";
+    // const char* fontpath = "assets/fonts/scary.ttf";
     if (FT_New_Face(ft, fontpath, 0, &face)) {
         std::cout << "Error in FreeType while loading font: " << fontpath << "\n";
         FT_Done_FreeType(ft);

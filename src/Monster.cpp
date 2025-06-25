@@ -28,7 +28,6 @@ Monster& Monster::add_scripted_movement(const glm::vec3& direction, float speed,
     return *this;
 }
 
-
 void Monster::clear_scripted_movements() {
     while (!scripts.empty()) {
         scripts.pop();
@@ -49,7 +48,7 @@ void Monster::move_towards(const glm::vec3& direction, float speed, float dt) {
     tf                       = glm::rotate(tf, yaw, glm::vec3(0.0f, 1.0f, 0.0f));
 
     tf[3] = glm::vec4(new_pos, 1.0f);
-    //keeps the monster on the floor level
+    // keeps the monster on the floor level
     tf[3][1] = 0.0f;
     model_ref->set_local_transform(tf);
 }
@@ -69,8 +68,6 @@ void Monster::appear_at(const glm::vec3& world_position) {
     model_ref->enable();
 }
 
-
-
 Monster& Monster::restrict_monster_within(float xmin, float xmax, float zmin, float zmax) {
     min_x = xmin;
     max_x = xmax;
@@ -84,7 +81,7 @@ Monster& Monster::seconds_for_coinflip(float secs) {
     return *this;
 }
 
-Monster& Monster::speed_within(float speedmin,float speedmax){
+Monster& Monster::speed_within(float speedmin, float speedmax) {
     min_chase_speed = speedmin;
     max_chase_speed = speedmax;
     return *this;
@@ -118,8 +115,8 @@ void Monster::update(float dt, const glm::vec3& player_view_direction,
         glm::vec3 monster_pos = glm::vec3(tf[3]);
 
         glm::vec3 dir = glm::normalize(player_position - monster_pos);
-        //can get slightly more than the camera's to ensure a proper chase
-        auto speed = min_chase_speed + uniform_rand(el) *(max_chase_speed - min_chase_speed);
+        // can get slightly more than the camera's to ensure a proper chase
+        auto speed = min_chase_speed + uniform_rand(el) * (max_chase_speed - min_chase_speed);
         move_towards(dir, speed, dt);
     } else {
         if (!scripts.empty()) {
@@ -132,9 +129,8 @@ void Monster::update(float dt, const glm::vec3& player_view_direction,
                 scripts.pop();
             }
         } else {
-
+            // Random scripted movement
             glm::vec3 pos = glm::vec3(monster_model()->get_local_transform()[3]);
-
             // pick a random target inside [min_x..max_x]×[min_z..max_z]
             float     u1 = uniform_rand(el);
             float     u2 = uniform_rand(el);
@@ -142,10 +138,9 @@ void Monster::update(float dt, const glm::vec3& player_view_direction,
             float     tz = min_z + u2 * (max_z - min_z);
             glm::vec3 target{tx, pos.y, tz};
 
-            glm::vec3 dir   = glm::normalize(target - pos);
-            //speed can get slightly higher than camera for difficulty
-            float     speed = 5.0f + uniform_rand(el) * (14.0f-5.0f);
-
+            glm::vec3 dir = glm::normalize(target - pos);
+            // speed can get slightly higher than camera for difficulty
+            float speed = min_chase_speed + uniform_rand(el) * (max_chase_speed - min_chase_speed);
             float distance = glm::distance(target, pos);
             float duration = distance / speed;
 
@@ -175,8 +170,8 @@ void Monster::update(float dt, const glm::vec3& player_view_direction,
     }
 
     if (monster_model()->is_active()) {
-        on_active();
+        on_active(this);
     } else {
-        on_disabled();
+        on_disabled(this);
     }
 }

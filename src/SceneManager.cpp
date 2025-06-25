@@ -6,6 +6,7 @@
 #include <SDL_timer.h>
 #include <algorithm>
 #include <chrono>
+#include <glm/gtx/vector_angle.hpp>
 #include <iostream>
 #include <random>
 
@@ -174,41 +175,56 @@ bool Game::SceneManager::has_user_won() {
 }
 
 void Game::SceneManager::run_game_loop() {
+    enum FootstepsState { IDLE, WALKING, RUNNING };
 
+    auto footsteps_state = IDLE;
     std::cout << "Attempting to load font";
-    text_renderer.load_font();
+    text_renderer.load_font("assets/fonts/scary.ttf");
 
-    Mix_Music* horror_music         = Mix_LoadMUS("assets/audio/scary.mp3");
-    int        horror_music_channel = 2;
+    Mix_Music* horror_music = Mix_LoadMUS("assets/audio/scary.mp3");
     if (!horror_music) {
-        std::cerr << "Failed to load music: " << Mix_GetError() << std::endl;
+        std::cerr << "Failed to load background music: " << Mix_GetError() << "\n";
         return;
     }
 
-    Mix_Chunk* footsteps_music          = Mix_LoadWAV("assets/audio/footsteps.mp3");
-    int        footsteps_music_channel  = 3;
-    auto       monster_initial_position = glm::vec3(5.0f, 0.0f, 5.0f);
-    last_monster_transform              = glm::translate(glm::mat4(1.0f), monster_initial_position);
-    auto monster_init                   = Models::Model("assets/models/monster.obj", "monster");
+    Mix_Chunk* footsteps_music         = Mix_LoadWAV("assets/audio/footsteps.mp3");
+    int        footsteps_music_channel = 2;
+    if (!footsteps_music) {
+        std::cerr << "Failed to load music for footsteps: " << Mix_GetError() << "\n";
+        return;
+    }
 
+    Mix_Chunk* human_footsteps_sound_walk = Mix_LoadWAV("assets/audio/human-footsteps-walk.mp3");
+    if (!human_footsteps_sound_walk) {
+        std::cerr << "Failed to load sound for walking human footsteps: " << Mix_GetError() << "\n";
+        return;
+    }
+
+    Mix_Chunk* human_footsteps_sound_run = Mix_LoadWAV("assets/audio/human-footsteps-run.mp3");
+    if (!human_footsteps_sound_run) {
+        std::cerr << "Failed to load sound for running human footsteps: " << Mix_GetError() << "\n";
+        return;
+    }
+    int human_footsteps_channel = 2;
+
+    auto monster_initial_position = glm::vec3(5.0f, 0.0f, 5.0f);
+    last_monster_transform        = glm::translate(glm::mat4(1.0f), monster_initial_position);
+    auto monster_init             = Models::Model("assets/models/monster.obj", "monster");
     game_state->add_model(std::move(monster_init), "monster");
-
     auto monster_model = game_state->find_model("monster");
-
     if (!monster_model) {
         throw std::runtime_error("Could not find monster model before starting game...");
     }
-
     monster_model->set_local_transform(last_monster_transform);
     monster_model->update_world_transform(glm::mat4(1.0f));
     Monster monster(monster_model);
     monster.disappear_probability(0.65f)
         .seconds_for_coinflip(15.0f)
-        .speed_within(4.0f,10.0f)
+        .speed_within(4.0f, 10.0f)
         .restrict_monster_within(-room_width, room_width, -room_depth, room_depth);
-        // .add_scripted_movement(glm::vec3(1.0f, 0.0f, -1.0f), 5.0f, 5.0f)
-        // .add_scripted_movement(glm::vec3(1.0f, 0.0f, 1.0f), 5.0f, 5.0f)
-        // .add_scripted_movement(glm::vec3(0.5f, 0.0f, 2.0f), 5.0f, 5.0f);
+    // .add_scripted_movement(glm::vec3(1.0f, 0.0f, -1.0f), 5.0f, 5.0f)
+    // .add_scripted_movement(glm::vec3(1.0f, 0.0f, 1.0f), 5.0f, 5.0f)
+    // .add_scripted_movement(glm::vec3(0.5f, 0.0f, 2.0f), 5.0f, 5.0f);
 
     running           = true;
     Uint64 lastTicks  = SDL_GetPerformanceCounter();
@@ -218,21 +234,25 @@ void Game::SceneManager::run_game_loop() {
         throw std::runtime_error("Could not find flashlight model...");
     }
 
-    monster.on_monster_active([horror_music, footsteps_music]() {
+    monster.on_monster_active([&](auto m) {
         if (Mix_PlayingMusic() == 0) {
-            Mix_PlayMusic(horror_music, -1);          // -1 = loop forever
-            Mix_PlayChannel(-1, footsteps_music, -1); //-1 as channel means that sdl allocates it
+            Mix_PlayMusic(horror_music, -1);// -1 = loop forever
+            Mix_VolumeMusic(MIX_MAX_VOLUME/4);
+            Mix_PlayChannel(footsteps_music_channel, footsteps_music, -1);
         }
+        // Mix_PlayChannel(footsteps_music_channel, footsteps_music, -1);
     });
 
-    monster.on_monster_not_active([]() {
+    monster.on_monster_not_active([footsteps_music_channel](auto m) {
         if (Mix_PlayingMusic()) {
             Mix_HaltMusic();
-            Mix_HaltChannel(-1);
+            Mix_HaltChannel(footsteps_music_channel);
         }
+        // Mix_HaltChannel(footsteps_music_channel);
     });
 
     monster.set_chasing_speed(4.0f);
+
     while (running) {
         if (has_user_won()) {
             // runs one more iteration so it can display the text
@@ -248,7 +268,25 @@ void Game::SceneManager::run_game_loop() {
         // std::cout << "Last camera position and current: \n";
         auto camera_dir = glm::normalize(camera.get_direction());
         monster.update(dt, camera_dir, last_camera_position);
-        // PRINT_VEC4(monster.monster_model()->get_local_transform()[3]);
+        if (monster.monster_model()->is_active()) {
+            glm::vec3 cam_pos = camera.get_position();
+            glm::mat4 mon_tf  = monster.monster_model()->get_local_transform();
+            glm::vec3 mon_pos = glm::vec3(mon_tf[3]);
+            glm::vec3 to_monster = mon_pos - cam_pos;
+            glm::vec3 dir_xz     = glm::normalize(glm::vec3(to_monster.x, 0.0f, to_monster.z));
+            glm::vec3 forward    = camera.get_direction();
+            glm::vec3 forward_xz = glm::normalize(glm::vec3(forward.x, 0.0f, forward.z));
+
+            float angle_rad = glm::orientedAngle(forward_xz, dir_xz, glm::vec3(0.0f, 1.0f, 0.0f));
+            float angle_deg = glm::degrees(angle_rad);
+
+            float distance_f = glm::length(to_monster);
+            distance_f = std::clamp(distance_f, 0.0f, 255.0f);
+
+            uint8_t distance_byte = static_cast<uint8_t>(distance_f + 0.5f);
+            Mix_SetPosition(footsteps_music_channel, angle_deg, distance_f);
+        }
+       
 
         check_collisions(dt);
         glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
@@ -364,33 +402,29 @@ void Game::SceneManager::run_interaction_handlers() {
     if (!game_state->closest_model.empty()) {
         SDL_Event ev;
         SDL_PollEvent(&ev);
-
         if (game_state->distance_from_closest_model < INTERACTION_DISTANCE) {
             if (ev.type == SDL_KEYDOWN && ev.key.repeat == 0 && keys[SDL_SCANCODE_I]) {
-                // std::cout << "Running handler for: " << game_state->closest_model << "\n";
                 run_handler_for(game_state->closest_model);
             }
             bottom_text_hints = "Interact with " + game_state->closest_model + " (Press I)";
         } else {
             bottom_text_hints = "";
         }
-    } 
+    }
 }
 void Game::SceneManager::handle_sdl_events(bool& running) {
     SDL_Event ev;
     while (SDL_PollEvent(&ev)) {
         if (ev.type == SDL_QUIT) {
-            running = false;
+            terminate_game("Quitting Game...");
         }
-        
-        // TODO(optional) fix resizing
+
         if (ev.type == SDL_WINDOWEVENT && ev.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
             int w = ev.window.data1, h = ev.window.data2;
             glViewport(0, 0, w, h);
         }
         // feed mouse/window events to the camera
         camera.process_input(ev);
-        // adjust the GL viewport on resize
     }
 }
 
@@ -519,12 +553,13 @@ void Game::SceneManager::render(const glm::mat4& view, const glm::mat4& projecti
     text_renderer.render_text(textShader, displayed_text, 50.0f, 720.0f - 50.0f, 1.2f,
                               {1.0f, 0.0f, 0.0f}, text_projection);
     if (!center_text.empty()) {
-        text_renderer.render_text(textShader, center_text, 1280.0f/2 - 80.0f, 720.0f - 250.0f, 1.2f,
-                                  {1.0f, 0.0f, 0.0f}, text_projection);
+        text_renderer.render_text(textShader, center_text, 1280.0f / 2 - 80.0f, 720.0f - 250.0f,
+                                  1.2f, {1.0f, 0.0f, 0.0f}, text_projection);
     }
 
-    if(!bottom_text_hints.empty()){
-        text_renderer.render_text(textShader,bottom_text_hints,300.0f,720.0f-650.0f,0.8f,{0.5f,0.5f,0.0f},text_projection);
+    if (!bottom_text_hints.empty()) {
+        text_renderer.render_text(textShader, bottom_text_hints, 300.0f, 720.0f - 650.0f, 0.8f,
+                                  {0.5f, 0.5f, 0.0f}, text_projection);
     }
     glUseProgram(0);
 }

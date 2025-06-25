@@ -140,6 +140,59 @@ Models::Model createCeiling(float roomSize, float height) {
 }
 
 
+Models::Model createWallBack(float roomSize, float roomHeight) {
+    // roomSize == half‐width & half‐depth of your room; roomHeight is the height of the wall.
+    float z0 = -roomSize;
+    float y0 = 0.0f;
+    float y1 = roomHeight;
+
+    // bottom‐left, bottom‐right, top‐right, top‐left (CCW when viewed from -Z side)
+    std::vector<glm::vec3> wall_verts = {
+        { -roomSize, y0, z0 },  // BL
+        { +roomSize, y0, z0 },  // BR
+        { +roomSize, y1, z0 },  // TR
+        { -roomSize, y1, z0 }   // TL
+    };
+
+    // normal pointing *into* the room (= –Z)
+    std::vector<glm::vec3> wall_normals(4, glm::vec3(0.0f, 0.0f, 1.0f));
+
+    // standard UVs
+    std::vector<glm::vec2> wall_uvs = {
+        {0.0f, 0.0f},
+        {1.0f, 0.0f},
+        {1.0f, 1.0f},
+        {0.0f, 1.0f}
+    };
+
+    // two triangles, wound CCW from the normal side
+    std::vector<GLuint> wall_indices = {
+        0, 1, 2,
+        0, 2, 3
+    };
+
+    // same material as your floor/ceiling (tweak as needed)
+    Material wall_material;
+    wall_material.Ka    = glm::vec3(0.15f, 0.07f, 0.02f);
+    wall_material.Kd    = glm::vec3(0.59f, 0.29f, 0.00f);
+    wall_material.Ks    = glm::vec3(0.05f, 0.04f, 0.03f);
+    wall_material.Ns    = 16.0f;
+    wall_material.d     = 1.0f;
+    wall_material.illum = 2;
+
+    return Models::Model(
+        wall_verts,
+        wall_normals,
+        wall_uvs,
+        wall_indices,
+        "WallBack",
+        wall_material
+    );
+}
+
+
+
+
 void createRoom2(Game::GameState& game_state) {}
 
 int main() {
@@ -159,8 +212,10 @@ int main() {
 
     auto floor_model   = createFloor(ROOM_WIDTH);
     auto ceiling_model = createCeiling(ROOM_WIDTH, ROOM_HEIGHT);
+    auto wall_front = createWallBack(ROOM_WIDTH,ROOM_HEIGHT);
     game_state.add_model(std::move(floor_model), floor_model.name());
     game_state.add_model(std::move(ceiling_model), ceiling_model.name());
+    game_state.add_model(std::move(wall_front),wall_front.name());
 
     auto                   scroll        = Models::Model("assets/models/scroll.obj", "page");
     constexpr unsigned int extra_scrolls = 4;
@@ -171,7 +226,7 @@ int main() {
     scroll_positions[2] = {-5.0f, 0.15f, -20.0f};
     scroll_positions[3] = {5.0f, 0.15f, 20.0f};
     scroll_positions[4] = {29.0f, 0.15f, -29.0f};
-    scroll_positions[5] = {29.0f, 0.15f, 29.0f};
+    scroll_positions[5] = {29.0f, 0.14f, 29.0f};
 
     scroll.set_interactivity(true);
     for (int i = 0; i < 6; i++)
