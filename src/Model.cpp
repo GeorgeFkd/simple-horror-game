@@ -156,26 +156,32 @@ Models::Model::Model(const std::string& objFile, const std::string& label)
     : local_transform(1.0f), world_transform(1.0f), localaabbmin(std::numeric_limits<float>::max()),
       localaabbmax(-std::numeric_limits<float>::max()), label(label) {
     ObjectLoader::OBJLoader loader;
-    loader.read_from_file(objFile);
+    auto model_data = loader.read_from_file(objFile);
 
     // build unique_vertices & a cache
     std::unordered_map<Vertex, GLuint, VertexHasher> cache;
-    cache.reserve(loader.model_data.m_faces.size() * 4);
+    // cache.reserve(loader.model_data.m_faces.size() * 4);
+    cache.reserve(model_data->m_faces.size() * 4);
 
     // bucket indices by material_id
     std::unordered_map<int, std::vector<GLuint>> buckets;
 
     auto add_vertex = [&](int vi, int ti, int ni) {
         Vertex vert;
-        vert.position = glm::vec3(loader.model_data.m_vertices[vi]);
-        if (ti >= 0 && ti < (int)loader.model_data.m_texture_coords.size()) {
-            vert.texcoord = loader.model_data.m_texture_coords[ti];
+        // vert.position = glm::vec3(loader.model_data.m_vertices[vi]);
+        vert.position = glm::vec3(model_data->m_vertices[vi]);
+        // if (ti >= 0 && ti < (int)loader.model_data.m_texture_coords.size()) {
+        if(ti >= 0 && ti < (int) model_data->m_texture_coords.size()) {
+            // vert.texcoord = loader.model_data.m_texture_coords[ti];
+            vert.texcoord = model_data->m_texture_coords[ti];
         } else {
             vert.texcoord = glm::vec2{0.0f, 0.0f};
         }
 
-        if (ni >= 0 && ni < (int)loader.model_data.m_vertex_normals.size()) {
-            vert.normal = loader.model_data.m_vertex_normals[ni];
+        // if (ni >= 0 && ni < (int)loader.model_data.m_vertex_normals.size()) {
+        if(ni >= 0 && ni < (int) model_data->m_vertex_normals.size()) {
+            // vert.normal = loader.model_data.m_vertex_normals[ni];
+            vert.normal = model_data->m_vertex_normals[ni];
         } else {
             vert.normal = glm::vec3{0.0f, 0.0f, 1.0f};
         }
@@ -187,7 +193,8 @@ Models::Model::Model(const std::string& objFile, const std::string& label)
         return it->second;
     };
 
-    for (auto const& face : loader.model_data.m_faces) {
+    // for (auto const& face : loader.model_data.m_faces) {
+    for(auto const& face: model_data->m_faces) {
         int material_id = face.material_id;
         // unpack up to 4 verts; 3 if w == -1
         int vertex_count = (face.vertices.w == -1 ? 3 : 4);
@@ -217,7 +224,8 @@ Models::Model::Model(const std::string& objFile, const std::string& label)
     for (auto& [material_id, indexes] : buckets) {
         SubMesh sm;
         if (material_id >= 0) {
-            sm.mat = loader.model_data.m_materials[material_id]; // assumes same Material layout
+            sm.mat = model_data->m_materials[material_id];
+            // sm.mat = loader.model_data.m_materials[material_id]; // assumes same Material layout
         } else {
             sm.mat = Material{};
         }

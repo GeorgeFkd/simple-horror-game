@@ -10,6 +10,7 @@
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 #include <iostream>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -126,11 +127,11 @@ class OBJLoader {
     void read_mtllib(const char* buff, const std::string& filename);
     void read_usemtl(const char* buff, int& current_mat_id);
     void add_new_group(const char* buff, int& current_group_id);
-
+    inline static std::unordered_map<std::string,std::shared_ptr<ModelData>> model_cache = {};
   public:
     void debug_dump() const;
 
-    void read_from_file(const std::string& filename);
+    std::shared_ptr<ModelData> read_from_file(const std::string& filename);
     ModelData model_data;
     // std::vector<glm::vec4> m_vertices;
     // std::vector<glm::vec2> m_texture_coords;
