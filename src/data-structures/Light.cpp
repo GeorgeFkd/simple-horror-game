@@ -50,7 +50,8 @@ Light::Light(LightType light_type, const glm::vec3& position, const glm::vec3& d
         float borderColor[] = {1.0f, 1.0f, 1.0f, 1.0f};
         GLCall(glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor));
         GLCall(glBindFramebuffer(GL_FRAMEBUFFER, depth_map_fbo));
-        GLCall(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depth_map, 0));
+        GLCall(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depth_map,
+                                      0));
     }
 
     GLCall(GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER));
@@ -89,10 +90,8 @@ void Light::draw_lighting(std::shared_ptr<Shader> shader, const std::string& bas
     shader->set_mat4(base + "proj", get_light_projection());
 }
 
-void Light::draw_depth_pass(
-    std::shared_ptr<Shader> shader,
-    const std::vector<std::unique_ptr<Models::Model>>& models
-) const {
+void Light::draw_depth_pass(std::shared_ptr<Shader>                            shader,
+                            const std::vector<std::unique_ptr<Models::Model>>& models) const {
     GLCall(glViewport(0, 0, shadow_width, shadow_height));
     GLCall(glBindFramebuffer(GL_FRAMEBUFFER, depth_map_fbo));
     GLCall(glClear(GL_DEPTH_BUFFER_BIT));
@@ -110,15 +109,17 @@ void Light::draw_depth_pass(
             shader->set_vec3("lightPos", position);
             shader->set_float("farPlane", far_plane);
             shader->set_mat4("shadowMatrices[" + std::to_string(face) + "]", proj * views[face]);
-            glm::mat4 VP = proj * views[face];
-            auto planes = Camera::CameraObj::extract_frustum_planes(VP);
+            glm::mat4 VP     = proj * views[face];
+            auto      planes = Camera::CameraObj::extract_frustum_planes(VP);
 
             // draw all models into this face
             for (auto& m : models) {
                 m->in_frustum(planes);
 
-                if (!m->is_active()) continue;
-                if (!m->is_in_frustum()) continue;
+                if (!m->is_active())
+                    continue;
+                if (!m->is_in_frustum())
+                    continue;
                 if (m->is_instanced()) {
                     m->draw_depth_instanced(shader);
                 } else {
@@ -129,13 +130,15 @@ void Light::draw_depth_pass(
     } else {
         shader->set_mat4("uView", get_light_view());
         shader->set_mat4("uProj", get_light_projection());
-        glm::mat4 VP = get_light_projection() * get_light_view();
-        auto planes = Camera::CameraObj::extract_frustum_planes(VP);
+        glm::mat4 VP     = get_light_projection() * get_light_view();
+        auto      planes = Camera::CameraObj::extract_frustum_planes(VP);
 
         for (auto& m : models) {
             m->in_frustum(planes);
-            if (!m->is_active()) continue;
-            if (!m->is_in_frustum()) continue;
+            if (!m->is_active())
+                continue;
+            if (!m->is_in_frustum())
+                continue;
             if (m->is_instanced()) {
                 m->draw_depth_instanced(shader);
             } else {

@@ -212,7 +212,7 @@ GLuint ObjectLoader::load_texture_from_file(const std::string& filepath) {
 
 void ObjectLoader::OBJLoader::load_textures() {
   std::cout << "Now preparing materials\n";
-  for (auto& material : m_materials) {
+  for (auto& material : model_data.m_materials) {
         if (!material.map_Kd.empty()) {
             GLuint id = load_texture_from_file(material.map_Kd);
             #ifdef DEBUG_OBJLOADER
@@ -258,7 +258,8 @@ void ObjectLoader::OBJLoader::read_normal(const char* buff) {
   #ifdef DEBUG_OBJLOADER
     print_glmvec3(v);
   #endif
-  m_vertex_normals.push_back(v);
+  // m_vertex_normals.push_back(v);
+  model_data.m_vertex_normals.push_back(v);
 }
 
 void ObjectLoader::OBJLoader::read_texcoord(const char* buff) {
@@ -268,7 +269,8 @@ void ObjectLoader::OBJLoader::read_texcoord(const char* buff) {
   #ifdef DEBUG_OBJLOADER
     print_glmvec2(glm::vec2{v.x, v.y});
   #endif
-  m_texture_coords.push_back(v);
+  // m_texture_coords.push_back(v);
+  model_data.m_texture_coords.push_back(v);
 }
 
 void ObjectLoader::OBJLoader::read_vertex(const char* buff) {
@@ -278,7 +280,8 @@ void ObjectLoader::OBJLoader::read_vertex(const char* buff) {
   #ifdef DEBUG_OBJLOADER
     print_glmvec4(v);
   #endif
-  m_vertices.push_back(v);
+  // m_vertices.push_back(v);
+  model_data.m_vertices.push_back(v);
 }
 
 void ObjectLoader::OBJLoader::read_faceLimited(const char *buff, int current_mat_id, int current_group_id) {
@@ -345,14 +348,15 @@ void ObjectLoader::OBJLoader::read_faceLimited(const char *buff, int current_mat
       std::cout << "  norms: " << nIdx.x<<","<<nIdx.y<<","<<nIdx.z<<","<<nIdx.w<<"\n";
     #endif
 
-    m_faces.push_back(f);
+    // m_faces.push_back(f);
+    model_data.m_faces.push_back(f);
 }
 
 void ObjectLoader::OBJLoader::debug_dump() const {
   std::cout << "=== OBJ Debug Dump ===\n";
-  std::cout << "Materials (" << m_materials.size() << "):\n";
-  for (size_t i = 0; i < m_materials.size(); ++i) {
-    auto const& M = m_materials[i];
+  std::cout << "Materials (" << model_data.m_materials.size() << "):\n";
+  for (size_t i = 0; i < model_data.m_materials.size(); ++i) {
+    auto const& M = model_data.m_materials[i];
     std::cout << " ["<<i<<"] '"<< M.name << "'  "
               << "Ka("<< M.Ka.r<<","<<M.Ka.g<<","<<M.Ka.b<<")  "
               << "Kd("<< M.Kd.r<<","<<M.Kd.g<<","<<M.Kd.b<<")  "
@@ -368,9 +372,9 @@ void ObjectLoader::OBJLoader::debug_dump() const {
     std::cout << "\n";
   }
 
-  std::cout << "Groups (" << m_groups.size() << "):\n";
-  for (size_t i = 0; i < m_groups.size(); ++i) {
-    std::cout << " ["<<i<<"] '"<< m_groups[i] <<"'\n";
+  std::cout << "Groups (" << model_data.m_groups.size() << "):\n";
+  for (size_t i = 0; i < model_data.m_groups.size(); ++i) {
+    std::cout << " ["<<i<<"] '"<< model_data.m_groups[i] <<"'\n";
   }
 
   // std::cout << "Faces (" << m_faces.size() << "):\n";
@@ -393,8 +397,8 @@ void ObjectLoader::OBJLoader::read_usemtl(const char *buff, int &current_mat_id)
   while (*q && !std::isspace(*q) && *q != '#') ++q;
 
   std::string name{ p, size_t(q - p) };
-  auto it = m_mat_name_to_id.find(name);
-  if (it != m_mat_name_to_id.end()) {
+  auto it = model_data.m_mat_name_to_id.find(name);
+  if (it != model_data.m_mat_name_to_id.end()) {
     current_mat_id = it->second;
   } else {
     current_mat_id = -1;
@@ -426,9 +430,11 @@ void ObjectLoader::OBJLoader::read_mtllib(const char* buff, const std::string& o
   Material current_mat;
   auto commit_mat = [&]() {
       if (!current_mat.name.empty()) {
-          int id = m_materials.size();
-          m_mat_name_to_id[current_mat.name] = id;
-          m_materials.push_back(std::move(current_mat));
+          int id = model_data.m_materials.size();
+          // m_mat_name_to_id[current_mat.name] = id;
+          model_data.m_mat_name_to_id[current_mat.name] = id;
+          model_data.m_materials.push_back(std::move(current_mat));
+          // m_materials.push_back(std::move(current_mat));
           current_mat = Material{};
       }
   };
@@ -527,11 +533,13 @@ void ObjectLoader::OBJLoader::add_new_group(const char *buff, int &current_group
   while (*q && !std::isspace(*q) && *q != '#') ++q;
 
   std::string name{ p, size_t(q - p) };
-  auto it = m_group_name_to_id.find(name);
-  if (it == m_group_name_to_id.end()) {
-    int id = m_groups.size();
-    m_groups.push_back(name);
-    m_group_name_to_id[name] = id;
+  auto it = model_data.m_group_name_to_id.find(name);
+  if (it == model_data.m_group_name_to_id.end()) {
+    int id = model_data.m_groups.size();
+    model_data.m_groups.push_back(name);
+    // model_data.m_groups.push_back(name);
+    // m_group_name_to_id[name] = id;
+    model_data.m_group_name_to_id[name] = id;
     current_group_id = id;
   } else {
     current_group_id = it->second;
