@@ -5,6 +5,11 @@
 #include "stb_image.h"
 #include <GL/glew.h>
 
+void ObjectLoader::OBJLoader::clear_cache() {
+  model_cache.clear();
+}
+
+
 std::shared_ptr<ObjectLoader::ModelData> ObjectLoader::OBJLoader::read_from_file(const std::string& filename) {
 #ifdef DEBUG_OBJLOADER
     std::cout << "Reading .obj file from: " << filename << "\n";
@@ -13,7 +18,6 @@ std::shared_ptr<ObjectLoader::ModelData> ObjectLoader::OBJLoader::read_from_file
     auto from_cache = model_cache.find(filename);
     if (from_cache != model_cache.end()) {
         std::cout << "Found it from cache\n";
-
         return from_cache->second;
     } else {
         std::cout << "Did not find it from cache, reading file normally\n";
@@ -291,7 +295,6 @@ void ObjectLoader::OBJLoader::read_vertex(const char* buff) {
 #ifdef DEBUG_OBJLOADER
     print_glmvec4(v);
 #endif
-    // m_vertices.push_back(v);
     model_data.m_vertices.push_back(v);
 }
 
@@ -365,7 +368,6 @@ void ObjectLoader::OBJLoader::read_faceLimited(const char* buff, int current_mat
     std::cout << "  norms: " << nIdx.x << "," << nIdx.y << "," << nIdx.z << "," << nIdx.w << "\n";
 #endif
 
-    // m_faces.push_back(f);
     model_data.m_faces.push_back(f);
 }
 
@@ -394,9 +396,9 @@ void ObjectLoader::OBJLoader::debug_dump() const {
         std::cout << " [" << i << "] '" << model_data.m_groups[i] << "'\n";
     }
 
-    // std::cout << "Faces (" << m_faces.size() << "):\n";
-    // for (size_t i = 0; i < m_faces.size(); ++i) {
-    //   auto const& F = m_faces[i];
+    // std::cout << "Faces (" << model_data.m_faces.size() << "):\n";
+    // for (size_t i = 0; i < model_data.m_faces.size(); ++i) {
+    //   auto const& F = model_data.m_faces[i];
     //   std::cout << " ["<<i<<"] mat="<<F.material_id
     //             << " grp="<<F.group_id
     //             << " verts=("
@@ -451,10 +453,8 @@ void ObjectLoader::OBJLoader::read_mtllib(const char* buff, const std::string& o
     auto     commit_mat = [&]() {
         if (!current_mat.name.empty()) {
             int id = model_data.m_materials.size();
-            // m_mat_name_to_id[current_mat.name] = id;
             model_data.m_mat_name_to_id[current_mat.name] = id;
             model_data.m_materials.push_back(std::move(current_mat));
-            // m_materials.push_back(std::move(current_mat));
             current_mat = Material{};
         }
     };
@@ -544,8 +544,6 @@ void ObjectLoader::OBJLoader::add_new_group(const char* buff, int& current_group
     if (it == model_data.m_group_name_to_id.end()) {
         int id = model_data.m_groups.size();
         model_data.m_groups.push_back(name);
-        // model_data.m_groups.push_back(name);
-        // m_group_name_to_id[name] = id;
         model_data.m_group_name_to_id[name] = id;
         current_group_id                    = id;
     } else {

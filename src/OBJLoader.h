@@ -127,22 +127,13 @@ class OBJLoader {
     void read_mtllib(const char* buff, const std::string& filename);
     void read_usemtl(const char* buff, int& current_mat_id);
     void add_new_group(const char* buff, int& current_group_id);
+    static void clear_cache();
     inline static std::unordered_map<std::string,std::shared_ptr<ModelData>> model_cache = {};
   public:
     void debug_dump() const;
 
     std::shared_ptr<ModelData> read_from_file(const std::string& filename);
     ModelData model_data;
-    // std::vector<glm::vec4> m_vertices;
-    // std::vector<glm::vec2> m_texture_coords;
-    // std::vector<glm::vec3> m_vertex_normals;
-    // std::vector<Face>      m_faces;
-    //
-    // std::vector<Material>                m_materials;
-    // std::unordered_map<std::string, int> m_mat_name_to_id;
-    //
-    // std::vector<std::string>             m_groups;
-    // std::unordered_map<std::string, int> m_group_name_to_id;
 
     void parseFace(const std::string& line);
 

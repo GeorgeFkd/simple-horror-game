@@ -160,7 +160,6 @@ Models::Model::Model(const std::string& objFile, const std::string& label)
 
     // build unique_vertices & a cache
     std::unordered_map<Vertex, GLuint, VertexHasher> cache;
-    // cache.reserve(loader.model_data.m_faces.size() * 4);
     cache.reserve(model_data->m_faces.size() * 4);
 
     // bucket indices by material_id
@@ -168,19 +167,14 @@ Models::Model::Model(const std::string& objFile, const std::string& label)
 
     auto add_vertex = [&](int vi, int ti, int ni) {
         Vertex vert;
-        // vert.position = glm::vec3(loader.model_data.m_vertices[vi]);
         vert.position = glm::vec3(model_data->m_vertices[vi]);
-        // if (ti >= 0 && ti < (int)loader.model_data.m_texture_coords.size()) {
         if(ti >= 0 && ti < (int) model_data->m_texture_coords.size()) {
-            // vert.texcoord = loader.model_data.m_texture_coords[ti];
             vert.texcoord = model_data->m_texture_coords[ti];
         } else {
             vert.texcoord = glm::vec2{0.0f, 0.0f};
         }
 
-        // if (ni >= 0 && ni < (int)loader.model_data.m_vertex_normals.size()) {
         if(ni >= 0 && ni < (int) model_data->m_vertex_normals.size()) {
-            // vert.normal = loader.model_data.m_vertex_normals[ni];
             vert.normal = model_data->m_vertex_normals[ni];
         } else {
             vert.normal = glm::vec3{0.0f, 0.0f, 1.0f};
@@ -225,7 +219,6 @@ Models::Model::Model(const std::string& objFile, const std::string& label)
         SubMesh sm;
         if (material_id >= 0) {
             sm.mat = model_data->m_materials[material_id];
-            // sm.mat = loader.model_data.m_materials[material_id]; // assumes same Material layout
         } else {
             sm.mat = Material{};
         }
