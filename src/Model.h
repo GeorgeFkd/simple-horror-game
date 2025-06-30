@@ -41,7 +41,7 @@ struct Vertex {
 };
 
 struct MData {
-
+    std::vector<GLuint>  indices;
     std::vector<Vertex>  unique_vertices;
     std::vector<SubMesh> submeshes;
 };
@@ -63,8 +63,10 @@ struct VertexHasher {
 class Model {
   public:
     void draw_depth(std::shared_ptr<Shader> shader);
+    // should be private api
     void draw_depth_instanced(std::shared_ptr<Shader> shader);
     void draw(const glm::mat4& view, const glm::mat4& projection, std::shared_ptr<Shader> shader);
+    // should be private api
     void draw_instanced(const glm::mat4& view, const glm::mat4& projection,
                         std::shared_ptr<Shader> shader);
     void set_local_transform(const glm::mat4& local_transform);
@@ -73,6 +75,7 @@ class Model {
     void add_child(Model* child);
     void debug_dump() const;
     void move_relative_to(const glm::vec3& direction);
+    // those 2 should be private api
     std::pair<glm::vec3, glm::vec3>
          calculate_tangent_bitangent(Models::Vertex v0, Models::Vertex v1, Models::Vertex v2);
     void orthogonalize_and_normalize_tb(Models::Vertex&               vertex,
@@ -80,8 +83,10 @@ class Model {
                                         const std::vector<glm::vec3>& accumulated_bitangent,
                                         const size_t                  index);
     void add_instance_transform(const glm::mat4& transform, const std::string& suffix);
+    // should be private api
     void compute_transformed_aabb(const glm::mat4& xf, glm::vec3& out_min, glm::vec3& out_max);
     void init_instancing(size_t max_instances);
+    // can be made private api
     void update_instance_data();
     void in_frustum(const std::array<glm::vec4, 6>& P);
     bool aabb_in_frustum(const std::array<glm::vec4, 6>& P, const glm::vec3& minB,
@@ -95,6 +100,7 @@ class Model {
 
     void remove_instance_transform(const std::string& suffix);
 
+    // can be safely deleted
     inline bool intersectAABB(const glm::vec3& minA, const glm::vec3& maxA, const glm::vec3& minB,
                               const glm::vec3& maxB) {
         // If one box is completely to the “left” of the other, no collision
@@ -178,10 +184,12 @@ class Model {
         return instance_aabb_max[i];
     }
 
+    // can be made private api
     inline size_t get_instance_count() const {
         return instance_transforms.size();
     }
 
+    // probably private api, it won't be needed this much after refactor.
     inline size_t get_active_instance_count() const {
         return std::count_if(
             instance_modifications.begin(), instance_modifications.end(),
@@ -208,13 +216,19 @@ class Model {
     ~Model();
 
   private:
-    inline static std::unordered_map<std::string, MData> models_processed_data_cache = {}; 
+    inline static std::unordered_map<std::string, MData> models_processed_data_cache = {};
     // those 2 should be a separate thing that can be cached(using the file probably).
     // the rest should be a separate thing that defines the instance
+    // ModelState or something
     MData model_data;
+
+
+    std::pair<std::vector<glm::vec3>,std::vector<glm::vec3>> prepare_bitangents();
+    void reserve_open_gl_memory();
+
     // std::vector<Vertex>  unique_vertices;
     // std::vector<SubMesh> submeshes;
-    std::string          label;
+    std::string label;
     // where the model is located
     // relative to its parent
     glm::mat4 local_transform;
@@ -249,8 +263,9 @@ class Model {
     glm::vec3 aabbmin;
     glm::vec3 aabbmax;
 
-    bool                interactable = false;
-    bool                active       = true;
+    bool interactable = false;
+    bool active       = true;
+    // should be part of model data probably
     std::vector<Model*> children;
 };
 
