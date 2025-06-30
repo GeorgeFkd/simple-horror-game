@@ -1,4 +1,5 @@
 #include "Model.h"
+#include <limits>
 
 static void print_vec3(glm::vec3 v) {
     std::cout << "(" << v.x << "," << v.y << "," << v.z << ")\n";
@@ -74,28 +75,27 @@ std::pair<std::vector<glm::vec3>, std::vector<glm::vec3>> Models::Model::prepare
         tan2[i1] += B;
         tan2[i2] += B;
     }
-    return std::make_pair(tan1,tan2);
+    return std::make_pair(tan1, tan2);
 }
 
 Models::Model::Model(const std::vector<glm::vec3>& positions, const std::vector<glm::vec3>& normals,
                      const std::vector<glm::vec2>& texcoords, const std::vector<GLuint>& indices,
                      std::string label, const Material& mat)
-    : local_transform(1.0f), world_transform(1.0f), localaabbmin(std::numeric_limits<float>::max()),
-      localaabbmax(std::numeric_limits<float>::lowest()), label(std::move(label)) {
+    : local_transform(1.0f), world_transform(1.0f), label(std::move(label)) {
 
     model_data.indices = indices;
     model_data.unique_vertices.reserve(positions.size());
+
+    auto default_normal = glm::vec3(0.0f,1.0f,0.0f);
+    auto default_texcoord = glm::vec2(0.0f);
     for (size_t i = 0; i < positions.size(); ++i) {
         Vertex vert;
         vert.position = positions[i];
-        vert.normal   = (i < normals.size()) ? normals[i] : glm::vec3(0.0f, 1.0f, 0.0f);
-        vert.texcoord = (i < texcoords.size()) ? texcoords[i] : glm::vec2(0.0f);
+        vert.normal   = (i < normals.size()) ? normals[i] : default_normal;
+        vert.texcoord = (i < texcoords.size()) ? texcoords[i] : default_texcoord;
 
         vert.tangent = glm::vec4(0.0f);
         model_data.unique_vertices.push_back(vert);
-
-        localaabbmin = glm::min(localaabbmin, vert.position);
-        localaabbmax = glm::max(localaabbmax, vert.position);
     }
 
     SubMesh sm;
@@ -104,15 +104,24 @@ Models::Model::Model(const std::vector<glm::vec3>& positions, const std::vector<
     sm.index_count  = static_cast<GLuint>(model_data.indices.size());
     model_data.submeshes.push_back(sm);
 
-
-    auto [tan1,tan2] = prepare_bitangents();
+    auto [tan1, tan2] = prepare_bitangents();
     for (size_t i = 0; i < model_data.unique_vertices.size(); ++i) {
         orthogonalize_and_normalize_tb(model_data.unique_vertices[i], tan1, tan2, i);
     }
 
     reserve_open_gl_memory();
+    initialize_local_aabb();
+    
 }
 
+void Models::Model::initialize_local_aabb() {
+    localaabbmin = glm::vec3(std::numeric_limits<float>::max());
+    localaabbmax = glm::vec3(-std::numeric_limits<float>::max());
+    for (auto const& v : model_data.unique_vertices) {
+        localaabbmin = glm::min(localaabbmin, v.position);
+        localaabbmax = glm::max(localaabbmax, v.position);
+    }
+}
 void Models::Model::reserve_open_gl_memory() {
     GLCall(glGenVertexArrays(1, &vao));
     GLCall(glGenBuffers(1, &vbo));
@@ -148,8 +157,7 @@ void Models::Model::reserve_open_gl_memory() {
 }
 
 Models::Model::Model(const std::string& objFile, const std::string& label)
-    : local_transform(1.0f), world_transform(1.0f), localaabbmin(std::numeric_limits<float>::max()),
-      localaabbmax(-std::numeric_limits<float>::max()), label(label) {
+    : local_transform(1.0f), world_transform(1.0f), label(label) {
     ObjectLoader::OBJLoader loader;
     auto                    obj_model_data = loader.read_from_file(objFile);
 
@@ -160,19 +168,21 @@ Models::Model::Model(const std::string& objFile, const std::string& label)
     // bucket indices by material_id
     std::unordered_map<int, std::vector<GLuint>> buckets;
 
+    auto default_texcoord = glm::vec2(0.0f,0.0f);
+    auto default_normal = glm::vec3(0.0f,0.0f,1.0f);
     auto add_vertex = [&](int vi, int ti, int ni) {
         Vertex vert;
         vert.position = glm::vec3(obj_model_data->m_vertices[vi]);
         if (ti >= 0 && ti < (int)obj_model_data->m_texture_coords.size()) {
             vert.texcoord = obj_model_data->m_texture_coords[ti];
         } else {
-            vert.texcoord = glm::vec2{0.0f, 0.0f};
+            vert.texcoord = default_texcoord;
         }
 
         if (ni >= 0 && ni < (int)obj_model_data->m_vertex_normals.size()) {
             vert.normal = obj_model_data->m_vertex_normals[ni];
         } else {
-            vert.normal = glm::vec3{0.0f, 0.0f, 1.0f};
+            vert.normal = default_normal; 
         }
 
         auto [it, inserted] = cache.emplace(vert, (GLuint)this->model_data.unique_vertices.size());
@@ -182,7 +192,6 @@ Models::Model::Model(const std::string& objFile, const std::string& label)
         return it->second;
     };
 
-    // for (auto const& face : loader.model_data.m_faces) {
     for (auto const& face : obj_model_data->m_faces) {
         int material_id = face.material_id;
         // unpack up to 4 verts; 3 if w == -1
@@ -206,7 +215,6 @@ Models::Model::Model(const std::string& objFile, const std::string& label)
     }
 
     // flatten buckets → one big index array, record submeshes
-    // std::vector<GLuint> all_indices;
     model_data.indices.reserve(
         std::accumulate(buckets.begin(), buckets.end(), 0u,
                         [](auto sum, auto& p) { return sum + p.second.size(); }));
@@ -226,18 +234,13 @@ Models::Model::Model(const std::string& objFile, const std::string& label)
     }
 
     // storage for accumulating each shared vertex's contributions
-    auto [tan1,tan2] = prepare_bitangents();
-    for(int i = 0; i < model_data.unique_vertices.size(); i++){
+    auto [tan1, tan2] = prepare_bitangents();
+    for (int i = 0; i < model_data.unique_vertices.size(); i++) {
         orthogonalize_and_normalize_tb(model_data.unique_vertices[i], tan1, tan2, i);
     }
 
     reserve_open_gl_memory();
-
-    // compute local AABB
-    for (auto const& v : model_data.unique_vertices) {
-        localaabbmin = glm::min(localaabbmin, v.position);
-        localaabbmax = glm::max(localaabbmax, v.position);
-    }
+    initialize_local_aabb();
 }
 
 Models::Model::~Model() {

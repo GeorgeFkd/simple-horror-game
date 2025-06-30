@@ -224,6 +224,7 @@ class Model {
 
 
     std::pair<std::vector<glm::vec3>,std::vector<glm::vec3>> prepare_bitangents();
+    void initialize_local_aabb();
     void reserve_open_gl_memory();
 
     // std::vector<Vertex>  unique_vertices;
