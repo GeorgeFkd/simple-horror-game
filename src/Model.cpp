@@ -86,7 +86,7 @@ Models::Model::Model(const std::vector<glm::vec3>& positions, const std::vector<
     model_data.indices = indices;
     model_data.unique_vertices.reserve(positions.size());
 
-    auto default_normal = glm::vec3(0.0f,1.0f,0.0f);
+    auto default_normal   = glm::vec3(0.0f, 1.0f, 0.0f);
     auto default_texcoord = glm::vec2(0.0f);
     for (size_t i = 0; i < positions.size(); ++i) {
         Vertex vert;
@@ -111,7 +111,6 @@ Models::Model::Model(const std::vector<glm::vec3>& positions, const std::vector<
 
     reserve_open_gl_memory();
     initialize_local_aabb();
-    
 }
 
 void Models::Model::initialize_local_aabb() {
@@ -168,9 +167,9 @@ Models::Model::Model(const std::string& objFile, const std::string& label)
     // bucket indices by material_id
     std::unordered_map<int, std::vector<GLuint>> buckets;
 
-    auto default_texcoord = glm::vec2(0.0f,0.0f);
-    auto default_normal = glm::vec3(0.0f,0.0f,1.0f);
-    auto add_vertex = [&](int vi, int ti, int ni) {
+    auto default_texcoord = glm::vec2(0.0f, 0.0f);
+    auto default_normal   = glm::vec3(0.0f, 0.0f, 1.0f);
+    auto add_vertex       = [&](int vi, int ti, int ni) {
         Vertex vert;
         vert.position = glm::vec3(obj_model_data->m_vertices[vi]);
         if (ti >= 0 && ti < (int)obj_model_data->m_texture_coords.size()) {
@@ -182,7 +181,7 @@ Models::Model::Model(const std::string& objFile, const std::string& label)
         if (ni >= 0 && ni < (int)obj_model_data->m_vertex_normals.size()) {
             vert.normal = obj_model_data->m_vertex_normals[ni];
         } else {
-            vert.normal = default_normal; 
+            vert.normal = default_normal;
         }
 
         auto [it, inserted] = cache.emplace(vert, (GLuint)this->model_data.unique_vertices.size());
@@ -458,6 +457,11 @@ void Models::Model::draw(const glm::mat4& view, const glm::mat4& projection,
 
 void Models::Model::draw_depth(std::shared_ptr<Shader> shader) {
 
+    if (is_instanced_) {
+        draw_depth_instanced(shader);
+        return;
+    }
+
     // GLCall(glEnable(GL_CULL_FACE));
     // GLCall(glCullFace(GL_FRONT));
     // GLCall(glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE));
@@ -728,6 +732,21 @@ void Models::Model::remove_instance_transform(const std::string& suffix) {
     instance_modifications[i] = InstanceModifiedTypes::REMOVED;
     instance_in_frustum[i]    = false;
     instance_data_dirty       = true;
+
+    // not even sure that is needed
+    if (get_active_instance_count() == 0) {
+        disable();
+    }
+}
+
+size_t Models::Model::get_instance_count() const {
+    return instance_transforms.size();
+}
+
+size_t Models::Model::get_active_instance_count() const {
+    return std::count_if(
+        instance_modifications.begin(), instance_modifications.end(),
+        [](InstanceModifiedTypes m) { return m != InstanceModifiedTypes::REMOVED; });
 }
 
 Models::Model Models::createFloor(float roomSize) {
