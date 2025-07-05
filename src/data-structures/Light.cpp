@@ -120,11 +120,7 @@ void Light::draw_depth_pass(std::shared_ptr<Shader>                            s
                     continue;
                 if (!m->is_in_frustum())
                     continue;
-                if (m->is_instanced()) {
-                    m->draw_depth_instanced(shader);
-                } else {
-                    m->draw_depth(shader);
-                }
+                m->draw_depth(shader);
             }
         }
     } else {
@@ -139,11 +135,12 @@ void Light::draw_depth_pass(std::shared_ptr<Shader>                            s
                 continue;
             if (!m->is_in_frustum())
                 continue;
-            if (m->is_instanced()) {
-                m->draw_depth_instanced(shader);
-            } else {
-                m->draw_depth(shader);
-            }
+            m->draw_depth(shader);
+            // if (m->is_instanced()) {
+            //     m->draw_depth_instanced(shader);
+            // } else {
+            //     m->draw_depth(shader);
+            // }
         }
     }
 
