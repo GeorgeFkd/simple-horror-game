@@ -8,12 +8,12 @@ static void print_vec3(glm::vec3 v) {
 void Models::Model::debug_dump() const {
     std::cout << "Transforms for: " << label << "\n";
     if (is_instanced()) {
-        for (size_t i = 0; i < instance_transforms.size(); i++) {
+        for (size_t i = 0; i < instances.size(); i++) {
             std::cout << "===" << i << "====\n";
             std::cout << "Min: ";
-            print_vec3(instance_aabb_min[i]);
+            print_vec3(instances[i].aabb_min);
             std::cout << "Max: ";
-            print_vec3(instance_aabb_max[i]);
+            print_vec3(instances[i].aabb_max);
         }
     }
     // size_t total_indices   = 0;
@@ -251,12 +251,13 @@ Models::Model::~Model() {
     is_instanced_ = false;
 
     // Clear all CPU‐side instance arrays
-    instance_suffixes.clear();
-    instance_transforms.clear();
-    instance_aabb_min.clear();
-    instance_aabb_max.clear();
-    instance_modifications.clear();
-
+    instances.clear();
+    // instance_suffixes.clear();
+    // instance_transforms.clear();
+    // instance_aabb_min.clear();
+    // instance_aabb_max.clear();
+    // instance_modifications.clear();
+    //
     // Then tear down your regular VAO/VBO/EBO in reverse creation order
     if (ebo) {
         GLCall(glDeleteBuffers(1, &ebo));
@@ -393,7 +394,7 @@ void Models::Model::draw_instanced(const glm::mat4& view, const glm::mat4& proje
 
         void* offsetPtr = (void*)(sm.index_offset * sizeof(GLuint));
         GLCall(glDrawElementsInstanced(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT, offsetPtr,
-                                       instance_transforms.size()));
+                                       instances.size()));
     }
     GLCall(glBindVertexArray(0));
 }
@@ -489,7 +490,7 @@ void Models::Model::draw_depth_instanced(std::shared_ptr<Shader> shader) {
     for (auto const& sm : model_data.submeshes) {
         void* offset_ptr = (void*)(sm.index_offset * sizeof(GLuint));
         GLCall(glDrawElementsInstanced(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT, offset_ptr,
-                                       static_cast<GLsizei>(instance_transforms.size())));
+                                       static_cast<GLsizei>(instances.size())));
     }
     GLCall(glBindVertexArray(0));
 }
@@ -571,12 +572,7 @@ void Models::Model::init_instancing(size_t max_instances) {
         GLCall(glVertexAttribDivisor(attrib, 1));
     }
     is_instanced_ = true;
-    instance_suffixes.reserve(max_instances);
-    instance_transforms.reserve(max_instances);
-    instance_aabb_min.reserve(max_instances);
-    instance_aabb_max.reserve(max_instances);
-    instance_modifications.reserve(max_instances);
-    instance_in_frustum.reserve(max_instances);
+    instances.reserve(max_instances);
     GLCall(glBindVertexArray(0));
 }
 
@@ -591,18 +587,18 @@ void Models::Model::init_instancing(size_t max_instances) {
 void Models::Model::update_instance_data() {
     // build a temporary list of only the active transforms
     std::vector<glm::mat4> active;
-    active.reserve(instance_transforms.size());
-    for (size_t i = 0; i < instance_transforms.size(); ++i) {
+    active.reserve(instances.size());
+    for (size_t i = 0; i < instances.size(); ++i) {
 
-        if (instance_modifications[i] == InstanceModifiedTypes::REMOVED) {
+        if (instances[i].modification == InstanceModifiedTypes::REMOVED) {
             continue;
         }
 
-        if (!instance_in_frustum[i]) {
+        if (!instances[i].in_frustum) {
             continue;
         }
 
-        active.push_back(instance_transforms[i]);
+        active.push_back(instances[i].transform);
     }
 
     // upload only the active list
@@ -616,16 +612,24 @@ void Models::Model::update_instance_data() {
 }
 
 void Models::Model::add_instance_transform(const glm::mat4& xf, const std::string& suffix) {
-    instance_transforms.push_back(xf);
+    InstanceData new_instance;
+    new_instance.transform = xf;
+    // instance_transforms.push_back(xf);
 
     glm::vec3 wmin, wmax;
     compute_transformed_aabb(xf, wmin, wmax);
 
-    instance_aabb_min.push_back(wmin);
-    instance_aabb_max.push_back(wmax);
-    instance_suffixes.push_back(suffix);
-    instance_modifications.push_back(InstanceModifiedTypes::NOT_MODIFIED);
-    instance_in_frustum.push_back(true);
+    new_instance.aabb_min = wmin;
+    new_instance.aabb_max = wmax;
+    new_instance.suffix = suffix;
+    new_instance.modification = InstanceModifiedTypes::NOT_MODIFIED;
+    new_instance.in_frustum = true;
+    instances.push_back(new_instance);
+    // instance_aabb_min.push_back(wmin);
+    // instance_aabb_max.push_back(wmax);
+    // instance_suffixes.push_back(suffix);
+    // instance_modifications.push_back(InstanceModifiedTypes::NOT_MODIFIED);
+    // instance_in_frustum.push_back(true);
     instance_data_dirty = true;
 }
 
@@ -645,7 +649,7 @@ std::pair<float, int> Models::Model::distance_from_point_using_AABB(const glm::v
     int   best_idx = -1;
 
     for (int i = 0; i < get_instance_count(); ++i) {
-        if (instance_modifications[i] == InstanceModifiedTypes::REMOVED)
+        if (instances[i].modification  == InstanceModifiedTypes::REMOVED)
             continue;
         const auto& min_i   = get_instance_aabb_min(i);
         const auto& max_i   = get_instance_aabb_max(i);
@@ -697,8 +701,13 @@ bool Models::Model::aabb_in_frustum(const std::array<glm::vec4, 6>& P, const glm
 void Models::Model::in_frustum(const std::array<glm::vec4, 6>& P) {
     // clear previous state
     inside_frustum_ = false;
-    if (is_instanced())
-        instance_in_frustum.assign(get_instance_count(), false);
+    if (is_instanced()){
+
+        // instance_in_frustum.assign(get_instance_count(), false);
+        for(auto& instance : instances){
+            instance.in_frustum = false;
+        }
+    }
 
     // non-instanced: single AABB
     if (!is_instanced()) {
@@ -709,28 +718,28 @@ void Models::Model::in_frustum(const std::array<glm::vec4, 6>& P) {
     // instanced: test each live instance
     int N = get_instance_count();
     for (int i = 0; i < N; ++i) {
-        if (instance_modifications[i] == InstanceModifiedTypes::REMOVED)
+        if (instances[i].modification == InstanceModifiedTypes::REMOVED)
             continue;
 
         auto minB              = get_instance_aabb_min(i);
         auto maxB              = get_instance_aabb_max(i);
         bool inside            = aabb_in_frustum(P, minB, maxB);
-        instance_in_frustum[i] = inside;
+        instances[i].in_frustum = inside;
         if (inside)
             inside_frustum_ = true; // model is “in” if any instance is
     }
 }
 
 void Models::Model::remove_instance_transform(const std::string& suffix) {
-    auto it = std::find(instance_suffixes.begin(), instance_suffixes.end(), suffix);
-    if (it == instance_suffixes.end()) {
+    auto it = std::find_if(instances.begin(), instances.end(), [&suffix](InstanceData& idata){ return idata.suffix == suffix;});
+    if (it == instances.end()) {
         std::cerr << "Instance suffix not found: " << suffix << "\n";
         return;
     }
 
-    size_t i                  = std::distance(instance_suffixes.begin(), it);
-    instance_modifications[i] = InstanceModifiedTypes::REMOVED;
-    instance_in_frustum[i]    = false;
+    size_t i                  = std::distance(instances.begin(), it);
+    instances[i].modification  = InstanceModifiedTypes::REMOVED;
+    instances[i].in_frustum = false;
     instance_data_dirty       = true;
 
     // not even sure that is needed
@@ -740,13 +749,13 @@ void Models::Model::remove_instance_transform(const std::string& suffix) {
 }
 
 size_t Models::Model::get_instance_count() const {
-    return instance_transforms.size();
+    return instances.size();
 }
 
 size_t Models::Model::get_active_instance_count() const {
     return std::count_if(
-        instance_modifications.begin(), instance_modifications.end(),
-        [](InstanceModifiedTypes m) { return m != InstanceModifiedTypes::REMOVED; });
+        instances.begin(), instances.end(),
+        [](const InstanceData& idata) { return idata.modification != InstanceModifiedTypes::REMOVED; });
 }
 
 Models::Model Models::createFloor(float roomSize) {
