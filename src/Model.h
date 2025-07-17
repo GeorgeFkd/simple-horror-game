@@ -46,6 +46,16 @@ struct MData {
     std::vector<SubMesh> submeshes;
 };
 
+
+struct InstanceData{
+    std::string           label;
+    glm::mat4             transform;
+    glm::vec3             aabb_min;
+    glm::vec3             aabb_max;
+    InstanceModifiedTypes modification;
+    bool                  in_frustum;
+};
+
 struct VertexHasher {
     // TODO I don't know if thats good enough
     size_t operator()(Vertex const& v) const noexcept {
@@ -78,7 +88,6 @@ class Model {
                           is_closer_than_current_model(const glm::vec3& point_to_check,
                                                        float            current_distance_from_closest_model);
     std::pair<bool, int>  intersect_sphere_aabb(const glm::vec3& point, float radius);
-    std::pair<float, int> distance_from_point_using_AABB(const glm::vec3& point);
 
     void remove_instance_transform(const std::string& suffix);
 
@@ -112,8 +121,8 @@ class Model {
             return inside_frustum_;
         }
 
-        return std::any_of(instance_in_frustum.begin(), instance_in_frustum.end(),
-                           [](bool v) { return v; });
+        return std::any_of(instances.begin(), instances.end(),
+                           [](InstanceData v) { return v.in_frustum; });
     }
 
     inline bool can_interact() {
@@ -140,17 +149,17 @@ class Model {
         local_transform = glm::scale(glm::mat4(1.0f), s) * local_transform;
     }
 
-    inline void set_instance_transforms(const std::vector<glm::mat4> instance_transforms) {
-        this->instance_transforms = instance_transforms;
-        instance_data_dirty       = true;
-    }
+    // inline void set_instance_transforms(const std::vector<glm::mat4> instance_transforms) {
+    //     this->instance_transforms = instance_transforms;
+    //     instance_data_dirty       = true;
+    // }
 
     const glm::vec3& get_instance_aabb_min(size_t i) const {
-        return instance_aabb_min[i];
+        return instances[i].aabb_min;
     }
 
     const glm::vec3& get_instance_aabb_max(size_t i) const {
-        return instance_aabb_max[i];
+        return instances[i].aabb_max;
     }
 
     inline glm::mat4 get_world_transform() const {
@@ -158,8 +167,8 @@ class Model {
     }
 
     inline std::string name(std::size_t instance_index = 0) const {
-        if (is_instanced() && instance_index >= 0 && instance_index < instance_suffixes.size()) {
-            return label + instance_suffixes[instance_index];
+        if (is_instanced() && instance_index >= 0 && instance_index < instances.size()) {
+            return label + instances[instance_index].label;
         }
         return label;
     }
@@ -176,6 +185,7 @@ class Model {
     // the rest should be a separate thing that defines the instance
     // ModelState or something
     MData  model_data;
+    std::pair<float, int> distance_from_point_using_AABB(const glm::vec3& point);
     size_t get_instance_count() const;
     void   update_instance_data();
     size_t get_active_instance_count() const;
@@ -197,6 +207,7 @@ class Model {
                                         const std::vector<glm::vec3>& accumulated_tangent,
                                         const std::vector<glm::vec3>& accumulated_bitangent,
                                         const size_t                  index);
+
     std::string label;
     // where the model is located
     // relative to its parent
@@ -205,13 +216,9 @@ class Model {
     // in the world after applying all parent transforms
     glm::mat4 world_transform;
 
-    std::vector<std::string>           instance_suffixes;
-    std::vector<glm::mat4>             instance_transforms;
-    std::vector<glm::vec3>             instance_aabb_min;
-    std::vector<glm::vec3>             instance_aabb_max;
-    std::vector<InstanceModifiedTypes> instance_modifications;
-    std::vector<bool>                  instance_in_frustum;
 
+    std::vector<InstanceData> instances;
+    
     bool inside_frustum_     = true;
     bool instance_data_dirty = true;
 
