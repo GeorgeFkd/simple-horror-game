@@ -341,76 +341,18 @@ void Models::Model::update_world_transform(const glm::mat4& parent_transform) {
         child->update_world_transform(world_transform);
     }
 }
-// I could remove this from the public API
-// and have it be an impl detail, as both draws are called with the same params
-void Models::Model::draw_instanced(const glm::mat4& view, const glm::mat4& projection,
-                                   std::shared_ptr<Shader> shader) {
-
-    // CARE WITH THIS IS MIGHT CAUSE A BUG
-    // if(instance_data_dirty) update_instance_data();
-    update_instance_data();
-
-    shader->set_mat4("uView", view);
-    shader->set_mat4("uProj", projection);
-    shader->set_bool("uUseInstancing", true);
-
-    GLCall(glBindVertexArray(vao));
-    for (auto const& sm : model_data.submeshes) {
-        shader->set_vec3("material.ambient", sm.mat.Ka);
-        shader->set_vec3("material.diffuse", sm.mat.Kd);
-        shader->set_vec3("material.specular", sm.mat.Ks);
-        shader->set_vec3("material.emissive", sm.mat.Ke);
-        shader->set_float("material.shininess", sm.mat.Ns);
-        shader->set_float("material.opacity", sm.mat.d);
-        shader->set_int("material.illumModel", sm.mat.illum);
-        shader->set_float("material.ior", sm.mat.Ni);
-        shader->set_bool("material.useBumpMap", sm.mat.use_bump_map);
-
-        if (sm.mat.tex_Ka) {
-            shader->set_texture("ambientMap", sm.mat.tex_Ka, GL_TEXTURE1);
-            shader->set_bool("useAmbientMap", true);
-        } else {
-            shader->set_bool("useAmbientMap", false);
-        }
-
-        if (sm.mat.tex_Kd) {
-            shader->set_texture("diffuseMap", sm.mat.tex_Kd, GL_TEXTURE2);
-            shader->set_bool("useDiffuseMap", true);
-        } else {
-            shader->set_bool("useDiffuseMap", false);
-        }
-
-        if (sm.mat.tex_Ks) {
-            shader->set_texture("specularMap", sm.mat.tex_Ks, GL_TEXTURE3);
-            shader->set_bool("useSpecularMap", true);
-        } else {
-            shader->set_bool("useSpecularMap", false);
-        }
-
-        if (sm.mat.tex_Bump) {
-            shader->set_texture("bumpMap", sm.mat.tex_Bump, GL_TEXTURE4);
-            shader->set_float("bumpScale", 4.0f);
-        }
-
-        void* offsetPtr = (void*)(sm.index_offset * sizeof(GLuint));
-        GLCall(glDrawElementsInstanced(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT, offsetPtr,
-                                       instances.size()));
-    }
-    GLCall(glBindVertexArray(0));
-}
 
 void Models::Model::draw(const glm::mat4& view, const glm::mat4& projection,
                          std::shared_ptr<Shader> shader) {
     if (is_instanced_) {
-        draw_instanced(view, projection, shader);
-        return;
+        update_instance_data();
     }
 
     // upload matrices
     shader->set_mat4("uView", view);
     shader->set_mat4("uProj", projection);
     shader->set_mat4("uModel", world_transform);
-    shader->set_bool("uUseInstancing", false);
+    shader->set_bool("uUseInstancing", is_instanced());
 
     GLCall(glBindVertexArray(vao));
     for (auto const& sm : model_data.submeshes) {
@@ -451,47 +393,37 @@ void Models::Model::draw(const glm::mat4& view, const glm::mat4& projection,
         }
 
         void* offsetPtr = (void*)(sm.index_offset * sizeof(GLuint));
-        GLCall(glDrawElements(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT, offsetPtr));
+        if (is_instanced()) {
+            GLCall(glDrawElementsInstanced(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT, offsetPtr,
+                                           instances.size()));
+        } else {
+            GLCall(glDrawElements(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT, offsetPtr));
+        }
     }
     GLCall(glBindVertexArray(0));
 }
 
 void Models::Model::draw_depth(std::shared_ptr<Shader> shader) {
 
-    if (is_instanced_) {
-        draw_depth_instanced(shader);
-        return;
-    }
 
     // GLCall(glEnable(GL_CULL_FACE));
     // GLCall(glCullFace(GL_FRONT));
     // GLCall(glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE));
 
     shader->set_mat4("uModel", world_transform);
-    shader->set_bool("uUseInstancing", false);
+    shader->set_bool("uUseInstancing", is_instanced());
     GLCall(glBindVertexArray(vao));
     for (auto const& sm : model_data.submeshes) {
         void* offset_ptr = (void*)(sm.index_offset * sizeof(GLuint));
-        GLCall(glDrawElements(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT, offset_ptr));
+        if (is_instanced()) {
+            GLCall(glDrawElementsInstanced(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT,
+                                           offset_ptr, static_cast<GLsizei>(instances.size())));
+        } else {
+            GLCall(glDrawElements(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT, offset_ptr));
+        }
     }
     // GLCall(glCullFace(GL_BACK));
     // GLCall(glColorMask(GL_TRUE,  GL_TRUE,  GL_TRUE,  GL_TRUE));
-    GLCall(glBindVertexArray(0));
-}
-
-void Models::Model::draw_depth_instanced(std::shared_ptr<Shader> shader) {
-    // if(instance_data_dirty) update_instance_data();
-    update_instance_data();
-    shader->set_bool("uUseInstancing", true);
-    shader->set_mat4("uModel", world_transform);
-
-    GLCall(glBindVertexArray(vao));
-
-    for (auto const& sm : model_data.submeshes) {
-        void* offset_ptr = (void*)(sm.index_offset * sizeof(GLuint));
-        GLCall(glDrawElementsInstanced(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT, offset_ptr,
-                                       static_cast<GLsizei>(instances.size())));
-    }
     GLCall(glBindVertexArray(0));
 }
 
@@ -614,22 +546,16 @@ void Models::Model::update_instance_data() {
 void Models::Model::add_instance_transform(const glm::mat4& xf, const std::string& suffix) {
     InstanceData new_instance;
     new_instance.transform = xf;
-    // instance_transforms.push_back(xf);
 
     glm::vec3 wmin, wmax;
     compute_transformed_aabb(xf, wmin, wmax);
 
-    new_instance.aabb_min = wmin;
-    new_instance.aabb_max = wmax;
-    new_instance.suffix = suffix;
+    new_instance.aabb_min     = wmin;
+    new_instance.aabb_max     = wmax;
+    new_instance.label        = suffix;
     new_instance.modification = InstanceModifiedTypes::NOT_MODIFIED;
-    new_instance.in_frustum = true;
+    new_instance.in_frustum   = true;
     instances.push_back(new_instance);
-    // instance_aabb_min.push_back(wmin);
-    // instance_aabb_max.push_back(wmax);
-    // instance_suffixes.push_back(suffix);
-    // instance_modifications.push_back(InstanceModifiedTypes::NOT_MODIFIED);
-    // instance_in_frustum.push_back(true);
     instance_data_dirty = true;
 }
 
@@ -649,7 +575,7 @@ std::pair<float, int> Models::Model::distance_from_point_using_AABB(const glm::v
     int   best_idx = -1;
 
     for (int i = 0; i < get_instance_count(); ++i) {
-        if (instances[i].modification  == InstanceModifiedTypes::REMOVED)
+        if (instances[i].modification == InstanceModifiedTypes::REMOVED)
             continue;
         const auto& min_i   = get_instance_aabb_min(i);
         const auto& max_i   = get_instance_aabb_max(i);
@@ -701,45 +627,42 @@ bool Models::Model::aabb_in_frustum(const std::array<glm::vec4, 6>& P, const glm
 void Models::Model::in_frustum(const std::array<glm::vec4, 6>& P) {
     // clear previous state
     inside_frustum_ = false;
-    if (is_instanced()){
-
-        // instance_in_frustum.assign(get_instance_count(), false);
-        for(auto& instance : instances){
+    if (is_instanced()) {
+        for (auto& instance : instances) {
             instance.in_frustum = false;
         }
-    }
+        // instanced: test each live instance
+        int N = get_instance_count();
+        for (int i = 0; i < N; ++i) {
+            if (instances[i].modification == InstanceModifiedTypes::REMOVED)
+                continue;
 
-    // non-instanced: single AABB
-    if (!is_instanced()) {
+            auto minB               = get_instance_aabb_min(i);
+            auto maxB               = get_instance_aabb_max(i);
+            bool inside             = aabb_in_frustum(P, minB, maxB);
+            instances[i].in_frustum = inside;
+            if (inside)
+                inside_frustum_ = true; // model is “in” if any instance is,not sure about this
+        }
+        return;
+    } else {
+        // non-instanced: single AABB
         inside_frustum_ = aabb_in_frustum(P, aabbmin, aabbmax);
         return;
-    }
-
-    // instanced: test each live instance
-    int N = get_instance_count();
-    for (int i = 0; i < N; ++i) {
-        if (instances[i].modification == InstanceModifiedTypes::REMOVED)
-            continue;
-
-        auto minB              = get_instance_aabb_min(i);
-        auto maxB              = get_instance_aabb_max(i);
-        bool inside            = aabb_in_frustum(P, minB, maxB);
-        instances[i].in_frustum = inside;
-        if (inside)
-            inside_frustum_ = true; // model is “in” if any instance is
     }
 }
 
 void Models::Model::remove_instance_transform(const std::string& suffix) {
-    auto it = std::find_if(instances.begin(), instances.end(), [&suffix](InstanceData& idata){ return idata.suffix == suffix;});
+    auto it = std::find_if(instances.begin(), instances.end(),
+                           [&suffix](InstanceData& idata) { return idata.label == suffix; });
     if (it == instances.end()) {
         std::cerr << "Instance suffix not found: " << suffix << "\n";
         return;
     }
 
     size_t i                  = std::distance(instances.begin(), it);
-    instances[i].modification  = InstanceModifiedTypes::REMOVED;
-    instances[i].in_frustum = false;
+    instances[i].modification = InstanceModifiedTypes::REMOVED;
+    instances[i].in_frustum   = false;
     instance_data_dirty       = true;
 
     // not even sure that is needed
@@ -753,9 +676,9 @@ size_t Models::Model::get_instance_count() const {
 }
 
 size_t Models::Model::get_active_instance_count() const {
-    return std::count_if(
-        instances.begin(), instances.end(),
-        [](const InstanceData& idata) { return idata.modification != InstanceModifiedTypes::REMOVED; });
+    return std::count_if(instances.begin(), instances.end(), [](const InstanceData& idata) {
+        return idata.modification != InstanceModifiedTypes::REMOVED;
+    });
 }
 
 Models::Model Models::createFloor(float roomSize) {
