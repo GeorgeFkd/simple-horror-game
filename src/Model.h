@@ -192,10 +192,7 @@ class Model {
     void   compute_transformed_aabb(const glm::mat4& xf, glm::vec3& out_min, glm::vec3& out_max);
     bool   aabb_in_frustum(const std::array<glm::vec4, 6>& P, const glm::vec3& minB,
                            const glm::vec3& maxB) const;
-    void   draw_depth_instanced(std::shared_ptr<Shader> shader);
 
-    void draw_instanced(const glm::mat4& view, const glm::mat4& projection,
-                        std::shared_ptr<Shader> shader);
     std::pair<std::vector<glm::vec3>, std::vector<glm::vec3>> prepare_bitangents();
     std::pair<glm::vec3, glm::vec3>
     calculate_tangent_bitangent(Models::Vertex v0, Models::Vertex v1, Models::Vertex v2);
@@ -221,9 +218,6 @@ class Model {
     
     bool inside_frustum_     = true;
     bool instance_data_dirty = true;
-
-    void draw_instanced(const glm::mat4& view, const glm::mat4& projection,
-                        std::shared_ptr<Shader> shader) const;
 
     GLuint instance_vbo  = 0;
     bool   is_instanced_ = false;
