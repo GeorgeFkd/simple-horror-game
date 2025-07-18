@@ -11,9 +11,9 @@ void Models::Model::debug_dump() const {
         for (size_t i = 0; i < instances.size(); i++) {
             std::cout << "===" << i << "====\n";
             std::cout << "Min: ";
-            print_vec3(instances[i].aabb_min);
+            print_vec3(instances[i].aabbmin);
             std::cout << "Max: ";
-            print_vec3(instances[i].aabb_max);
+            print_vec3(instances[i].aabbmax);
         }
     }
     // size_t total_indices   = 0;
@@ -30,13 +30,13 @@ void Models::Model::debug_dump() const {
     //   << total_indices           << " indices total\n"
     //   << "      Submeshes: "     << submeshes.size() << "\n"
     //   << "      AABB local min = ("
-    //      << localaabbmin.x << ", "
-    //      << localaabbmin.y << ", "
-    //      << localaabbmin.z << ")\n"
+    //      << model_data->localaabbmin.x << ", "
+    //      << model_data->localaabbmin.y << ", "
+    //      << model_data->localaabbmin.z << ")\n"
     //   << "      AABB local max = ("
-    //      << localaabbmax.x << ", "
-    //      << localaabbmax.y << ", "
-    //      << localaabbmax.z << ")" << std::endl;
+    //      << model_data->localaabbmax.x << ", "
+    //      << model_data->localaabbmax.y << ", "
+    //      << model_data->localaabbmax.z << ")" << std::endl;
 }
 
 void Models::Model::move_relative_to(const glm::vec3& direction) {
@@ -54,17 +54,17 @@ void Models::Model::move_relative_to(const glm::vec3& direction) {
 }
 
 std::pair<std::vector<glm::vec3>, std::vector<glm::vec3>> Models::Model::prepare_bitangents() {
-    std::vector<glm::vec3> tan1(model_data.unique_vertices.size(), glm::vec3(0.0f));
-    std::vector<glm::vec3> tan2(model_data.unique_vertices.size(), glm::vec3(0.0f));
+    std::vector<glm::vec3> tan1(model_data->unique_vertices.size(), glm::vec3(0.0f));
+    std::vector<glm::vec3> tan2(model_data->unique_vertices.size(), glm::vec3(0.0f));
 
-    for (size_t i = 0; i + 2 < model_data.indices.size(); i += 3) {
-        GLuint i0 = model_data.indices[i + 0];
-        GLuint i1 = model_data.indices[i + 1];
-        GLuint i2 = model_data.indices[i + 2];
+    for (size_t i = 0; i + 2 < model_data->indices.size(); i += 3) {
+        GLuint i0 = model_data->indices[i + 0];
+        GLuint i1 = model_data->indices[i + 1];
+        GLuint i2 = model_data->indices[i + 2];
 
-        const auto& v0 = model_data.unique_vertices[i0];
-        const auto& v1 = model_data.unique_vertices[i1];
-        const auto& v2 = model_data.unique_vertices[i2];
+        const auto& v0 = model_data->unique_vertices[i0];
+        const auto& v1 = model_data->unique_vertices[i1];
+        const auto& v2 = model_data->unique_vertices[i2];
 
         auto [T, B] = calculate_tangent_bitangent(v0, v1, v2);
 
@@ -83,8 +83,10 @@ Models::Model::Model(const std::vector<glm::vec3>& positions, const std::vector<
                      std::string label, const Material& mat)
     : local_transform(1.0f), world_transform(1.0f), label(std::move(label)) {
 
-    model_data.indices = indices;
-    model_data.unique_vertices.reserve(positions.size());
+    model_data = std::make_shared<MData>();
+
+    model_data->indices = indices;
+    model_data->unique_vertices.reserve(positions.size());
 
     auto default_normal   = glm::vec3(0.0f, 1.0f, 0.0f);
     auto default_texcoord = glm::vec2(0.0f);
@@ -95,30 +97,30 @@ Models::Model::Model(const std::vector<glm::vec3>& positions, const std::vector<
         vert.texcoord = (i < texcoords.size()) ? texcoords[i] : default_texcoord;
 
         vert.tangent = glm::vec4(0.0f);
-        model_data.unique_vertices.push_back(vert);
+        model_data->unique_vertices.push_back(vert);
     }
 
     SubMesh sm;
     sm.mat          = mat;
     sm.index_offset = 0;
-    sm.index_count  = static_cast<GLuint>(model_data.indices.size());
-    model_data.submeshes.push_back(sm);
+    sm.index_count  = static_cast<GLuint>(model_data->indices.size());
+    model_data->submeshes.push_back(sm);
 
     auto [tan1, tan2] = prepare_bitangents();
-    for (size_t i = 0; i < model_data.unique_vertices.size(); ++i) {
-        orthogonalize_and_normalize_tb(model_data.unique_vertices[i], tan1, tan2, i);
+    for (size_t i = 0; i < model_data->unique_vertices.size(); ++i) {
+        orthogonalize_and_normalize_tb(model_data->unique_vertices[i], tan1, tan2, i);
     }
-
+    // when the caching is complete those 2 will also be cached
     reserve_open_gl_memory();
     initialize_local_aabb();
 }
 
 void Models::Model::initialize_local_aabb() {
-    localaabbmin = glm::vec3(std::numeric_limits<float>::max());
-    localaabbmax = glm::vec3(-std::numeric_limits<float>::max());
-    for (auto const& v : model_data.unique_vertices) {
-        localaabbmin = glm::min(localaabbmin, v.position);
-        localaabbmax = glm::max(localaabbmax, v.position);
+    model_data->localaabbmin = glm::vec3(std::numeric_limits<float>::max());
+    model_data->localaabbmax = glm::vec3(-std::numeric_limits<float>::max());
+    for (auto const& v : model_data->unique_vertices) {
+        model_data->localaabbmin = glm::min(model_data->localaabbmin, v.position);
+        model_data->localaabbmax = glm::max(model_data->localaabbmax, v.position);
     }
 }
 void Models::Model::reserve_open_gl_memory() {
@@ -129,12 +131,12 @@ void Models::Model::reserve_open_gl_memory() {
     GLCall(glBindVertexArray(vao));
 
     GLCall(glBindBuffer(GL_ARRAY_BUFFER, vbo));
-    GLCall(glBufferData(GL_ARRAY_BUFFER, model_data.unique_vertices.size() * sizeof(Vertex),
-                        model_data.unique_vertices.data(), GL_STATIC_DRAW));
+    GLCall(glBufferData(GL_ARRAY_BUFFER, model_data->unique_vertices.size() * sizeof(Vertex),
+                        model_data->unique_vertices.data(), GL_STATIC_DRAW));
 
     GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo));
-    GLCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER, model_data.indices.size() * sizeof(GLuint),
-                        model_data.indices.data(), GL_STATIC_DRAW));
+    GLCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER, model_data->indices.size() * sizeof(GLuint),
+                        model_data->indices.data(), GL_STATIC_DRAW));
 
     GLCall(glEnableVertexAttribArray(0));
     GLCall(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
@@ -157,9 +159,21 @@ void Models::Model::reserve_open_gl_memory() {
 
 Models::Model::Model(const std::string& objFile, const std::string& label)
     : local_transform(1.0f), world_transform(1.0f), label(label) {
+
+    auto it = model_registry.find(objFile);
+    if (it != model_registry.end()) {
+        std::cout << "Model: " << objFile << " already exists in model registry \n";
+        model_data = it->second;
+        return;
+    } else {
+        std::cout << "Model: " << objFile << " not in registry\n";
+        std::cout << "Registry size: " << model_registry.size() << "\n";
+    }
+
     ObjectLoader::OBJLoader loader;
     auto                    obj_model_data = loader.read_from_file(objFile);
 
+    model_data = std::make_shared<MData>();
     // build unique_vertices & a cache
     std::unordered_map<Vertex, GLuint, VertexHasher> cache;
     cache.reserve(obj_model_data->m_faces.size() * 4);
@@ -184,9 +198,9 @@ Models::Model::Model(const std::string& objFile, const std::string& label)
             vert.normal = default_normal;
         }
 
-        auto [it, inserted] = cache.emplace(vert, (GLuint)this->model_data.unique_vertices.size());
+        auto [it, inserted] = cache.emplace(vert, (GLuint)this->model_data->unique_vertices.size());
         if (inserted) {
-            this->model_data.unique_vertices.push_back(vert);
+            this->model_data->unique_vertices.push_back(vert);
         }
         return it->second;
     };
@@ -214,7 +228,7 @@ Models::Model::Model(const std::string& objFile, const std::string& label)
     }
 
     // flatten buckets → one big index array, record submeshes
-    model_data.indices.reserve(
+    model_data->indices.reserve(
         std::accumulate(buckets.begin(), buckets.end(), 0u,
                         [](auto sum, auto& p) { return sum + p.second.size(); }));
 
@@ -225,21 +239,24 @@ Models::Model::Model(const std::string& objFile, const std::string& label)
         } else {
             sm.mat = Material{};
         }
-        sm.index_offset = (GLuint)model_data.indices.size();
+        sm.index_offset = (GLuint)model_data->indices.size();
         sm.index_count  = (GLuint)indexes.size();
 
-        model_data.indices.insert(model_data.indices.end(), indexes.begin(), indexes.end());
-        this->model_data.submeshes.push_back(sm);
+        model_data->indices.insert(model_data->indices.end(), indexes.begin(), indexes.end());
+        this->model_data->submeshes.push_back(sm);
     }
 
     // storage for accumulating each shared vertex's contributions
     auto [tan1, tan2] = prepare_bitangents();
-    for (int i = 0; i < model_data.unique_vertices.size(); i++) {
-        orthogonalize_and_normalize_tb(model_data.unique_vertices[i], tan1, tan2, i);
+    for (int i = 0; i < model_data->unique_vertices.size(); i++) {
+        orthogonalize_and_normalize_tb(model_data->unique_vertices[i], tan1, tan2, i);
     }
 
     reserve_open_gl_memory();
     initialize_local_aabb();
+
+    model_registry [objFile] = model_data;
+    // model_registry.insert(std::make_pair(objFile, model_data));
 }
 
 Models::Model::~Model() {
@@ -252,12 +269,6 @@ Models::Model::~Model() {
 
     // Clear all CPU‐side instance arrays
     instances.clear();
-    // instance_suffixes.clear();
-    // instance_transforms.clear();
-    // instance_aabb_min.clear();
-    // instance_aabb_max.clear();
-    // instance_modifications.clear();
-    //
     // Then tear down your regular VAO/VBO/EBO in reverse creation order
     if (ebo) {
         GLCall(glDeleteBuffers(1, &ebo));
@@ -355,7 +366,7 @@ void Models::Model::draw(const glm::mat4& view, const glm::mat4& projection,
     shader->set_bool("uUseInstancing", is_instanced());
 
     GLCall(glBindVertexArray(vao));
-    for (auto const& sm : model_data.submeshes) {
+    for (auto const& sm : model_data->submeshes) {
         shader->set_vec3("material.ambient", sm.mat.Ka);
         shader->set_vec3("material.diffuse", sm.mat.Kd);
         shader->set_vec3("material.specular", sm.mat.Ks);
@@ -405,7 +416,6 @@ void Models::Model::draw(const glm::mat4& view, const glm::mat4& projection,
 
 void Models::Model::draw_depth(std::shared_ptr<Shader> shader) {
 
-
     // GLCall(glEnable(GL_CULL_FACE));
     // GLCall(glCullFace(GL_FRONT));
     // GLCall(glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE));
@@ -413,7 +423,7 @@ void Models::Model::draw_depth(std::shared_ptr<Shader> shader) {
     shader->set_mat4("uModel", world_transform);
     shader->set_bool("uUseInstancing", is_instanced());
     GLCall(glBindVertexArray(vao));
-    for (auto const& sm : model_data.submeshes) {
+    for (auto const& sm : model_data->submeshes) {
         void* offset_ptr = (void*)(sm.index_offset * sizeof(GLuint));
         if (is_instanced()) {
             GLCall(glDrawElementsInstanced(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT,
@@ -433,7 +443,7 @@ void Models::Model::compute_aabb() {
     glm::vec3 world_max(-FLT_MAX);
 
     // 2) Transform each unique-vertex into world space and accumulate
-    for (auto const& v : model_data.unique_vertices) {
+    for (auto const& v : model_data->unique_vertices) {
         glm::vec4 wc = world_transform * glm::vec4(v.position, 1.0f);
         glm::vec3 w  = glm::vec3(wc);
         world_min    = glm::min(world_min, w);
@@ -457,15 +467,15 @@ void Models::Model::compute_transformed_aabb(const glm::mat4& xf, glm::vec3& out
                                              glm::vec3& out_max) {
     // all 8 corners of the local box
     glm::vec3 corners[8] = {
-        {localaabbmin.x, localaabbmin.y, localaabbmin.z},
-        {localaabbmin.x, localaabbmin.y, localaabbmax.z},
-        {localaabbmin.x, localaabbmax.y, localaabbmin.z},
-        {localaabbmin.x, localaabbmax.y, localaabbmax.z},
+        {model_data->localaabbmin.x, model_data->localaabbmin.y, model_data->localaabbmin.z},
+        {model_data->localaabbmin.x, model_data->localaabbmin.y, model_data->localaabbmax.z},
+        {model_data->localaabbmin.x, model_data->localaabbmax.y, model_data->localaabbmin.z},
+        {model_data->localaabbmin.x, model_data->localaabbmax.y, model_data->localaabbmax.z},
 
-        {localaabbmax.x, localaabbmin.y, localaabbmin.z},
-        {localaabbmax.x, localaabbmin.y, localaabbmax.z},
-        {localaabbmax.x, localaabbmax.y, localaabbmin.z},
-        {localaabbmax.x, localaabbmax.y, localaabbmax.z},
+        {model_data->localaabbmax.x, model_data->localaabbmin.y, model_data->localaabbmin.z},
+        {model_data->localaabbmax.x, model_data->localaabbmin.y, model_data->localaabbmax.z},
+        {model_data->localaabbmax.x, model_data->localaabbmax.y, model_data->localaabbmin.z},
+        {model_data->localaabbmax.x, model_data->localaabbmax.y, model_data->localaabbmax.z},
     };
 
     out_min = glm::vec3(FLT_MAX);
@@ -550,8 +560,8 @@ void Models::Model::add_instance_transform(const glm::mat4& xf, const std::strin
     glm::vec3 wmin, wmax;
     compute_transformed_aabb(xf, wmin, wmax);
 
-    new_instance.aabb_min     = wmin;
-    new_instance.aabb_max     = wmax;
+    new_instance.aabbmin      = wmin;
+    new_instance.aabbmax      = wmax;
     new_instance.label        = suffix;
     new_instance.modification = InstanceModifiedTypes::NOT_MODIFIED;
     new_instance.in_frustum   = true;

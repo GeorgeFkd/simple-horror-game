@@ -18,6 +18,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <unordered_map>
 namespace Models {
 
 using namespace GlHelpers;
@@ -44,14 +45,20 @@ struct MData {
     std::vector<GLuint>  indices;
     std::vector<Vertex>  unique_vertices;
     std::vector<SubMesh> submeshes;
+    //Object-space AABB (min/max corners in mesh local coords)
+    glm::vec3 localaabbmin,localaabbmax;
+    //for the same model data the memory reserved will be the same, thus fewer allocations
+    GLuint vao,vbo,ebo = 0;
 };
+
+
 
 
 struct InstanceData{
     std::string           label;
     glm::mat4             transform;
-    glm::vec3             aabb_min;
-    glm::vec3             aabb_max;
+    glm::vec3             aabbmin;
+    glm::vec3             aabbmax;
     InstanceModifiedTypes modification;
     bool                  in_frustum;
 };
@@ -155,11 +162,11 @@ class Model {
     // }
 
     const glm::vec3& get_instance_aabb_min(size_t i) const {
-        return instances[i].aabb_min;
+        return instances[i].aabbmin;
     }
 
     const glm::vec3& get_instance_aabb_max(size_t i) const {
-        return instances[i].aabb_max;
+        return instances[i].aabbmax;
     }
 
     inline glm::mat4 get_world_transform() const {
@@ -182,9 +189,12 @@ class Model {
     ~Model();
 
   private:
+
+    //this is made not for caching, but for sharing MData between instances coming from the same model
+    inline static std::unordered_map<std::string ,std::shared_ptr<MData>> model_registry;
     // the rest should be a separate thing that defines the instance
     // ModelState or something
-    MData  model_data;
+    std::shared_ptr<MData>  model_data;
     std::pair<float, int> distance_from_point_using_AABB(const glm::vec3& point);
     size_t get_instance_count() const;
     void   update_instance_data();
@@ -225,9 +235,6 @@ class Model {
     GLuint texture_id        = 0;
     GLuint gl_instance_count = 0;
 
-    // 1) Object-space AABB (min/max corners in mesh local coords)
-    glm::vec3 localaabbmin;
-    glm::vec3 localaabbmax;
 
     // 2) World-space AABB (after applying world_transform)
     glm::vec3 aabbmin;
