@@ -179,6 +179,8 @@ class Model {
         }
         return label;
     }
+    
+    Model(const Model& model_to_replicate,std::string name,glm::mat4 transform);
 
     Model(const std::vector<glm::vec3>& positions, const std::vector<glm::vec3>& normals,
           const std::vector<glm::vec2>& texcoords, const std::vector<GLuint>& indices,
@@ -232,6 +234,8 @@ class Model {
     GLuint instance_vbo  = 0;
     bool   is_instanced_ = false;
     GLuint vao, vbo, ebo = 0;
+
+    //texture_id and gl_instance_count do not seem to be used anywhere
     GLuint texture_id        = 0;
     GLuint gl_instance_count = 0;
 
