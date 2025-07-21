@@ -115,6 +115,9 @@ Models::Model::Model(const std::vector<glm::vec3>& positions, const std::vector<
     initialize_local_aabb();
 }
 
+
+
+
 void Models::Model::initialize_local_aabb() {
     model_data->localaabbmin = glm::vec3(std::numeric_limits<float>::max());
     model_data->localaabbmax = glm::vec3(-std::numeric_limits<float>::max());
@@ -124,17 +127,17 @@ void Models::Model::initialize_local_aabb() {
     }
 }
 void Models::Model::reserve_open_gl_memory() {
-    GLCall(glGenVertexArrays(1, &vao));
-    GLCall(glGenBuffers(1, &vbo));
-    GLCall(glGenBuffers(1, &ebo));
+    GLCall(glGenVertexArrays(1, &(model_data->vao)));
+    GLCall(glGenBuffers(1, &(model_data->vbo)));
+    GLCall(glGenBuffers(1, &(model_data->ebo)));
 
-    GLCall(glBindVertexArray(vao));
+    GLCall(glBindVertexArray(model_data->vao));
 
-    GLCall(glBindBuffer(GL_ARRAY_BUFFER, vbo));
+    GLCall(glBindBuffer(GL_ARRAY_BUFFER, model_data->vbo));
     GLCall(glBufferData(GL_ARRAY_BUFFER, model_data->unique_vertices.size() * sizeof(Vertex),
                         model_data->unique_vertices.data(), GL_STATIC_DRAW));
 
-    GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo));
+    GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, model_data->ebo));
     GLCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER, model_data->indices.size() * sizeof(GLuint),
                         model_data->indices.data(), GL_STATIC_DRAW));
 
@@ -155,6 +158,13 @@ void Models::Model::reserve_open_gl_memory() {
                                  (void*)offsetof(Vertex, tangent)));
 
     GLCall(glBindVertexArray(0));
+}
+
+Models::Model::Model(const Model& model_to_replicate, std::string label,glm::mat4 transform){
+    model_data = model_to_replicate.model_data;
+    label = label;
+    local_transform = transform;
+    //opengl memory is already initialised and local aabb boundaries are already initialised in model data
 }
 
 Models::Model::Model(const std::string& objFile, const std::string& label)
@@ -365,7 +375,7 @@ void Models::Model::draw(const glm::mat4& view, const glm::mat4& projection,
     shader->set_mat4("uModel", world_transform);
     shader->set_bool("uUseInstancing", is_instanced());
 
-    GLCall(glBindVertexArray(vao));
+    GLCall(glBindVertexArray(model_data->vao));
     for (auto const& sm : model_data->submeshes) {
         shader->set_vec3("material.ambient", sm.mat.Ka);
         shader->set_vec3("material.diffuse", sm.mat.Kd);
@@ -422,7 +432,7 @@ void Models::Model::draw_depth(std::shared_ptr<Shader> shader) {
 
     shader->set_mat4("uModel", world_transform);
     shader->set_bool("uUseInstancing", is_instanced());
-    GLCall(glBindVertexArray(vao));
+    GLCall(glBindVertexArray(model_data->vao));
     for (auto const& sm : model_data->submeshes) {
         void* offset_ptr = (void*)(sm.index_offset * sizeof(GLuint));
         if (is_instanced()) {
@@ -497,7 +507,7 @@ void Models::Model::compute_transformed_aabb(const glm::mat4& xf, glm::vec3& out
 void Models::Model::init_instancing(size_t max_instances) {
     // Generate the instance‐buffer
     GLCall(glGenBuffers(1, &instance_vbo));
-    GLCall(glBindVertexArray(vao));
+    GLCall(glBindVertexArray(model_data->vao));
     GLCall(glBindBuffer(GL_ARRAY_BUFFER, instance_vbo));
     // allocate enough space for max_instances matrices
     GLCall(
