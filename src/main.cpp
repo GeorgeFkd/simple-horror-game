@@ -41,7 +41,6 @@ int main() {
 
     auto                   scroll        = Models::Model("assets/models/scroll.obj", "page");
     constexpr unsigned int extra_scrolls = 4;
-    // scroll.init_instancing(6 + 4);
     glm::vec3 scroll_positions[6];
     scroll_positions[0] = {-29.0f, 0.15f, -29.0f};
     scroll_positions[1] = {-15.0f, 0.15f, 20.0f};
@@ -115,7 +114,6 @@ int main() {
     vertical[8][4] = true;
 
     unsigned int extraWalls = 10;
-    // wall.init_instancing(grid_rows * grid_columns * 2 + extraWalls);
 
     float half_width  = (grid_columns - 1) * spacing_x / 2.0f;
     float half_height = (grid_rows - 1) * spacing_z / 2.0f;
@@ -615,8 +613,6 @@ int main() {
                 throw std::runtime_error("Model not found " + m->name());
             }
             scene_manager->remove_model(name);
-            //TODO this should change
-            // scene_manager->remove_instanced_model_at(m->name(-1), "-" + std::to_string(i));
             scene_manager->get_game_state()->pages_collected += 1;
             //keep event handler
             return false;

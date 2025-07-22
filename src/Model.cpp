@@ -1,47 +1,33 @@
 #include "Model.h"
 #include <limits>
+#include <memory>
 
 static void print_vec3(glm::vec3 v) {
     std::cout << "(" << v.x << "," << v.y << "," << v.z << ")\n";
 }
 
 void Models::Model::debug_dump() const {
-    std::cout << "Transforms for: " << label << "\n";
-    if (is_instanced()) {
-        for (size_t i = 0; i < instances.size(); i++) {
-            std::cout << "===" << i << "====\n";
-            std::cout << "Min: ";
-            print_vec3(instances[i].aabbmin);
-            std::cout << "Max: ";
-            print_vec3(instances[i].aabbmax);
-        }
+    std::cout << "Transforms for: " << model_instance.label << "\n";
+    size_t total_indices   = 0;
+    size_t total_triangles = 0;
+    for (auto const& sm : model_data->submeshes) {
+        total_indices += sm.index_count;
+        total_triangles += sm.index_count / 3;
     }
-    // size_t total_indices   = 0;
-    // size_t total_triangles = 0;
-    // for (auto const& sm : submeshes) {
-    //     total_indices   += sm.index_count;
-    //     total_triangles += sm.index_count / 3;
-    // }
-    //
-    // std::cout
-    //   << "  >>> Model built: "
-    //   << unique_vertices.size() << " unique vertices, "
-    //   << total_triangles         << " triangles, "
-    //   << total_indices           << " indices total\n"
-    //   << "      Submeshes: "     << submeshes.size() << "\n"
-    //   << "      AABB local min = ("
-    //      << model_data->localaabbmin.x << ", "
-    //      << model_data->localaabbmin.y << ", "
-    //      << model_data->localaabbmin.z << ")\n"
-    //   << "      AABB local max = ("
-    //      << model_data->localaabbmax.x << ", "
-    //      << model_data->localaabbmax.y << ", "
-    //      << model_data->localaabbmax.z << ")" << std::endl;
+
+    std::cout << "  >>> Model built: " << model_data->unique_vertices.size() << " unique vertices, "
+              << total_triangles << " triangles, " << total_indices << " indices total\n"
+              << "      Submeshes: " << model_data->submeshes.size() << "\n"
+              << "      AABB local min = (" << model_data->localaabbmin.x << ", "
+              << model_data->localaabbmin.y << ", " << model_data->localaabbmin.z << ")\n"
+              << "      AABB local max = (" << model_data->localaabbmax.x << ", "
+              << model_data->localaabbmax.y << ", " << model_data->localaabbmax.z << ")"
+              << std::endl;
 }
 
 void Models::Model::move_relative_to(const glm::vec3& direction) {
 
-    glm::mat4 tf = local_transform;
+    glm::mat4 tf = model_instance.local_transform;
 
     glm::vec3 forward = glm::normalize(glm::vec3(tf[2])); // local Z
     glm::vec3 right   = glm::normalize(glm::vec3(tf[0])); // local X
@@ -81,9 +67,12 @@ std::pair<std::vector<glm::vec3>, std::vector<glm::vec3>> Models::Model::prepare
 Models::Model::Model(const std::vector<glm::vec3>& positions, const std::vector<glm::vec3>& normals,
                      const std::vector<glm::vec2>& texcoords, const std::vector<GLuint>& indices,
                      std::string label, const Material& mat)
-    : local_transform(1.0f), world_transform(1.0f), label(std::move(label)) {
 
-    model_data = std::make_shared<MData>();
+{
+    model_instance.local_transform = 1.0f;
+    model_instance.world_transform = 1.0f;
+    model_instance.label           = std::move(label);
+    model_data                     = std::make_shared<MData>();
 
     model_data->indices = indices;
     model_data->unique_vertices.reserve(positions.size());
@@ -114,9 +103,6 @@ Models::Model::Model(const std::vector<glm::vec3>& positions, const std::vector<
     reserve_open_gl_memory();
     initialize_local_aabb();
 }
-
-
-
 
 void Models::Model::initialize_local_aabb() {
     model_data->localaabbmin = glm::vec3(std::numeric_limits<float>::max());
@@ -160,16 +146,19 @@ void Models::Model::reserve_open_gl_memory() {
     GLCall(glBindVertexArray(0));
 }
 
-Models::Model::Model(const Model& model_to_replicate, std::string model_name,glm::mat4 transform){
-    model_data = model_to_replicate.model_data;
-    this->label = model_name;
-    local_transform = transform;
-    interactable = model_to_replicate.interactable;
-    //opengl memory is already initialised and local aabb boundaries are already initialised in model data
+Models::Model::Model(const Model& model_to_replicate, std::string model_name, glm::mat4 transform) {
+    model_data                     = model_to_replicate.model_data;
+    model_instance.label           = std::move(model_name);
+    model_instance.local_transform = transform;
+    interactable                   = model_to_replicate.interactable;
+    // opengl memory is already initialised and local aabb boundaries are already initialised in
+    // model data
 }
 
-Models::Model::Model(const std::string& objFile, const std::string& label)
-    : local_transform(1.0f), world_transform(1.0f), label(label) {
+Models::Model::Model(const std::string& objFile, std::string label) {
+    model_instance.local_transform = 1.0f;
+    model_instance.world_transform = 1.0f;
+    model_instance.label           = std::move(label);
 
     auto it = model_registry.find(objFile);
     if (it != model_registry.end()) {
@@ -254,7 +243,7 @@ Models::Model::Model(const std::string& objFile, const std::string& label)
         sm.index_count  = (GLuint)indexes.size();
 
         model_data->indices.insert(model_data->indices.end(), indexes.begin(), indexes.end());
-        this->model_data->submeshes.push_back(sm);
+        model_data->submeshes.push_back(sm);
     }
 
     // storage for accumulating each shared vertex's contributions
@@ -266,32 +255,23 @@ Models::Model::Model(const std::string& objFile, const std::string& label)
     reserve_open_gl_memory();
     initialize_local_aabb();
 
-    model_registry [objFile] = model_data;
-    // model_registry.insert(std::make_pair(objFile, model_data));
+    model_registry[objFile] = model_data;
 }
 
 Models::Model::~Model() {
-    // Tear down instancing first (reverse of creation)
-    if (instance_vbo) {
-        GLCall(glDeleteBuffers(1, &instance_vbo));
-        instance_vbo = 0;
+    // TODO these clear ups should be in the MData destructor
+    // here it is problematic if we add and remove model instances
+    if (model_data->ebo) {
+        GLCall(glDeleteBuffers(1, &(model_data->ebo)));
+        model_data->ebo = 0;
     }
-    is_instanced_ = false;
-
-    // Clear all CPU‐side instance arrays
-    instances.clear();
-    // Then tear down your regular VAO/VBO/EBO in reverse creation order
-    if (ebo) {
-        GLCall(glDeleteBuffers(1, &ebo));
-        ebo = 0;
+    if (model_data->vbo) {
+        GLCall(glDeleteBuffers(1, &(model_data->vbo)));
+        model_data->vbo = 0;
     }
-    if (vbo) {
-        GLCall(glDeleteBuffers(1, &vbo));
-        vbo = 0;
-    }
-    if (vao) {
-        GLCall(glDeleteVertexArrays(1, &vao));
-        vao = 0;
+    if (model_data->vao) {
+        GLCall(glDeleteVertexArrays(1, &(model_data->vao)));
+        model_data->vao = 0;
     }
 }
 
@@ -352,29 +332,25 @@ void Models::Model::add_child(Model* child) {
 }
 
 void Models::Model::set_local_transform(const glm::mat4& local_transform) {
-    this->local_transform = local_transform;
+    model_instance.local_transform = local_transform;
 }
 
 void Models::Model::update_world_transform(const glm::mat4& parent_transform) {
-    world_transform = parent_transform * local_transform;
+    model_instance.world_transform = parent_transform * model_instance.local_transform;
 
     compute_aabb();
     for (Model* child : children) {
-        child->update_world_transform(world_transform);
+        child->update_world_transform(model_instance.world_transform);
     }
 }
 
 void Models::Model::draw(const glm::mat4& view, const glm::mat4& projection,
                          std::shared_ptr<Shader> shader) {
-    if (is_instanced_) {
-        update_instance_data();
-    }
 
     // upload matrices
     shader->set_mat4("uView", view);
     shader->set_mat4("uProj", projection);
-    shader->set_mat4("uModel", world_transform);
-    shader->set_bool("uUseInstancing", is_instanced());
+    shader->set_mat4("uModel", model_instance.world_transform);
 
     GLCall(glBindVertexArray(model_data->vao));
     for (auto const& sm : model_data->submeshes) {
@@ -413,14 +389,8 @@ void Models::Model::draw(const glm::mat4& view, const glm::mat4& projection,
             shader->set_texture("bumpMap", sm.mat.tex_Bump, GL_TEXTURE4);
             shader->set_float("bumpScale", 4.0f);
         }
-
         void* offsetPtr = (void*)(sm.index_offset * sizeof(GLuint));
-        if (is_instanced()) {
-            GLCall(glDrawElementsInstanced(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT, offsetPtr,
-                                           instances.size()));
-        } else {
-            GLCall(glDrawElements(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT, offsetPtr));
-        }
+        GLCall(glDrawElements(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT, offsetPtr));
     }
     GLCall(glBindVertexArray(0));
 }
@@ -431,17 +401,11 @@ void Models::Model::draw_depth(std::shared_ptr<Shader> shader) {
     // GLCall(glCullFace(GL_FRONT));
     // GLCall(glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE));
 
-    shader->set_mat4("uModel", world_transform);
-    shader->set_bool("uUseInstancing", is_instanced());
+    shader->set_mat4("uModel", model_instance.world_transform);
     GLCall(glBindVertexArray(model_data->vao));
     for (auto const& sm : model_data->submeshes) {
         void* offset_ptr = (void*)(sm.index_offset * sizeof(GLuint));
-        if (is_instanced()) {
-            GLCall(glDrawElementsInstanced(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT,
-                                           offset_ptr, static_cast<GLsizei>(instances.size())));
-        } else {
-            GLCall(glDrawElements(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT, offset_ptr));
-        }
+        GLCall(glDrawElements(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT, offset_ptr));
     }
     // GLCall(glCullFace(GL_BACK));
     // GLCall(glColorMask(GL_TRUE,  GL_TRUE,  GL_TRUE,  GL_TRUE));
@@ -455,7 +419,7 @@ void Models::Model::compute_aabb() {
 
     // 2) Transform each unique-vertex into world space and accumulate
     for (auto const& v : model_data->unique_vertices) {
-        glm::vec4 wc = world_transform * glm::vec4(v.position, 1.0f);
+        glm::vec4 wc = model_instance.world_transform * glm::vec4(v.position, 1.0f);
         glm::vec3 w  = glm::vec3(wc);
         world_min    = glm::min(world_min, w);
         world_max    = glm::max(world_max, w);
@@ -470,8 +434,8 @@ void Models::Model::compute_aabb() {
     }
 
     // 4) Store
-    aabbmin = world_min;
-    aabbmax = world_max;
+    model_instance.aabbmin = world_min;
+    model_instance.aabbmax = world_max;
 }
 
 void Models::Model::compute_transformed_aabb(const glm::mat4& xf, glm::vec3& out_min,
@@ -505,129 +469,25 @@ void Models::Model::compute_transformed_aabb(const glm::mat4& xf, glm::vec3& out
     }
 }
 
-// void Models::Model::init_instancing(size_t max_instances) {
-//     // Generate the instance‐buffer
-//     GLCall(glGenBuffers(1, &instance_vbo));
-//     GLCall(glBindVertexArray(model_data->vao));
-//     GLCall(glBindBuffer(GL_ARRAY_BUFFER, instance_vbo));
-//     // allocate enough space for max_instances matrices
-//     GLCall(
-//         glBufferData(GL_ARRAY_BUFFER, max_instances * sizeof(glm::mat4), nullptr, GL_DYNAMIC_DRAW));
-//
-//     // Set up the four vec4 attributes (one per column of the mat4)
-//     constexpr GLuint loc = 4; // choose free attribute locations
-//     for (int i = 0; i < 4; ++i) {
-//         GLuint attrib = loc + i;
-//         GLCall(glEnableVertexAttribArray(attrib));
-//         GLCall(glVertexAttribPointer(attrib, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4),
-//                                      (void*)(sizeof(glm::vec4) * i)));
-//         // tell GL this is per-instance, not per-vertex:
-//         GLCall(glVertexAttribDivisor(attrib, 1));
-//     }
-//     is_instanced_ = true;
-//     instances.reserve(max_instances);
-//     GLCall(glBindVertexArray(0));
-// }
-
-// void Models::Model::update_instance_data() const {
-//     // Map & write only the portion we need (could also use glBufferSubData)
-//     GLCall(glBindBuffer(GL_ARRAY_BUFFER, instance_vbo));
-//     void* ptr = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
-//     memcpy(ptr, instance_transforms.data(), instance_transforms.size() * sizeof(glm::mat4));
-//     GLCall(glUnmapBuffer(GL_ARRAY_BUFFER));
-// }
-
-void Models::Model::update_instance_data() {
-    // build a temporary list of only the active transforms
-    std::vector<glm::mat4> active;
-    active.reserve(instances.size());
-    for (size_t i = 0; i < instances.size(); ++i) {
-
-        if (instances[i].modification == InstanceModifiedTypes::REMOVED) {
-            continue;
-        }
-
-        if (!instances[i].in_frustum) {
-            continue;
-        }
-
-        active.push_back(instances[i].transform);
-    }
-
-    // upload only the active list
-    GLCall(glBindBuffer(GL_ARRAY_BUFFER, instance_vbo));
-    GLCall(glBufferData(GL_ARRAY_BUFFER, active.size() * sizeof(glm::mat4), active.data(),
-                        GL_STREAM_DRAW));
-    // GLCall(glUnmapBuffer(GL_ARRAY_BUFFER));
-    // remember how many instances we’ll actually draw
-    gl_instance_count   = (GLuint)active.size();
-    instance_data_dirty = false;
-}
-
-// void Models::Model::add_instance_transform(const glm::mat4& xf, const std::string& suffix) {
-//     InstanceData new_instance;
-//     new_instance.transform = xf;
-//
-//     glm::vec3 wmin, wmax;
-//     compute_transformed_aabb(xf, wmin, wmax);
-//
-//     new_instance.aabbmin      = wmin;
-//     new_instance.aabbmax      = wmax;
-//     new_instance.label        = suffix;
-//     new_instance.modification = InstanceModifiedTypes::NOT_MODIFIED;
-//     new_instance.in_frustum   = true;
-//     instances.push_back(new_instance);
-//     instance_data_dirty = true;
-// }
-
-std::pair<float, int> Models::Model::distance_from_point_using_AABB(const glm::vec3& point) {
+float Models::Model::distance_from_point_using_AABB(const glm::vec3& point) {
     static const glm::vec3 convenience_offset{0.0f, -0.6f, 0.0f};
     glm::vec3              offset_cen = point + convenience_offset;
-
-    // non-instanced: just one AABB, instance = -1
-    if (!is_instanced()) {
-        glm::vec3 closest = glm::clamp(offset_cen, aabbmin, aabbmax);
-        float     d2      = glm::length2(closest - offset_cen);
-        return {d2, -1};
-    }
-
-    // instanced: find the instance with the smallest distance
-    float best_d2  = std::numeric_limits<float>::max();
-    int   best_idx = -1;
-
-    for (int i = 0; i < get_instance_count(); ++i) {
-        if (instances[i].modification == InstanceModifiedTypes::REMOVED)
-            continue;
-        const auto& min_i   = get_instance_aabb_min(i);
-        const auto& max_i   = get_instance_aabb_max(i);
-        glm::vec3   closest = glm::clamp(offset_cen, min_i, max_i);
-        float       d2      = glm::length2(closest - offset_cen);
-
-        if (d2 < best_d2) {
-            best_d2  = d2;
-            best_idx = i;
-        }
-    }
-
-    return {best_d2, best_idx};
+    glm::vec3 closest = glm::clamp(offset_cen, model_instance.aabbmin, model_instance.aabbmax);
+    float     d2      = glm::length2(closest - offset_cen);
+    return d2;
 }
 
-std::pair<bool, int> Models::Model::intersect_sphere_aabb(const glm::vec3& point, float radius) {
-    auto [squared_distance, instance_index] = distance_from_point_using_AABB(point);
-    return {squared_distance <= radius * radius, instance_index};
+bool Models::Model::intersect_sphere_aabb(const glm::vec3& point, float radius) {
+    auto squared_distance = distance_from_point_using_AABB(point);
+    return squared_distance <= radius * radius;
 }
 
 std::tuple<std::string, bool, float>
 Models::Model::is_closer_than_current_model(const glm::vec3& point_to_check,
                                             float            current_distance_to_closest_model) {
 
-    auto [squared_distance, instance_index] = distance_from_point_using_AABB(point_to_check);
-
-    if (instance_index == -1) {
-        return {name(), squared_distance < current_distance_to_closest_model, squared_distance};
-    }
-
-    return {name(instance_index), squared_distance < current_distance_to_closest_model,
+    auto squared_distance = distance_from_point_using_AABB(point_to_check);
+    return {model_instance.label, squared_distance < current_distance_to_closest_model,
             squared_distance};
 }
 
@@ -639,67 +499,19 @@ bool Models::Model::aabb_in_frustum(const std::array<glm::vec4, 6>& P, const glm
         glm::vec3 positive = {n.x > 0.0f ? maxB.x : minB.x, n.y > 0.0f ? maxB.y : minB.y,
                               n.z > 0.0f ? maxB.z : minB.z};
         // if that vertex is outside, the whole box is outside
-        if (glm::dot(n, positive) + plane.w < 0.0f)
+        if (glm::dot(n, positive) + plane.w < 0.0f) {
             return false;
+        }
     }
     return true;
 }
 
-void Models::Model::in_frustum(const std::array<glm::vec4, 6>& P) {
+void Models::Model::in_frustum(const std::array<glm::vec4, 6>& frustum_planes) {
     // clear previous state
-    inside_frustum_ = false;
-    if (is_instanced()) {
-        for (auto& instance : instances) {
-            instance.in_frustum = false;
-        }
-        // instanced: test each live instance
-        int N = get_instance_count();
-        for (int i = 0; i < N; ++i) {
-            if (instances[i].modification == InstanceModifiedTypes::REMOVED)
-                continue;
-
-            auto minB               = get_instance_aabb_min(i);
-            auto maxB               = get_instance_aabb_max(i);
-            bool inside             = aabb_in_frustum(P, minB, maxB);
-            instances[i].in_frustum = inside;
-            if (inside)
-                inside_frustum_ = true; // model is “in” if any instance is,not sure about this
-        }
-        return;
-    } else {
-        // non-instanced: single AABB
-        inside_frustum_ = aabb_in_frustum(P, aabbmin, aabbmax);
-        return;
-    }
-}
-
-void Models::Model::remove_instance_transform(const std::string& suffix) {
-    auto it = std::find_if(instances.begin(), instances.end(),
-                           [&suffix](InstanceData& idata) { return idata.label == suffix; });
-    if (it == instances.end()) {
-        std::cerr << "Instance suffix not found: " << suffix << "\n";
-        return;
-    }
-
-    size_t i                  = std::distance(instances.begin(), it);
-    instances[i].modification = InstanceModifiedTypes::REMOVED;
-    instances[i].in_frustum   = false;
-    instance_data_dirty       = true;
-
-    // not even sure that is needed
-    if (get_active_instance_count() == 0) {
-        disable();
-    }
-}
-
-size_t Models::Model::get_instance_count() const {
-    return instances.size();
-}
-
-size_t Models::Model::get_active_instance_count() const {
-    return std::count_if(instances.begin(), instances.end(), [](const InstanceData& idata) {
-        return idata.modification != InstanceModifiedTypes::REMOVED;
-    });
+    model_instance.in_frustum = false;
+    model_instance.in_frustum =
+        aabb_in_frustum(frustum_planes, model_instance.aabbmin, model_instance.aabbmax);
+    return;
 }
 
 Models::Model Models::createFloor(float roomSize) {
