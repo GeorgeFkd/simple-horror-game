@@ -18,15 +18,9 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <unordered_map>
 namespace Models {
 
 using namespace GlHelpers;
-
-enum class InstanceModifiedTypes {
-    NOT_MODIFIED,
-    REMOVED,
-};
 
 struct Vertex {
     glm::vec3 position;
@@ -45,22 +39,19 @@ struct MData {
     std::vector<GLuint>  indices;
     std::vector<Vertex>  unique_vertices;
     std::vector<SubMesh> submeshes;
-    //Object-space AABB (min/max corners in mesh local coords)
-    glm::vec3 localaabbmin,localaabbmax;
-    //for the same model data the memory reserved will be the same, thus fewer allocations
-    GLuint vao,vbo,ebo = 0;
+    // Object-space AABB (min/max corners in mesh local coords)
+    glm::vec3 localaabbmin, localaabbmax;
+    // for the same model data the memory reserved will be the same, thus fewer allocations
+    GLuint vao, vbo, ebo = 0;
 };
 
-
-
-
-struct InstanceData{
-    std::string           label;
-    glm::mat4             transform;
-    glm::vec3             aabbmin;
-    glm::vec3             aabbmax;
-    InstanceModifiedTypes modification;
-    bool                  in_frustum;
+struct InstanceData {
+    std::string label;
+    glm::mat4   local_transform;
+    glm::mat4 world_transform;
+    glm::vec3   aabbmin;
+    glm::vec3   aabbmax;
+    bool        in_frustum;
 };
 
 struct VertexHasher {
@@ -86,36 +77,28 @@ class Model {
     void add_child(Model* child);
     void debug_dump() const;
     void move_relative_to(const glm::vec3& direction);
-    // void add_instance_transform(const glm::mat4& transform, const std::string& suffix);
-    // void init_instancing(size_t max_instances);
 
     void in_frustum(const std::array<glm::vec4, 6>& P);
 
     std::tuple<std::string, bool, float>
-                          is_closer_than_current_model(const glm::vec3& point_to_check,
-                                                       float            current_distance_from_closest_model);
-    std::pair<bool, int>  intersect_sphere_aabb(const glm::vec3& point, float radius);
-
-    void remove_instance_transform(const std::string& suffix);
+                         is_closer_than_current_model(const glm::vec3& point_to_check,
+                                                      float            current_distance_from_closest_model);
+    bool intersect_sphere_aabb(const glm::vec3& point, float radius);
 
     inline void set_local_transform(glm::mat4&& local_transform) {
-        this->local_transform = std::move(local_transform);
+        model_instance.local_transform = std::move(local_transform);
     }
 
     inline glm::mat4 get_local_transform() {
-        return local_transform;
+        return model_instance.local_transform;
     }
 
     inline glm::vec3 get_aabbmin() const {
-        return aabbmin;
+        return model_instance.aabbmin;
     }
 
     inline glm::vec3 get_aabbmax() const {
-        return aabbmax;
-    }
-
-    inline bool is_instanced() const {
-        return is_instanced_;
+        return model_instance.aabbmax;
     }
 
     inline void set_interactivity(bool is_interactive) {
@@ -123,13 +106,7 @@ class Model {
     }
 
     inline bool is_in_frustum() const {
-
-        if (!is_instanced()) {
-            return inside_frustum_;
-        }
-
-        return std::any_of(instances.begin(), instances.end(),
-                           [](InstanceData v) { return v.in_frustum; });
+        return model_instance.in_frustum;
     }
 
     inline bool can_interact() {
@@ -153,57 +130,36 @@ class Model {
     }
 
     inline void set_scale(const glm::vec3& s) {
-        local_transform = glm::scale(glm::mat4(1.0f), s) * local_transform;
-    }
-
-    // inline void set_instance_transforms(const std::vector<glm::mat4> instance_transforms) {
-    //     this->instance_transforms = instance_transforms;
-    //     instance_data_dirty       = true;
-    // }
-
-    const glm::vec3& get_instance_aabb_min(size_t i) const {
-        return instances[i].aabbmin;
-    }
-
-    const glm::vec3& get_instance_aabb_max(size_t i) const {
-        return instances[i].aabbmax;
+        model_instance.local_transform = glm::scale(glm::mat4(1.0f), s) * model_instance.local_transform;
     }
 
     inline glm::mat4 get_world_transform() const {
-        return world_transform;
+        return model_instance.world_transform;
     }
 
     inline std::string name(std::size_t instance_index = 0) const {
-        if (is_instanced() && instance_index >= 0 && instance_index < instances.size()) {
-            return label + instances[instance_index].label;
-        }
-        return label;
+        return model_instance.label;
     }
-    
-    Model(const Model& model_to_replicate,std::string name,glm::mat4 transform);
+
+    Model(const Model& model_to_replicate, std::string name, glm::mat4 transform);
 
     Model(const std::vector<glm::vec3>& positions, const std::vector<glm::vec3>& normals,
           const std::vector<glm::vec2>& texcoords, const std::vector<GLuint>& indices,
           std::string label, const Material& mat = Material());
 
-    Model(const std::string& objFile, const std::string& label);
+    Model(const std::string& objFile, std::string label);
 
     ~Model();
 
   private:
-
-    //this is made not for caching, but for sharing MData between instances coming from the same model
-    inline static std::unordered_map<std::string ,std::shared_ptr<MData>> model_registry;
-    // the rest should be a separate thing that defines the instance
-    // ModelState or something
-    std::shared_ptr<MData>  model_data;
-    std::pair<float, int> distance_from_point_using_AABB(const glm::vec3& point);
-    size_t get_instance_count() const;
-    void   update_instance_data();
-    size_t get_active_instance_count() const;
-    void   compute_transformed_aabb(const glm::mat4& xf, glm::vec3& out_min, glm::vec3& out_max);
-    bool   aabb_in_frustum(const std::array<glm::vec4, 6>& P, const glm::vec3& minB,
-                           const glm::vec3& maxB) const;
+    // this is made not for caching, but for sharing MData between instances coming from the same
+    // model
+    inline static std::unordered_map<std::string, std::shared_ptr<MData>> model_registry;
+    std::shared_ptr<MData> model_data;
+    float  distance_from_point_using_AABB(const glm::vec3& point);
+    void compute_transformed_aabb(const glm::mat4& xf, glm::vec3& out_min, glm::vec3& out_max);
+    bool aabb_in_frustum(const std::array<glm::vec4, 6>& P, const glm::vec3& minB,
+                         const glm::vec3& maxB) const;
 
     std::pair<std::vector<glm::vec3>, std::vector<glm::vec3>> prepare_bitangents();
     std::pair<glm::vec3, glm::vec3>
@@ -217,32 +173,34 @@ class Model {
                                         const std::vector<glm::vec3>& accumulated_bitangent,
                                         const size_t                  index);
 
-    std::string label;
-    // where the model is located
-    // relative to its parent
-    glm::mat4 local_transform;
-    // where the model is actually placed
-    // in the world after applying all parent transforms
-    glm::mat4 world_transform;
 
+    InstanceData model_instance;
+    // std::string label;
+    // // where the model is located
+    // // relative to its parent
+    // glm::mat4 local_transform;
+    // // where the model is actually placed
+    // // in the world after applying all parent transforms
+    // glm::mat4 world_transform;
+    // glm::vec3 aabbmin;
+    // glm::vec3 aabbmax;
+    // struct InstanceData {
+    //     std::string           label;
+    //     glm::mat4             local_transform;
+    //     glm::mat4             world_transform
+    //     glm::vec3             aabbmin;
+    //     glm::vec3             aabbmax;
+    //     bool                  in_frustum;
+    // };
+    // bool inside_frustum_ = true;
 
-    std::vector<InstanceData> instances;
-    
-    bool inside_frustum_     = true;
-    bool instance_data_dirty = true;
-
-    GLuint instance_vbo  = 0;
-    bool   is_instanced_ = false;
     GLuint vao, vbo, ebo = 0;
 
-    //texture_id and gl_instance_count do not seem to be used anywhere
+    // texture_id and gl_instance_count do not seem to be used anywhere
     GLuint texture_id        = 0;
     GLuint gl_instance_count = 0;
 
-
     // 2) World-space AABB (after applying world_transform)
-    glm::vec3 aabbmin;
-    glm::vec3 aabbmax;
 
     bool interactable = false;
     bool active       = true;

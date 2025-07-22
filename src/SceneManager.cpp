@@ -218,8 +218,8 @@ void Game::SceneManager::run_game_loop() {
 
     monster.on_monster_active([&](auto m) {
         if (Mix_PlayingMusic() == 0) {
-            Mix_PlayMusic(horror_music, -1);// -1 = loop forever
-            Mix_VolumeMusic(MIX_MAX_VOLUME/4);
+            Mix_PlayMusic(horror_music, -1); // -1 = loop forever
+            Mix_VolumeMusic(MIX_MAX_VOLUME / 4);
             Mix_PlayChannel(footsteps_sound_channel, footsteps_sound, -1);
         }
     });
@@ -230,14 +230,14 @@ void Game::SceneManager::run_game_loop() {
             Mix_HaltChannel(footsteps_sound_channel);
         }
     });
-    monster.on_chase_start([](){
-        if(Mix_PlayingMusic()){
+    monster.on_chase_start([]() {
+        if (Mix_PlayingMusic()) {
             Mix_VolumeMusic(MIX_MAX_VOLUME);
         }
     });
-    monster.on_chase_stop([](){
-        if(Mix_PlayingMusic()){
-            Mix_VolumeMusic(MIX_MAX_VOLUME/4);
+    monster.on_chase_stop([]() {
+        if (Mix_PlayingMusic()) {
+            Mix_VolumeMusic(MIX_MAX_VOLUME / 4);
         }
     });
     monster.set_chasing_speed(4.0f);
@@ -258,9 +258,9 @@ void Game::SceneManager::run_game_loop() {
         auto camera_dir = glm::normalize(camera.get_direction());
         monster.update(dt, camera_dir, last_camera_position);
         if (monster.monster_model()->is_active()) {
-            glm::vec3 cam_pos = camera.get_position();
-            glm::mat4 mon_tf  = monster.monster_model()->get_local_transform();
-            glm::vec3 mon_pos = glm::vec3(mon_tf[3]);
+            glm::vec3 cam_pos    = camera.get_position();
+            glm::mat4 mon_tf     = monster.monster_model()->get_local_transform();
+            glm::vec3 mon_pos    = glm::vec3(mon_tf[3]);
             glm::vec3 to_monster = mon_pos - cam_pos;
             glm::vec3 dir_xz     = glm::normalize(glm::vec3(to_monster.x, 0.0f, to_monster.z));
             glm::vec3 forward    = camera.get_direction();
@@ -270,12 +270,11 @@ void Game::SceneManager::run_game_loop() {
             float angle_deg = glm::degrees(angle_rad);
 
             float distance_f = glm::length(to_monster);
-            distance_f = std::clamp(distance_f, 0.0f, 255.0f);
+            distance_f       = std::clamp(distance_f, 0.0f, 255.0f);
 
             uint8_t distance_byte = static_cast<uint8_t>(distance_f + 0.5f);
             Mix_SetPosition(footsteps_sound_channel, angle_deg, distance_f);
         }
-       
 
         check_collisions(dt);
         glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
@@ -292,7 +291,8 @@ void Game::SceneManager::run_game_loop() {
         render_depth_pass();
         glm::mat4 view = camera.get_view_matrix();
         glm::mat4 proj = camera.get_projection_matrix();
-        perform_culling();
+        // TODO add this when properly fixed
+        //  perform_culling();
         render(view, proj);
         run_interaction_handlers();
         SDL_GL_SwapWindow(window);
@@ -333,18 +333,10 @@ void Game::SceneManager::move_model_Z(const std::string& name, float z) {
     move_model(name, glm::vec3(0.0f, 0.0f, z));
 }
 
-void Game::SceneManager::remove_instanced_model_at(const std::string& name,
-                                                   const std::string& suffix) {
-    // assumes impl detail that instance names are created by model->name() + suffix
-    auto it = event_handlers.find(name + suffix);
-    if (it != event_handlers.end()) {
-        game_state->find_model(name)->remove_instance_transform(suffix);
-    }
-}
-
 void Game::SceneManager::remove_model(const std::string& name) {
     auto it = event_handlers.find(name);
     if (it != event_handlers.end()) {
+        std::cout << "Removing model: " << name << "\n";
         game_state->remove_model(name);
     }
 }
@@ -373,9 +365,9 @@ void Game::SceneManager::render_depth_pass() {
     auto depthCube = get_shader_by_name("depth_cube");
 
     for (auto& light : game_state->get_lights()) {
-        if(!light->is_turned_on()){
+        if (!light->is_turned_on()) {
             continue;
-        } 
+        }
         std::shared_ptr<Shader> sh;
         if (light->get_type() == LightType::POINT) {
             auto depthCube = get_shader_by_name("depth_cube");
@@ -415,10 +407,11 @@ void Game::SceneManager::handle_sdl_events(bool& running) {
             int w = ev.window.data1, h = ev.window.data2;
             glViewport(0, 0, w, h);
         }
-        
+
         const auto keys = SDL_GetKeyboardState(nullptr);
-        if(ev.type == SDL_KEYDOWN && ev.key.repeat == 0 && keys[SDL_SCANCODE_M]){
-            std::cout << "Position: " << camera.get_position().x << "," << camera.get_position().y << "," << camera.get_position().z << "\n";
+        if (ev.type == SDL_KEYDOWN && ev.key.repeat == 0 && keys[SDL_SCANCODE_M]) {
+            std::cout << "Position: " << camera.get_position().x << "," << camera.get_position().y
+                      << "," << camera.get_position().z << "\n";
         }
         // feed mouse/window events to the camera
         camera.process_input(ev);
@@ -473,8 +466,7 @@ void Game::SceneManager::check_collisions(float dt) {
         }
 
         // camera–AABB collision
-        auto [is_collided, instance_index_camera] =
-            model->intersect_sphere_aabb(camera_pos, camera_radius);
+        auto is_collided = model->intersect_sphere_aabb(camera_pos, camera_radius);
         // game logic
         if (is_collided && model->name() == "monster") {
             terminate_game("You died");
@@ -487,7 +479,7 @@ void Game::SceneManager::check_collisions(float dt) {
 
         // monster–AABB collision (skip self)
         if (monster_collision_enabled) {
-            auto [monster_is_collided, instance_index_monster] =
+            auto monster_is_collided =
                 model->intersect_sphere_aabb(monster_center, monster_sphere_radius);
             if (model->name() != monster_name && monster_is_collided) {
                 // std::cout << "Name is: " << name << ", monster name: " << monster_name << "\n";
@@ -530,12 +522,12 @@ void Game::SceneManager::render(const glm::mat4& view, const glm::mat4& projecti
         if (!model->is_active()) {
             continue;
         }
-        
-        //TODO this has a problem, in the beginning not all things are rendered properly
-        if (!model->is_in_frustum()) {
-            // std::cout << model->name() << std::endl;
-            continue;
-        }
+
+        // TODO this has a problem, in the beginning not all things are rendered properly
+        //  if (!model->is_in_frustum()) {
+        //      // std::cout << model->name() << std::endl;
+        //      continue;
+        //  }
 
         model->update_world_transform(glm::mat4(1.0f));
         model->draw(view, projection, shader);
