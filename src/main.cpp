@@ -41,7 +41,7 @@ int main() {
 
     auto                   scroll        = Models::Model("assets/models/scroll.obj", "page");
     constexpr unsigned int extra_scrolls = 4;
-    scroll.init_instancing(6 + 4);
+    // scroll.init_instancing(6 + 4);
     glm::vec3 scroll_positions[6];
     scroll_positions[0] = {-29.0f, 0.15f, -29.0f};
     scroll_positions[1] = {-15.0f, 0.15f, 20.0f};
@@ -51,9 +51,11 @@ int main() {
     scroll_positions[5] = {29.0f, 0.14f, 29.0f};
 
     scroll.set_interactivity(true);
-    for (int i = 0; i < 6; i++)
-        scroll.add_instance_transform(glm::translate(glm::mat4(1.0f), scroll_positions[i]),
-                                      "-" + std::to_string(i));
+    for (int i = 0; i < 6; i++){
+        auto extra_scroll = Models::Model(scroll,"scroll-" + std::to_string(i),glm::translate(glm::mat4(1.0f),scroll_positions[i]));
+        extra_scroll.set_interactivity(true);
+        game_state.add_model(std::move(extra_scroll),extra_scroll.name());
+    }
 
     auto wall =
         Models::Model("assets/models/SimpleOldTownAssets/OldHouseBrownWallLarge.obj", "wall");
@@ -113,7 +115,7 @@ int main() {
     vertical[8][4] = true;
 
     unsigned int extraWalls = 10;
-    wall.init_instancing(grid_rows * grid_columns * 2 + extraWalls);
+    // wall.init_instancing(grid_rows * grid_columns * 2 + extraWalls);
 
     float half_width  = (grid_columns - 1) * spacing_x / 2.0f;
     float half_height = (grid_rows - 1) * spacing_z / 2.0f;
@@ -127,8 +129,9 @@ int main() {
 
                 glm::vec3 pos = glm::vec3(x, wall_y, z);
                 glm::mat4 tf  = glm::translate(glm::mat4(1.0f), pos);
-                wall.add_instance_transform(tf, "-h-" + std::to_string(row) + "-" +
-                                                    std::to_string(col));
+                auto name_suffix = "-h-" + std::to_string(row) + "-" + std::to_string(col);
+                auto extra_wall = Models::Model(wall,"wall" + name_suffix,tf);
+                game_state.add_model(std::move(extra_wall),extra_wall.name());
             }
         }
     }
@@ -143,9 +146,9 @@ int main() {
                 glm::vec3 pos = glm::vec3(x, wall_y, z);
                 glm::mat4 tf  = glm::translate(glm::mat4(1.0f), pos);
                 tf            = glm::rotate(tf, glm::radians(90.0f), glm::vec3(0, 1, 0));
-
-                wall.add_instance_transform(tf, "-v-" + std::to_string(row) + "-" +
-                                                    std::to_string(col));
+                auto name_suffix = "-v-" + std::to_string(row) + "-" + std::to_string(col);
+                auto extra_wall = Models::Model(wall,"wall" + name_suffix,tf);
+                game_state.add_model(std::move(extra_wall),extra_wall.name());
             }
         }
     };
@@ -493,8 +496,8 @@ int main() {
     }
 
     glm::vec3 page3_pos = room_offset3 + glm::vec3(5.0f, 0.15f, 8.0f);
-    scroll.add_instance_transform(glm::translate(scroll.get_local_transform(), page3_pos),
-                                  "room-3-page-9");
+    auto scroll_room_3 = Models::Model(scroll,"room-3-page-9",glm::translate(scroll.get_local_transform(),page3_pos));
+    game_state.add_model(std::move(scroll_room_3),scroll_room_3.name());
 
     glm::vec3 room_offset4 = glm::vec3(-ROOM_WIDTH + room_size, 0.0f, ROOM_DEPTH - room_size);
     Group     room4("room-4", room_offset4);
@@ -551,13 +554,12 @@ int main() {
         game_state.add_model(std::move(m), m->name());
     }
 
-    game_state.add_model(std::move(scroll), "page");
     game_state.add_model(std::move(wall), "wall");
 
     scene_manager.set_game_state(game_state);
 
     std::array<std::string, 5> rooms = {"dining-room","room-1","room-2","room-3","room-4"};
-    for (auto r : rooms) {
+    for (const auto& r : rooms) {
         auto switch_model_name = r + "-switch";
         auto switch_model      = game_state.find_model(switch_model_name);
         scene_manager.bind_handler_to_model(switch_model_name, [r](Game::SceneManager* scene_mgr) {
@@ -606,13 +608,15 @@ int main() {
     }
 
     for (size_t i = 0; i < 6; i++) {
-        auto name = std::string("page-") + std::to_string(i);
-        scene_manager.bind_handler_to_model(name, [i](Game::SceneManager* scene_manager) {
-            auto m = scene_manager->get_game_state()->find_model("page");
+        auto name = std::string("scroll-") + std::to_string(i);
+        scene_manager.bind_handler_to_model(name, [i,name](Game::SceneManager* scene_manager) {
+            auto m = scene_manager->get_game_state()->find_model(name);
             if (!m) {
                 throw std::runtime_error("Model not found " + m->name());
             }
-            scene_manager->remove_instanced_model_at(m->name(-1), "-" + std::to_string(i));
+            scene_manager->remove_model(name);
+            //TODO this should change
+            // scene_manager->remove_instanced_model_at(m->name(-1), "-" + std::to_string(i));
             scene_manager->get_game_state()->pages_collected += 1;
             //keep event handler
             return false;

@@ -26,10 +26,10 @@ public:
         bool                     interactive = false
     );
     //model id: <room_name> + "-" + <wall_model_name> + "-" + <wall_number>
-    Group& walls(Models::Model& wall_model, float room_size);
+    Group& walls(const Models::Model& wall_model, float room_size);
 
     // Build and return all models with transforms applied
-    std::vector<std::unique_ptr<Models::Model>> models() const;
+    std::vector<std::unique_ptr<Models::Model>> models();
 
     inline glm::vec3 room_position() {
         return position;
@@ -48,5 +48,6 @@ private:
     std::string        name;
     glm::vec3          position;
     std::vector<Entry> entries;
+    std::vector<std::unique_ptr<Models::Model>> added_models;
 };
 
