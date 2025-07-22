@@ -86,8 +86,8 @@ class Model {
     void add_child(Model* child);
     void debug_dump() const;
     void move_relative_to(const glm::vec3& direction);
-    void add_instance_transform(const glm::mat4& transform, const std::string& suffix);
-    void init_instancing(size_t max_instances);
+    // void add_instance_transform(const glm::mat4& transform, const std::string& suffix);
+    // void init_instancing(size_t max_instances);
 
     void in_frustum(const std::array<glm::vec4, 6>& P);
 

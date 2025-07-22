@@ -18,42 +18,47 @@ Group& Group::model(
     return *this;
 }
 
-Group& Group::walls(Models::Model& wall_model,
+Group& Group::walls(const Models::Model& wall_model,
                   float room_size)
 {
+    //TODO:remove instance transforms and replace them with model construction.
     glm::mat4 id(1.0f);
-    std::string prefix = name + "-" + wall_model.name() + "-";
+    std::string prefix = name + "-" + "wall" + "-";
     //opposite side of the door,left side as you look at it
     auto wall_1_transform = glm::translate(id, position + glm::vec3(room_size, 0.0f,  4.6f));
     wall_1_transform = glm::scale(wall_1_transform,glm::vec3(1.0f,1.005f,1.1f));
-    wall_model.add_instance_transform(
-        wall_1_transform,
-        prefix + "1"
-    );
+    auto wall1 = std::make_unique<Models::Model>(wall_model,prefix + "1",wall_1_transform);
+    // wall_model.add_instance_transform(
+    //     wall_1_transform,
+    //     prefix + "1"
+    // );
 
     //same side as the door, on its right
     auto wall_2_transform = glm::translate(id, position + glm::vec3(0.0f,       0.0f,  4.8f));
     wall_2_transform = glm::scale(wall_2_transform,glm::vec3(1.0f,1.005f,1.04f));
-    wall_model.add_instance_transform(
-        wall_2_transform,
-        prefix + "2"
-    );
+    auto wall2 = std::make_unique<Models::Model>(wall_model,prefix + "1",wall_2_transform);
+    // wall_model.add_instance_transform(
+    //     wall_2_transform,
+    //     prefix + "2"
+    // );
 
     //same side as the door,on its left
     auto wall_3_transform = glm::translate(id, position + glm::vec3(0.0f,       0.0f, -6.8f));
     wall_3_transform = glm::scale(wall_3_transform,glm::vec3(1.0f,1.005f,1.0015f));
-    wall_model.add_instance_transform(
-        wall_3_transform,
-        prefix + "3"
-    );
+    auto wall3 = std::make_unique<Models::Model>(wall_model,prefix + "1",wall_3_transform);
+    // wall_model.add_instance_transform(
+    //     wall_3_transform,
+    //     prefix + "3"
+    // );
     
     //opposite side of the door, right side as you look at it
     auto wall_4_transform = glm::translate(id, position + glm::vec3(room_size, 0.0f, -6.25f));
     wall_4_transform = glm::scale(wall_4_transform,glm::vec3(1.0f,1.005f,1.1f));
-    wall_model.add_instance_transform(
-        wall_4_transform,
-        prefix + "4"
-    );
+    auto wall4 = std::make_unique<Models::Model>(wall_model,prefix + "4",wall_4_transform);
+    // wall_model.add_instance_transform(
+    //     wall_4_transform,
+    //     prefix + "4"
+    // );
     
     //5,6 are the sides orthogonal to the door side
     auto wall_5_transform = glm::rotate(
@@ -61,30 +66,41 @@ Group& Group::walls(Models::Model& wall_model,
             glm::radians(90.0f), glm::vec3(0.0f,1.0f,0.0f)
         );
     wall_5_transform = glm::scale(wall_5_transform,glm::vec3(1.0f,1.005f,1.0f));
-    wall_model.add_instance_transform(
-        wall_5_transform,
-        prefix + "5"
-    );
+    auto wall5 = std::make_unique<Models::Model>(wall_model,prefix + "5",wall_5_transform);
+    // wall_model.add_instance_transform(
+    //     wall_5_transform,
+    //     prefix + "5"
+    // );
     auto wall_6_transform = glm::rotate(
             glm::translate(id, position + glm::vec3(5.5f, 0.0f, -12.0f)),
             glm::radians(90.0f), glm::vec3(0.0f,1.0f,0.0f)
         );
-    wall_model.add_instance_transform(
-        wall_6_transform,
-        prefix + "6"
-    );
+    auto wall6 = std::make_unique<Models::Model>(wall_model,prefix + "6",wall_6_transform);
+    // wall_model.add_instance_transform(
+    //     wall_6_transform,
+    //     prefix + "6"
+    // );
     glm::mat4 roof_transform = glm::translate(id, position + glm::vec3(0.0f, 3.75f, -0.6f));
     roof_transform = glm::rotate(roof_transform, glm::radians(-90.0f), glm::vec3(0.0f,0.0f,1.0f));
     roof_transform = glm::scale(roof_transform, glm::vec3(1.0f,2.95f,2.21f));
-    wall_model.add_instance_transform(roof_transform, prefix + "7");
+    auto wall7 = std::make_unique<Models::Model>(wall_model,prefix + "7", roof_transform);
+    // wall_model.add_instance_transform(roof_transform, prefix + "7");
+    added_models.reserve(7);
+    added_models.push_back(std::move(wall1));
+    added_models.push_back(std::move(wall2));
+    added_models.push_back(std::move(wall3));
+    added_models.push_back(std::move(wall4));
+    added_models.push_back(std::move(wall5));
+    added_models.push_back(std::move(wall6));
+    added_models.push_back(std::move(wall7));
+
+
     return *this;
 }
 
 
-std::vector<std::unique_ptr<Models::Model>> Group::models() const {
-    std::vector<std::unique_ptr<Models::Model>> result;
-    result.reserve(entries.size());
-
+std::vector<std::unique_ptr<Models::Model>> Group::models() {
+    added_models.reserve(entries.size());
     for (auto& e : entries) {
         auto m = std::make_unique<Models::Model>(e.file, name + "-" + e.model_name);
         glm::mat4 xf = m->get_local_transform();
@@ -99,9 +115,9 @@ std::vector<std::unique_ptr<Models::Model>> Group::models() const {
         if (e.interactive) {
             m->set_interactivity(true);
         }
-        result.push_back(std::move(m));
+        added_models.push_back(std::move(m));
     }
 
-    return result;
+    return std::move(added_models);
 }
 

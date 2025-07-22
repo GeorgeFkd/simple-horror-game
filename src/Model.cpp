@@ -160,10 +160,11 @@ void Models::Model::reserve_open_gl_memory() {
     GLCall(glBindVertexArray(0));
 }
 
-Models::Model::Model(const Model& model_to_replicate, std::string label,glm::mat4 transform){
+Models::Model::Model(const Model& model_to_replicate, std::string model_name,glm::mat4 transform){
     model_data = model_to_replicate.model_data;
-    label = label;
+    this->label = model_name;
     local_transform = transform;
+    interactable = model_to_replicate.interactable;
     //opengl memory is already initialised and local aabb boundaries are already initialised in model data
 }
 
@@ -504,29 +505,29 @@ void Models::Model::compute_transformed_aabb(const glm::mat4& xf, glm::vec3& out
     }
 }
 
-void Models::Model::init_instancing(size_t max_instances) {
-    // Generate the instance‐buffer
-    GLCall(glGenBuffers(1, &instance_vbo));
-    GLCall(glBindVertexArray(model_data->vao));
-    GLCall(glBindBuffer(GL_ARRAY_BUFFER, instance_vbo));
-    // allocate enough space for max_instances matrices
-    GLCall(
-        glBufferData(GL_ARRAY_BUFFER, max_instances * sizeof(glm::mat4), nullptr, GL_DYNAMIC_DRAW));
-
-    // Set up the four vec4 attributes (one per column of the mat4)
-    constexpr GLuint loc = 4; // choose free attribute locations
-    for (int i = 0; i < 4; ++i) {
-        GLuint attrib = loc + i;
-        GLCall(glEnableVertexAttribArray(attrib));
-        GLCall(glVertexAttribPointer(attrib, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4),
-                                     (void*)(sizeof(glm::vec4) * i)));
-        // tell GL this is per-instance, not per-vertex:
-        GLCall(glVertexAttribDivisor(attrib, 1));
-    }
-    is_instanced_ = true;
-    instances.reserve(max_instances);
-    GLCall(glBindVertexArray(0));
-}
+// void Models::Model::init_instancing(size_t max_instances) {
+//     // Generate the instance‐buffer
+//     GLCall(glGenBuffers(1, &instance_vbo));
+//     GLCall(glBindVertexArray(model_data->vao));
+//     GLCall(glBindBuffer(GL_ARRAY_BUFFER, instance_vbo));
+//     // allocate enough space for max_instances matrices
+//     GLCall(
+//         glBufferData(GL_ARRAY_BUFFER, max_instances * sizeof(glm::mat4), nullptr, GL_DYNAMIC_DRAW));
+//
+//     // Set up the four vec4 attributes (one per column of the mat4)
+//     constexpr GLuint loc = 4; // choose free attribute locations
+//     for (int i = 0; i < 4; ++i) {
+//         GLuint attrib = loc + i;
+//         GLCall(glEnableVertexAttribArray(attrib));
+//         GLCall(glVertexAttribPointer(attrib, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4),
+//                                      (void*)(sizeof(glm::vec4) * i)));
+//         // tell GL this is per-instance, not per-vertex:
+//         GLCall(glVertexAttribDivisor(attrib, 1));
+//     }
+//     is_instanced_ = true;
+//     instances.reserve(max_instances);
+//     GLCall(glBindVertexArray(0));
+// }
 
 // void Models::Model::update_instance_data() const {
 //     // Map & write only the portion we need (could also use glBufferSubData)
@@ -563,21 +564,21 @@ void Models::Model::update_instance_data() {
     instance_data_dirty = false;
 }
 
-void Models::Model::add_instance_transform(const glm::mat4& xf, const std::string& suffix) {
-    InstanceData new_instance;
-    new_instance.transform = xf;
-
-    glm::vec3 wmin, wmax;
-    compute_transformed_aabb(xf, wmin, wmax);
-
-    new_instance.aabbmin      = wmin;
-    new_instance.aabbmax      = wmax;
-    new_instance.label        = suffix;
-    new_instance.modification = InstanceModifiedTypes::NOT_MODIFIED;
-    new_instance.in_frustum   = true;
-    instances.push_back(new_instance);
-    instance_data_dirty = true;
-}
+// void Models::Model::add_instance_transform(const glm::mat4& xf, const std::string& suffix) {
+//     InstanceData new_instance;
+//     new_instance.transform = xf;
+//
+//     glm::vec3 wmin, wmax;
+//     compute_transformed_aabb(xf, wmin, wmax);
+//
+//     new_instance.aabbmin      = wmin;
+//     new_instance.aabbmax      = wmax;
+//     new_instance.label        = suffix;
+//     new_instance.modification = InstanceModifiedTypes::NOT_MODIFIED;
+//     new_instance.in_frustum   = true;
+//     instances.push_back(new_instance);
+//     instance_data_dirty = true;
+// }
 
 std::pair<float, int> Models::Model::distance_from_point_using_AABB(const glm::vec3& point) {
     static const glm::vec3 convenience_offset{0.0f, -0.6f, 0.0f};
