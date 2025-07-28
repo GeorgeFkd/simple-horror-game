@@ -36,8 +36,8 @@ struct Vertex {
 };
 
 class MData {
-    
-public: 
+
+  public:
     ~MData();
     std::vector<GLuint>  indices;
     std::vector<Vertex>  unique_vertices;
@@ -51,7 +51,7 @@ public:
 struct InstanceData {
     std::string label;
     glm::mat4   local_transform;
-    glm::mat4 world_transform;
+    glm::mat4   world_transform;
     glm::vec3   aabbmin;
     glm::vec3   aabbmax;
     bool        in_frustum;
@@ -73,19 +73,17 @@ struct VertexHasher {
 
 class Model {
   public:
-    void draw_depth(std::shared_ptr<Shader> shader);
-    void draw(const glm::mat4& view, const glm::mat4& projection, std::shared_ptr<Shader> shader);
-    void set_local_transform(const glm::mat4& local_transform);
-    void update_world_transform(const glm::mat4& parent_transform);
-    void add_child(Model* child);
-    void debug_dump() const;
-    void move_relative_to(const glm::vec3& direction);
+    void  draw_depth(std::shared_ptr<Shader> shader);
+    void  draw(const glm::mat4& view, const glm::mat4& projection, std::shared_ptr<Shader> shader);
+    void  set_local_transform(const glm::mat4& local_transform);
+    void  update_world_transform(const glm::mat4& parent_transform);
+    void  add_child(Model* child);
+    void  debug_dump() const;
+    void  move_relative_to(const glm::vec3& direction);
+    float distance_from_point_using_AABB(const glm::vec3& point);
 
     void in_frustum(const std::array<glm::vec4, 6>& P);
 
-    std::tuple<std::string, bool, float>
-                         is_closer_than_current_model(const glm::vec3& point_to_check,
-                                                      float            current_distance_from_closest_model);
     bool intersect_sphere_aabb(const glm::vec3& point, float radius);
 
     inline void set_local_transform(glm::mat4&& local_transform) {
@@ -133,14 +131,15 @@ class Model {
     }
 
     inline void set_scale(const glm::vec3& s) {
-        model_instance.local_transform = glm::scale(glm::mat4(1.0f), s) * model_instance.local_transform;
+        model_instance.local_transform =
+            glm::scale(glm::mat4(1.0f), s) * model_instance.local_transform;
     }
 
     inline glm::mat4 get_world_transform() const {
         return model_instance.world_transform;
     }
 
-    inline std::string name(std::size_t instance_index = 0) const {
+    inline std::string name() const {
         return model_instance.label;
     }
 
@@ -156,8 +155,7 @@ class Model {
     // this is made not for caching, but for sharing MData between instances coming from the same
     // model
     inline static std::unordered_map<std::string, std::shared_ptr<MData>> model_registry;
-    std::shared_ptr<MData> model_data;
-    float  distance_from_point_using_AABB(const glm::vec3& point);
+    std::shared_ptr<MData>                                                model_data;
     void compute_transformed_aabb(const glm::mat4& xf, glm::vec3& out_min, glm::vec3& out_max);
     bool aabb_in_frustum(const std::array<glm::vec4, 6>& P, const glm::vec3& minB,
                          const glm::vec3& maxB) const;
@@ -168,41 +166,13 @@ class Model {
 
     void initialize_local_aabb();
     void reserve_open_gl_memory();
-    void compute_aabb();
+    void update_aabb();
     void orthogonalize_and_normalize_tb(Models::Vertex&               vertex,
                                         const std::vector<glm::vec3>& accumulated_tangent,
                                         const std::vector<glm::vec3>& accumulated_bitangent,
                                         const size_t                  index);
 
-
     InstanceData model_instance;
-    // std::string label;
-    // // where the model is located
-    // // relative to its parent
-    // glm::mat4 local_transform;
-    // // where the model is actually placed
-    // // in the world after applying all parent transforms
-    // glm::mat4 world_transform;
-    // glm::vec3 aabbmin;
-    // glm::vec3 aabbmax;
-    // struct InstanceData {
-    //     std::string           label;
-    //     glm::mat4             local_transform;
-    //     glm::mat4             world_transform
-    //     glm::vec3             aabbmin;
-    //     glm::vec3             aabbmax;
-    //     bool                  in_frustum;
-    // };
-    // bool inside_frustum_ = true;
-
-    GLuint vao, vbo, ebo = 0;
-
-    // texture_id and gl_instance_count do not seem to be used anywhere
-    GLuint texture_id        = 0;
-    GLuint gl_instance_count = 0;
-
-    // 2) World-space AABB (after applying world_transform)
-
     bool interactable = false;
     bool active       = true;
     // should be part of model data probably
