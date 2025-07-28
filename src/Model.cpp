@@ -2,6 +2,22 @@
 #include <limits>
 #include <memory>
 
+
+Models::MData::~MData() {
+    if (ebo) {
+        GLCall(glDeleteBuffers(1, &ebo));
+        ebo = 0;
+    }
+    if (vbo) {
+        GLCall(glDeleteBuffers(1, &vbo));
+        vbo = 0;
+    }
+    if (vao) {
+        GLCall(glDeleteVertexArrays(1, &vao));
+        vao = 0;
+    }
+}
+
 static void print_vec3(glm::vec3 v) {
     std::cout << "(" << v.x << "," << v.y << "," << v.z << ")\n";
 }
@@ -113,9 +129,9 @@ void Models::Model::initialize_local_aabb() {
     }
 }
 void Models::Model::reserve_open_gl_memory() {
-    GLCall(glGenVertexArrays(1, &(model_data->vao)));
-    GLCall(glGenBuffers(1, &(model_data->vbo)));
-    GLCall(glGenBuffers(1, &(model_data->ebo)));
+    GLCall(glGenVertexArrays(1, &model_data->vao));
+    GLCall(glGenBuffers(1, &model_data->vbo));
+    GLCall(glGenBuffers(1, &model_data->ebo));
 
     GLCall(glBindVertexArray(model_data->vao));
 
@@ -254,25 +270,9 @@ Models::Model::Model(const std::string& objFile, std::string label) {
 
     reserve_open_gl_memory();
     initialize_local_aabb();
-
+    
+    assert(model_data->vao != 0 && model_data->ebo != 0 && model_data->vbo != 0);
     model_registry[objFile] = model_data;
-}
-
-Models::Model::~Model() {
-    // TODO these clear ups should be in the MData destructor
-    // here it is problematic if we add and remove model instances
-    if (model_data->ebo) {
-        GLCall(glDeleteBuffers(1, &(model_data->ebo)));
-        model_data->ebo = 0;
-    }
-    if (model_data->vbo) {
-        GLCall(glDeleteBuffers(1, &(model_data->vbo)));
-        model_data->vbo = 0;
-    }
-    if (model_data->vao) {
-        GLCall(glDeleteVertexArrays(1, &(model_data->vao)));
-        model_data->vao = 0;
-    }
 }
 
 void Models::Model::orthogonalize_and_normalize_tb(
@@ -400,9 +400,11 @@ void Models::Model::draw_depth(std::shared_ptr<Shader> shader) {
     // GLCall(glEnable(GL_CULL_FACE));
     // GLCall(glCullFace(GL_FRONT));
     // GLCall(glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE));
-
+    
+    // shader->set_bool("uUseInstancing",false);
     shader->set_mat4("uModel", model_instance.world_transform);
     GLCall(glBindVertexArray(model_data->vao));
+    assert(model_data->vao != 0);
     for (auto const& sm : model_data->submeshes) {
         void* offset_ptr = (void*)(sm.index_offset * sizeof(GLuint));
         GLCall(glDrawElements(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT, offset_ptr));

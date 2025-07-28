@@ -35,7 +35,10 @@ struct Vertex {
     }
 };
 
-struct MData {
+class MData {
+    
+public: 
+    ~MData();
     std::vector<GLuint>  indices;
     std::vector<Vertex>  unique_vertices;
     std::vector<SubMesh> submeshes;
@@ -148,8 +151,6 @@ class Model {
           std::string label, const Material& mat = Material());
 
     Model(const std::string& objFile, std::string label);
-
-    ~Model();
 
   private:
     // this is made not for caching, but for sharing MData between instances coming from the same
