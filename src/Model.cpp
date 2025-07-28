@@ -2,7 +2,6 @@
 #include <limits>
 #include <memory>
 
-
 Models::MData::~MData() {
     if (ebo) {
         GLCall(glDeleteBuffers(1, &ebo));
@@ -270,7 +269,7 @@ Models::Model::Model(const std::string& objFile, std::string label) {
 
     reserve_open_gl_memory();
     initialize_local_aabb();
-    
+
     assert(model_data->vao != 0 && model_data->ebo != 0 && model_data->vbo != 0);
     model_registry[objFile] = model_data;
 }
@@ -352,6 +351,7 @@ void Models::Model::draw(const glm::mat4& view, const glm::mat4& projection,
     shader->set_mat4("uProj", projection);
     shader->set_mat4("uModel", model_instance.world_transform);
 
+    assert(model_data->vao != 0);
     GLCall(glBindVertexArray(model_data->vao));
     for (auto const& sm : model_data->submeshes) {
         shader->set_vec3("material.ambient", sm.mat.Ka);
@@ -366,24 +366,18 @@ void Models::Model::draw(const glm::mat4& view, const glm::mat4& projection,
 
         if (sm.mat.tex_Ka) {
             shader->set_texture("ambientMap", sm.mat.tex_Ka, GL_TEXTURE1);
-            shader->set_bool("useAmbientMap", true);
-        } else {
-            shader->set_bool("useAmbientMap", false);
         }
+        shader->set_bool("useAmbientMap", sm.mat.tex_Ka != 0 ? true : false);
 
         if (sm.mat.tex_Kd) {
             shader->set_texture("diffuseMap", sm.mat.tex_Kd, GL_TEXTURE2);
-            shader->set_bool("useDiffuseMap", true);
-        } else {
-            shader->set_bool("useDiffuseMap", false);
         }
+        shader->set_bool("useDiffuseMap", sm.mat.tex_Kd != 0 ? true : false);
 
         if (sm.mat.tex_Ks) {
             shader->set_texture("specularMap", sm.mat.tex_Ks, GL_TEXTURE3);
-            shader->set_bool("useSpecularMap", true);
-        } else {
-            shader->set_bool("useSpecularMap", false);
         }
+        shader->set_bool("useSpecularMap", sm.mat.tex_Ks != 0 ? true : false);
 
         if (sm.mat.tex_Bump) {
             shader->set_texture("bumpMap", sm.mat.tex_Bump, GL_TEXTURE4);
@@ -397,20 +391,14 @@ void Models::Model::draw(const glm::mat4& view, const glm::mat4& projection,
 
 void Models::Model::draw_depth(std::shared_ptr<Shader> shader) {
 
-    // GLCall(glEnable(GL_CULL_FACE));
-    // GLCall(glCullFace(GL_FRONT));
-    // GLCall(glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE));
-    
-    // shader->set_bool("uUseInstancing",false);
     shader->set_mat4("uModel", model_instance.world_transform);
-    GLCall(glBindVertexArray(model_data->vao));
     assert(model_data->vao != 0);
+
+    GLCall(glBindVertexArray(model_data->vao));
     for (auto const& sm : model_data->submeshes) {
         void* offset_ptr = (void*)(sm.index_offset * sizeof(GLuint));
         GLCall(glDrawElements(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT, offset_ptr));
     }
-    // GLCall(glCullFace(GL_BACK));
-    // GLCall(glColorMask(GL_TRUE,  GL_TRUE,  GL_TRUE,  GL_TRUE));
     GLCall(glBindVertexArray(0));
 }
 
@@ -484,14 +472,6 @@ bool Models::Model::intersect_sphere_aabb(const glm::vec3& point, float radius) 
     return squared_distance <= radius * radius;
 }
 
-std::tuple<std::string, bool, float>
-Models::Model::is_closer_than_current_model(const glm::vec3& point_to_check,
-                                            float            current_distance_to_closest_model) {
-
-    auto squared_distance = distance_from_point_using_AABB(point_to_check);
-    return {model_instance.label, squared_distance < current_distance_to_closest_model,
-            squared_distance};
-}
 
 bool Models::Model::aabb_in_frustum(const std::array<glm::vec4, 6>& P, const glm::vec3& minB,
                                     const glm::vec3& maxB) const {
@@ -516,6 +496,7 @@ void Models::Model::in_frustum(const std::array<glm::vec4, 6>& frustum_planes) {
     return;
 }
 
+//TODO create one function that does all of the walls in a simple way
 Models::Model Models::createFloor(float roomSize) {
 
     float                  y           = 0.0f;
