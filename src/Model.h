@@ -1,5 +1,4 @@
 #pragma once
-
 #include "OBJLoader.h"
 #include "Shader.h"
 #include "SubMesh.h"
@@ -36,7 +35,6 @@ struct Vertex {
 };
 
 class MData {
-
   public:
     ~MData();
     std::vector<GLuint>  indices;
@@ -55,6 +53,8 @@ struct InstanceData {
     glm::vec3   aabbmin;
     glm::vec3   aabbmax;
     bool        in_frustum;
+    bool        interactable = false;
+    bool        active = true;
 };
 
 struct VertexHasher {
@@ -103,7 +103,7 @@ class Model {
     }
 
     inline void set_interactivity(bool is_interactive) {
-        this->interactable = is_interactive;
+        this->model_instance.interactable = is_interactive;
     }
 
     inline bool is_in_frustum() const {
@@ -111,23 +111,23 @@ class Model {
     }
 
     inline bool can_interact() {
-        return interactable;
+        return model_instance.interactable;
     }
 
     inline bool is_active() const {
-        return this->active;
+        return this->model_instance.active;
     }
 
     inline void toggle_active() {
-        active = !active;
+        model_instance.active = !model_instance.active;
     }
 
     inline void disable() {
-        this->active = false;
+        this->model_instance.active = false;
     }
 
     inline void enable() {
-        this->active = true;
+        this->model_instance.active = true;
     }
 
     inline void set_scale(const glm::vec3& s) {
@@ -153,7 +153,7 @@ class Model {
 
   private:
     // this is made not for caching, but for sharing MData between instances coming from the same
-    // model
+    // model, this saves opengl allocations and the computation to go from raw vertices to usable data
     inline static std::unordered_map<std::string, std::shared_ptr<MData>> model_registry;
     std::shared_ptr<MData>                                                model_data;
     void compute_transformed_aabb(const glm::mat4& xf, glm::vec3& out_min, glm::vec3& out_max);
@@ -173,8 +173,9 @@ class Model {
                                         const size_t                  index);
 
     InstanceData model_instance;
-    bool interactable = false;
-    bool active       = true;
+    //these 2 could also be on the model_instance 
+    // bool interactable = false;
+    // bool active       = true;
     // should be part of model data probably
     std::vector<Model*> children;
 };
