@@ -13,6 +13,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 set(SOURCES
     src/main.cpp
+    src/GameState.cpp
     src/SceneManager.cpp
     src/TextRenderer.cpp
     src/OBJLoader.cpp

@@ -165,7 +165,7 @@ Models::Model::Model(const Model& model_to_replicate, std::string model_name, gl
     model_data                     = model_to_replicate.model_data;
     model_instance.label           = std::move(model_name);
     model_instance.local_transform = transform;
-    interactable                   = model_to_replicate.interactable;
+    model_instance.interactable                   = model_to_replicate.model_instance.interactable;
     // opengl memory is already initialised and local aabb boundaries are already initialised in
     // model data
 }
@@ -337,7 +337,7 @@ void Models::Model::set_local_transform(const glm::mat4& local_transform) {
 void Models::Model::update_world_transform(const glm::mat4& parent_transform) {
     model_instance.world_transform = parent_transform * model_instance.local_transform;
 
-    compute_aabb();
+    update_aabb();
     for (Model* child : children) {
         child->update_world_transform(model_instance.world_transform);
     }
@@ -393,7 +393,6 @@ void Models::Model::draw_depth(std::shared_ptr<Shader> shader) {
 
     shader->set_mat4("uModel", model_instance.world_transform);
     assert(model_data->vao != 0);
-
     GLCall(glBindVertexArray(model_data->vao));
     for (auto const& sm : model_data->submeshes) {
         void* offset_ptr = (void*)(sm.index_offset * sizeof(GLuint));
@@ -402,7 +401,7 @@ void Models::Model::draw_depth(std::shared_ptr<Shader> shader) {
     GLCall(glBindVertexArray(0));
 }
 
-void Models::Model::compute_aabb() {
+void Models::Model::update_aabb() {
     // 1) Initialize to extreme opposites
     glm::vec3 world_min(FLT_MAX);
     glm::vec3 world_max(-FLT_MAX);
