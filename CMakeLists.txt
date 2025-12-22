@@ -8,6 +8,9 @@ project(OpenGLApp LANGUAGES CXX)
 option(BUILD_TESTS "Build Tests(Install Catch2 Dependency)" OFF)
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+include(FetchContent)
+
 
 
 
@@ -25,11 +28,18 @@ set(SOURCES
         src/Monster.cpp
 )
 
+FetchContent_Declare(
+  googletest
+  URL https://github.com/google/googletest/archive/52eb8108c5bdec04579160ae17225d66034bd723.zip
+)
+
+FetchContent_MakeAvailable(googletest)
+
 find_package(OpenGL REQUIRED)
 find_package(SDL2 REQUIRED)
 find_package(GLEW REQUIRED)
 find_package(glm REQUIRED)
-find_package(Catch2)
+# find_package(Catch2)
 find_package(TIFF REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(SDL2_mixer REQUIRED SDL2_mixer)
@@ -47,10 +57,10 @@ if (NOT TIFF_FOUND)
     message(STATUS "Did not find TIFF, .tiff files wont load properly")
 endif()
 
-if (NOT Catch2_FOUND)
-    message(STATUS "Did not find Catch2, setting BUILD_TESTS option to OFF")
-    set(BUILD_TESTS OFF)
-endif()
+# if (NOT Catch2_FOUND)
+#     message(STATUS "Did not find Catch2, setting BUILD_TESTS option to OFF")
+#     set(BUILD_TESTS OFF)
+# endif()
 
 
 if (NOT GLEW_FOUND)
@@ -66,12 +76,7 @@ if (NOT SDL2_FOUND)
 endif()
 
 
-if (${BUILD_TESTS})
-    message(STATUS "building tests...")
-    add_subdirectory(src/tests)
-else()
-    message(STATUS "not building tests, use -DBUILD_TESTS=ON TO BUILD TESTS")
-endif()
+
 
 
 add_executable(opengl_app ${SOURCES})
@@ -101,6 +106,23 @@ target_link_libraries(opengl_app PRIVATE
 ##############
 # TEST FUNCTIONALITY OF OBJECT LOADER
 ##############
+
+add_library(obj_loader_lib STATIC src/OBJLoader.cpp)
+target_include_directories(obj_loader_lib 
+PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
+PRIVATE ${OPENGL_INCLUDE_DIR} ${SDL2_INCLUDE_DIRS} ${TIFF_INCLUDE_DIR} /usr/include/glm
+)
+
+target_link_libraries(obj_loader_lib PRIVATE
+    ${OPENGL_LIBRARIES}
+    ${SDL2_LIBRARIES}
+        TIFF::TIFF
+    GLEW::glew
+    glm::glm
+)
+
+
+# TODO: remove the obj_loader executable and write it into a test
 add_executable(obj_loader src/OBJLoaderMain.cpp src/OBJLoader.cpp)
 
 target_include_directories(obj_loader PRIVATE
@@ -206,4 +228,11 @@ add_dependencies(opengl_app copy_fonts)
 add_dependencies(opengl_app copy_models)
 add_dependencies(opengl_app copy_textures)
 add_dependencies(opengl_app copy_audio)
+
+if (${BUILD_TESTS})
+    message(STATUS "building tests...")
+    add_subdirectory(src/tests)
+else()
+    message(STATUS "not building tests, use -DBUILD_TESTS=ON TO BUILD TESTS")
+endif()
 
