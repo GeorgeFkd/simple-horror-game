@@ -117,87 +117,51 @@ target_link_libraries(opengl_app PRIVATE
 # ASSETS HERE
 ##############
 
-# Set shader source and destination dirs
-set(SHADER_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/assets/shaders")
-set(SHADER_DST_DIR "${CMAKE_CURRENT_BINARY_DIR}/assets/shaders")
-# Collect all shader files (.vert, .frag, etc.)
-file(GLOB SHADERS "${SHADER_SRC_DIR}/*.*")
+function(copy_assets TARGET NAME SRC_DIR DST_DIR)
+    add_custom_target(copy_${NAME} ALL
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${DST_DIR}"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory "${SRC_DIR}" "${DST_DIR}"
+        COMMENT "Copying ${NAME} assets..."
+    )
 
-# Copy each shader file into build/assets/shaders/
+    add_dependencies(${TARGET} copy_${NAME})
+endfunction()
 
-add_custom_target(copy_shaders ALL
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${SHADER_DST_DIR}"
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${SHADER_SRC_DIR}" "${SHADER_DST_DIR}"
-    COMMENT "Copying shader files..."
+copy_assets(
+    opengl_app
+    shaders
+    "${CMAKE_CURRENT_SOURCE_DIR}/assets/shaders"
+    "${CMAKE_CURRENT_BINARY_DIR}/assets/shaders"
 )
 
-add_dependencies(opengl_app copy_shaders)
-
-# Copy .obj/mtl model files into build/assets/models/
-set(MODEL_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/assets/models")
-set(MODEL_DST_DIR "${CMAKE_CURRENT_BINARY_DIR}/assets/models")
-
-file(GLOB_RECURSE ALL_MODEL_FILES
-    "${MODEL_SRC_DIR}/*.obj"
-    "${MODEL_SRC_DIR}/*.mtl"
+copy_assets(
+    opengl_app
+    models
+    "${CMAKE_CURRENT_SOURCE_DIR}/assets/models"
+    "${CMAKE_CURRENT_BINARY_DIR}/assets/models"
 )
 
-add_custom_target(copy_models ALL
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${MODEL_DST_DIR}"
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${MODEL_SRC_DIR}" "${MODEL_DST_DIR}"
-    COMMENT "Copying model files..."
+copy_assets(
+    opengl_app
+    textures
+    "${CMAKE_CURRENT_SOURCE_DIR}/assets/textures"
+    "${CMAKE_CURRENT_BINARY_DIR}/assets/textures"
 )
 
-set(TEXTURES_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/assets/textures")
-set(TEXTURES_DST_DIR "${CMAKE_CURRENT_BINARY_DIR}/assets/textures")
-
-file(GLOB_RECURSE ALL_TEXTURE_FILES
-    "${TEXTURES_SRC_DIR}/*.jpg"
+copy_assets(
+    opengl_app
+    audio
+    "${CMAKE_CURRENT_SOURCE_DIR}/assets/audio"
+    "${CMAKE_CURRENT_BINARY_DIR}/assets/audio"
 )
 
-set(MUSIC_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/assets/audio")
-set(MUSIC_DST_DIR "${CMAKE_CURRENT_BINARY_DIR}/assets/audio")
-
-file(GLOB_RECURSE ALL_AUDIO_FILES
-    "${MUSIC_SRC_DIR}/*.mp3"
+copy_assets(
+    opengl_app
+    fonts
+    "${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts"
+    "${CMAKE_CURRENT_BINARY_DIR}/assets/fonts"
 )
 
-add_custom_target(copy_audio ALL
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${MUSIC_DST_DIR}"
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${MUSIC_SRC_DIR}" "${MUSIC_DST_DIR}"
-    COMMENT "Copying music files"
-
-)
-
-
-add_custom_target(copy_textures ALL
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${TEXTURES_DST_DIR}"
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${TEXTURES_SRC_DIR}" "${TEXTURES_DST_DIR}"
-    COMMENT "Copying texture files..."
-
-)
-
-
-set(FONTS_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts")
-set(FONTS_DST_DIR "${CMAKE_CURRENT_BINARY_DIR}/assets/fonts")
-file(GLOB_RECURSE ALL_FONT_FILES
-    "${FONTS_SRC_DIR}/*.ttf"
-)
-
-
-
-add_custom_target(copy_fonts ALL
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${FONTS_DST_DIR}"
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${FONTS_SRC_DIR}" "${FONTS_DST_DIR}"
-    COMMENT "Copying font files..."
-
-)
-
-
-add_dependencies(opengl_app copy_fonts)
-add_dependencies(opengl_app copy_models)
-add_dependencies(opengl_app copy_textures)
-add_dependencies(opengl_app copy_audio)
 
 if (${BUILD_TESTS})
     message(STATUS "building tests using googletest library")
