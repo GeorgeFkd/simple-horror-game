@@ -12,14 +12,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include(FetchContent)
 
 
-
-
 set(SOURCES
     src/main.cpp
     src/GameState.cpp
     src/SceneManager.cpp
-    src/TextRenderer.cpp
-    src/OBJLoader.cpp
     src/Camera.cpp
     src/Model.cpp
     src/Shader.cpp
@@ -57,12 +53,6 @@ if (NOT TIFF_FOUND)
     message(STATUS "Did not find TIFF, .tiff files wont load properly")
 endif()
 
-# if (NOT Catch2_FOUND)
-#     message(STATUS "Did not find Catch2, setting BUILD_TESTS option to OFF")
-#     set(BUILD_TESTS OFF)
-# endif()
-
-
 if (NOT GLEW_FOUND)
     message(ERROR "ERROR: Glew not found")
 endif()
@@ -75,7 +65,28 @@ if (NOT SDL2_FOUND)
     message(ERROR "SDL2 was not found")
 endif()
 
+add_library(obj_loader_lib STATIC src/OBJLoader.cpp)
+target_include_directories(obj_loader_lib 
+PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
+PRIVATE ${OPENGL_INCLUDE_DIR} ${TIFF_INCLUDE_DIR} /usr/include/glm
+)
 
+target_link_libraries(obj_loader_lib PRIVATE
+    ${OPENGL_LIBRARIES}
+    TIFF::TIFF
+    GLEW::glew
+    glm::glm
+)
+
+
+set(TEXT_HANDLER_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures)
+message(STATUS "Including ${TEXT_HANDLER_INCLUDES} for text handler")
+add_library(text_handler STATIC src/TextRenderer.cpp)
+target_include_directories(text_handler PRIVATE 
+${TEXT_HANDLER_INCLUDES} 
+${FREETYPE_INCLUDE_DIRS}
+)
+target_link_libraries(text_handler PRIVATE ${OPENGL_LIBRARIES} GLEW::GLEW glm::glm ${FREETYPE_LIBRARIES})
 
 
 
@@ -86,63 +97,21 @@ target_include_directories(opengl_app PRIVATE
     ${SDL2_INCLUDE_DIRS}
     ${SDL2_mixer_INCLUDE_DIRS}
     ${GLEW_INCLUDE_DIRS}
-    ${FREETYPE_INCLUDE_DIRS}
     /usr/include/glm
     ${CMAKE_CURRENT_SOURCE_DIR}/src   # So headers like Renderer.h and OBJLoader.h are found
     ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
-    ${TIFF_INCLUDE_DIR}
 )
 
 target_link_libraries(opengl_app PRIVATE
     ${OPENGL_LIBRARIES}
     ${SDL2_LIBRARIES}
     ${SDL2_mixer_LIBRARIES}
-    ${FREETYPE_LIBRARIES}
-    TIFF::TIFF
     GLEW::glew
     glm::glm
+    obj_loader_lib
+    text_handler
 )
 
-##############
-# TEST FUNCTIONALITY OF OBJECT LOADER
-##############
-
-add_library(obj_loader_lib STATIC src/OBJLoader.cpp)
-target_include_directories(obj_loader_lib 
-PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
-PRIVATE ${OPENGL_INCLUDE_DIR} ${SDL2_INCLUDE_DIRS} ${TIFF_INCLUDE_DIR} /usr/include/glm
-)
-
-target_link_libraries(obj_loader_lib PRIVATE
-    ${OPENGL_LIBRARIES}
-    ${SDL2_LIBRARIES}
-        TIFF::TIFF
-    GLEW::glew
-    glm::glm
-)
-
-
-# TODO: remove the obj_loader executable and write it into a test
-add_executable(obj_loader src/OBJLoaderMain.cpp src/OBJLoader.cpp)
-
-target_include_directories(obj_loader PRIVATE
-    ${OPENGL_INCLUDE_DIR}
-    ${SDL2_INCLUDE_DIRS}
-    ${GLEW_INCLUDE_DIRS}
-    /usr/include/glm
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
-        ${TIFF_INCLUDE_DIR}
-)
-
-target_link_libraries(obj_loader PRIVATE
-    ${OPENGL_LIBRARIES}
-    ${SDL2_LIBRARIES}
-        TIFF::TIFF
-    GLEW::glew
-    glm::glm
-)
-
-target_compile_definitions(obj_loader PRIVATE DEBUG_OBJLOADER)
 
 ##############
 # ASSETS HERE
@@ -196,6 +165,7 @@ file(GLOB_RECURSE ALL_AUDIO_FILES
 add_custom_target(copy_audio ALL
     COMMAND ${CMAKE_COMMAND} -E make_directory "${MUSIC_DST_DIR}"
     COMMAND ${CMAKE_COMMAND} -E copy_directory "${MUSIC_SRC_DIR}" "${MUSIC_DST_DIR}"
+    COMMENT "Copying music files"
 
 )
 
@@ -230,7 +200,7 @@ add_dependencies(opengl_app copy_textures)
 add_dependencies(opengl_app copy_audio)
 
 if (${BUILD_TESTS})
-    message(STATUS "building tests...")
+    message(STATUS "building tests using googletest library")
     add_subdirectory(src/tests)
 else()
     message(STATUS "not building tests, use -DBUILD_TESTS=ON TO BUILD TESTS")

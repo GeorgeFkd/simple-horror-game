@@ -1,6 +1,7 @@
 // TextRenderer.cpp
 #include "TextRenderer.h"
-
+#include <ft2build.h>
+#include FT_FREETYPE_H
 void TextRenderer::load_font(const char* fontpath) {
     FT_Library ft;
     if (FT_Init_FreeType(&ft)) {

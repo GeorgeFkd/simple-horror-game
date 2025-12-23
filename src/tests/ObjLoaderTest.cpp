@@ -5,7 +5,8 @@
 TEST(ObjLoader, BasicAssertions) {
 
     ObjectLoader::OBJLoader loader;
-    auto filename = "./assets/test.obj";
+    // i want a way to not have to specify it like this
+    const auto* filename = "./assets/test.obj";
     loader.read_from_file(filename);
     loader.debug_dump();
 
