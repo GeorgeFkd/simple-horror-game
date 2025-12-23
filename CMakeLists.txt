@@ -5,7 +5,7 @@ add_compile_definitions(GLM_ENABLE_EXPERIMENTAL)
 
 project(OpenGLApp LANGUAGES CXX)
 
-option(BUILD_TESTS "Build Tests(Install Catch2 Dependency)" OFF)
+option(BUILD_TESTS "Build Tests(Installs GoogleTest Dependency)" OFF)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -14,14 +14,6 @@ include(FetchContent)
 
 set(SOURCES
     src/main.cpp
-    src/GameState.cpp
-    src/SceneManager.cpp
-    src/Camera.cpp
-    src/Model.cpp
-    src/Shader.cpp
-    src/data-structures/Light.cpp
-        src/Group.cpp
-        src/Monster.cpp
 )
 
 FetchContent_Declare(
@@ -89,34 +81,46 @@ ${FREETYPE_INCLUDE_DIRS}
 target_link_libraries(text_handler PRIVATE ${OPENGL_LIBRARIES} GLEW::GLEW glm::glm ${FREETYPE_LIBRARIES})
 
 
+add_library(renderer STATIC src/Camera.cpp src/Model.cpp src/GameState.cpp src/Group.cpp src/Monster.cpp src/data-structures/Light.cpp src/Shader.cpp src/SceneManager.cpp)
+
+target_include_directories(renderer PUBLIC 
+${CMAKE_CURRENT_SOURCE_DIR}/src 
+${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
+${SDL2_INCLUDE_DIRS}
+${OPENGL_INCLUDE_DIR}
+${GLEW_INCLUDE_DIRS}
+${SDL2_mixer_INCLUDE_DIRS}
+/usr/include/glm
+)
+
+target_link_libraries(renderer PRIVATE 
+${OPENGL_LIBRARIES} 
+${SDL2_LIBRARIES}
+${SDL2_mixer_LIBRARIES}
+GLEW::GLEW 
+glm::glm 
+obj_loader_lib 
+text_handler
+)
+
 
 add_executable(opengl_app ${SOURCES})
 
 target_include_directories(opengl_app PRIVATE
-    ${OPENGL_INCLUDE_DIR}
-    ${SDL2_INCLUDE_DIRS}
-    ${SDL2_mixer_INCLUDE_DIRS}
-    ${GLEW_INCLUDE_DIRS}
     /usr/include/glm
-    ${CMAKE_CURRENT_SOURCE_DIR}/src   # So headers like Renderer.h and OBJLoader.h are found
+    ${CMAKE_CURRENT_SOURCE_DIR}/src   
     ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
 )
 
 target_link_libraries(opengl_app PRIVATE
-    ${OPENGL_LIBRARIES}
-    ${SDL2_LIBRARIES}
-    ${SDL2_mixer_LIBRARIES}
-    GLEW::glew
     glm::glm
-    obj_loader_lib
-    text_handler
+    renderer
 )
 
 
 ##############
 # ASSETS HERE
 ##############
-
 function(copy_assets TARGET NAME SRC_DIR DST_DIR)
     add_custom_target(copy_${NAME} ALL
         COMMAND ${CMAKE_COMMAND} -E make_directory "${DST_DIR}"
