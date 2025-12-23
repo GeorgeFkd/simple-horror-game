@@ -353,16 +353,16 @@ void Game::SceneManager::check_collisions(float dt) {
     const auto monster_name   = monster_model->name();
     const auto last_mon_xform = last_monster_transform;
 
-    const float monster_sphere_radius = 0.8f;
-    auto cameraCollidesWithModelAABB = [&](Models::Model* model) {
+    const float monster_sphere_radius       = 0.8f;
+    auto        cameraCollidesWithModelAABB = [&](Models::Model* model) {
         // game wise it might be more fun if it can go through walls
         bool monster_collision_enabled = false;
         // update “closest interactable” tracking
-        if(model->can_interact()){
+        if (model->can_interact()) {
             float distance_from_model = model->distance_from_point_using_AABB(camera_pos);
-            if(distance_from_model < game_state->distance_from_closest_model){
-                //unnecessary copy here
-                game_state->closest_model = model->name();
+            if (distance_from_model < game_state->distance_from_closest_model) {
+                // unnecessary copy here
+                game_state->closest_model               = model->name();
                 game_state->distance_from_closest_model = distance_from_model;
             }
         }
@@ -379,17 +379,16 @@ void Game::SceneManager::check_collisions(float dt) {
             return true;
         }
 
-        //TODO enable monster collisions in some way outside of this method
-        //monster–AABB collision (skip self)
-        // if (monster_collision_enabled) {
-        //     auto monster_is_collided =
-        //         model->intersect_sphere_aabb(monster_center, monster_sphere_radius);
-        //     if (model->name() != monster_name && monster_is_collided) {
-        //         // std::cout << "Name is: " << name << ", monster name: " << monster_name << "\n";
-        //         monster_model->set_local_transform(last_mon_xform);
-        //         return true;
-        //     }
-        // }
+        // TODO enable monster collisions in some way outside of this method
+        // monster–AABB collision (skip self)
+        //  if (monster_collision_enabled) {
+        //      auto monster_is_collided =
+        //          model->intersect_sphere_aabb(monster_center, monster_sphere_radius);
+        //      if (model->name() != monster_name && monster_is_collided) {
+        //          // std::cout << "Name is: " << name << ", monster name: " << monster_name <<
+        //          "\n"; monster_model->set_local_transform(last_mon_xform); return true;
+        //      }
+        //  }
         return false;
     };
 
@@ -398,11 +397,10 @@ void Game::SceneManager::check_collisions(float dt) {
     for (auto& model : game_state->get_models()) {
         if (!model->is_active())
             continue;
-        if (cameraCollidesWithModelAABB(model.get())){
+        if (cameraCollidesWithModelAABB(model.get())) {
             camera.set_position(last_camera_position);
             break;
         }
-            
     }
 }
 
@@ -460,8 +458,8 @@ void Game::SceneManager::render(const glm::mat4& view, const glm::mat4& projecti
     glUseProgram(0);
 }
 
-Game::SceneManager::SceneManager(int width, int height, Camera::CameraObj camera)
-    : screen_width(width), screen_height(height), camera(camera) {
+Game::SceneManager::SceneManager(int width, int height, glm::vec3 camera_position)
+    : screen_width(width), screen_height(height), camera(width, height, camera_position) {
     event_handlers = {};
 }
 

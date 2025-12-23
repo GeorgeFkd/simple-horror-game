@@ -1,11 +1,8 @@
 // main.cpp
-#include "Camera.h"
 #include "Group.h"
 #include "Light.h"
 #include "SceneManager.h"
 #include "fwd.hpp"
-#include <GL/glew.h>
-#include <SDL.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <string>
@@ -13,9 +10,9 @@
 
 int main() {
 
-    Camera::CameraObj  camera(1280, 720, glm::vec3(0.0f, 5.0f, 3.5f));
-    Game::SceneManager scene_manager(1280, 720, camera);
-
+    auto camera_position = glm::vec3(0.0f,5.0f,3.5f);
+    Game::SceneManager scene_manager(1280, 720, camera_position);
+    
     scene_manager.initialise_opengl_sdl();
     scene_manager.initialise_shaders();
 

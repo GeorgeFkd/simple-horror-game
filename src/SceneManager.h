@@ -22,7 +22,7 @@ namespace Game {
     using namespace GlHelpers;
     class SceneManager {
     public:
-        SceneManager(int width, int height, Camera::CameraObj camera);
+        SceneManager(int width, int height, glm::vec3 camera_position);
         ~SceneManager();
         void debug_dump_model_names();
 
