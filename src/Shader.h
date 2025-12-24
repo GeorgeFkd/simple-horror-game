@@ -13,6 +13,20 @@
 #include "GlMacros.h"
 
 
+void deleteBuffer(GLuint *buffer);
+void deleteVertexArray(GLuint *vao);
+
+void makeVertexArray(GLuint *vao);
+void makeBuffer(GLuint *buffer);
+void bindVAO(GLuint vao);
+void unbindVAO();
+void bindBufferData(unsigned int size, void* ptr);
+void bindBuffer(GLuint vbo);
+void bindElementBuffer(GLuint ebo);
+void bindElementBufferData(unsigned int size,void* ptr);
+
+void enableVAttribArray(unsigned int);
+void bindVAttribPointer(unsigned int,unsigned int,std::size_t size,void* offsetPtr);
 
 class Shader {
 public:
@@ -32,6 +46,10 @@ public:
     inline void use(){
         glUseProgram(program_id);
     }
+
+    void bindVAO(GLuint vao);
+    void unbindVAO();
+    void drawElemTriangles(unsigned int count,void* offset_ptr);
 
     void set_bool(const std::string &name, bool value);         
     void set_int (const std::string &name, int value); 

@@ -1,20 +1,12 @@
 #include "Model.h"
 #include <limits>
 #include <memory>
+#include "Shader.h"
 
 Models::MData::~MData() {
-    if (ebo) {
-        GLCall(glDeleteBuffers(1, &ebo));
-        ebo = 0;
-    }
-    if (vbo) {
-        GLCall(glDeleteBuffers(1, &vbo));
-        vbo = 0;
-    }
-    if (vao) {
-        GLCall(glDeleteVertexArrays(1, &vao));
-        vao = 0;
-    }
+    deleteBuffer(&ebo);
+    deleteBuffer(&vbo);
+    deleteVertexArray(&vao);
 }
 
 static void print_vec3(glm::vec3 v) {
@@ -128,37 +120,27 @@ void Models::Model::initialize_local_aabb() {
     }
 }
 void Models::Model::reserve_open_gl_memory() {
-    GLCall(glGenVertexArrays(1, &model_data->vao));
-    GLCall(glGenBuffers(1, &model_data->vbo));
-    GLCall(glGenBuffers(1, &model_data->ebo));
+    makeVertexArray(&model_data->vao);
+    makeBuffer(&model_data->vbo);
+    makeBuffer(&model_data->ebo);
+    
+    bindVAO(model_data->vao);
+    bindBuffer(model_data->vbo);
+    bindBufferData(model_data->unique_vertices.size() * sizeof(Vertex),model_data->unique_vertices.data());
+    bindElementBuffer(model_data->ebo);
+    bindElementBufferData(model_data->indices.size() * sizeof(GLuint),model_data->indices.data());
 
-    GLCall(glBindVertexArray(model_data->vao));
+    auto size = sizeof(Vertex);
+    enableVAttribArray(0);
+    bindVAttribPointer(0,3,size,(void*)offsetof(Vertex,position));
+    enableVAttribArray(1);
+    bindVAttribPointer(1,2, size, (void*) offsetof(Vertex,texcoord));
+    enableVAttribArray(2);
+    bindVAttribPointer(2, 3, size, (void *)offsetof(Vertex,normal));
+    enableVAttribArray(3);
+    bindVAttribPointer(3,4,size,(void*) offsetof(Vertex,tangent));
 
-    GLCall(glBindBuffer(GL_ARRAY_BUFFER, model_data->vbo));
-    GLCall(glBufferData(GL_ARRAY_BUFFER, model_data->unique_vertices.size() * sizeof(Vertex),
-                        model_data->unique_vertices.data(), GL_STATIC_DRAW));
-
-    GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, model_data->ebo));
-    GLCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER, model_data->indices.size() * sizeof(GLuint),
-                        model_data->indices.data(), GL_STATIC_DRAW));
-
-    GLCall(glEnableVertexAttribArray(0));
-    GLCall(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-                                 (void*)offsetof(Vertex, position)));
-
-    GLCall(glEnableVertexAttribArray(1));
-    GLCall(glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-                                 (void*)offsetof(Vertex, texcoord)));
-
-    GLCall(glEnableVertexAttribArray(2));
-    GLCall(glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-                                 (void*)offsetof(Vertex, normal)));
-
-    GLCall(glEnableVertexAttribArray(3));
-    GLCall(glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-                                 (void*)offsetof(Vertex, tangent)));
-
-    GLCall(glBindVertexArray(0));
+    unbindVAO();
 }
 
 Models::Model::Model(const Model& model_to_replicate, std::string model_name, glm::mat4 transform) {
@@ -352,7 +334,7 @@ void Models::Model::draw(const glm::mat4& view, const glm::mat4& projection,
     shader->set_mat4("uModel", model_instance.world_transform);
 
     assert(model_data->vao != 0);
-    GLCall(glBindVertexArray(model_data->vao));
+    shader->bindVAO(model_data->vao);
     for (auto const& sm : model_data->submeshes) {
         shader->set_vec3("material.ambient", sm.mat.Ka);
         shader->set_vec3("material.diffuse", sm.mat.Kd);
@@ -384,21 +366,21 @@ void Models::Model::draw(const glm::mat4& view, const glm::mat4& projection,
             shader->set_float("bumpScale", 4.0f);
         }
         void* offsetPtr = (void*)(sm.index_offset * sizeof(GLuint));
-        GLCall(glDrawElements(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT, offsetPtr));
+        shader->drawElemTriangles(sm.index_count, offsetPtr);
     }
-    GLCall(glBindVertexArray(0));
+    shader->unbindVAO();
 }
 
 void Models::Model::draw_depth(std::shared_ptr<Shader> shader) {
 
     shader->set_mat4("uModel", model_instance.world_transform);
     assert(model_data->vao != 0);
-    GLCall(glBindVertexArray(model_data->vao));
+    shader->bindVAO(model_data->vao);
     for (auto const& sm : model_data->submeshes) {
         void* offset_ptr = (void*)(sm.index_offset * sizeof(GLuint));
-        GLCall(glDrawElements(GL_TRIANGLES, sm.index_count, GL_UNSIGNED_INT, offset_ptr));
+        shader->drawElemTriangles(sm.index_count, offset_ptr);
     }
-    GLCall(glBindVertexArray(0));
+    shader->unbindVAO();
 }
 
 void Models::Model::update_aabb() {
@@ -505,7 +487,7 @@ Models::Model Models::createFloor(float roomSize) {
                                           {roomSize, y, -roomSize}};
     std::vector<glm::vec3> floor_normals(4, glm::vec3(0, 1, 0));
     std::vector<glm::vec2> floor_uvs     = {{0, 0}, {0, 1}, {1, 1}, {1, 0}};
-    std::vector<GLuint>    floor_indices = {0, 1, 2, 0, 2, 3};
+    std::vector<unsigned int>    floor_indices = {0, 1, 2, 0, 2, 3};
 
     Material floor_material;
     floor_material.Ka           = glm::vec3(0.15f, 0.07f, 0.02f); // dark ambient
@@ -528,7 +510,7 @@ Models::Model Models::createCeiling(float roomSize, float height) {
     std::vector<glm::vec3> floor_normals(4, glm::vec3(0, -1, 0));
     std::vector<glm::vec2> floor_uvs = {{0, 0}, {0, 1}, {1, 1}, {1, 0}};
     // the indices are changed to agree with the normals 0,-1,0 as otherwise it is discarded
-    std::vector<GLuint> floor_indices = {0, 2, 1, 0, 3, 2};
+    std::vector<unsigned int> floor_indices = {0, 2, 1, 0, 3, 2};
 
     Material floor_material;
     floor_material.Ka           = glm::vec3(0.15f, 0.07f, 0.02f); // dark ambient
@@ -564,7 +546,7 @@ Models::Model Models::createWallFront(float roomSize, float roomHeight) {
     std::vector<glm::vec2> wall_uvs = {{0.0f, 0.0f}, {1.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f}};
 
     // two triangles, wound CCW from the normal side
-    std::vector<GLuint> wall_indices = {0, 2, 1, 0, 3, 2};
+    std::vector<unsigned int> wall_indices = {0, 2, 1, 0, 3, 2};
 
     // same material as your floor/ceiling (tweak as needed)
     Material wall_material;
@@ -600,7 +582,7 @@ Models::Model Models::createWallRight(float roomSize, float roomHeight) {
     std::vector<glm::vec2> wall_uvs = {{0.0f, 0.0f}, {1.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f}};
 
     // two triangles, wound CCW from the normal side
-    std::vector<GLuint> wall_indices = {0, 1, 2, 0, 2, 3};
+    std::vector<unsigned int> wall_indices = {0, 1, 2, 0, 2, 3};
 
     // same material as your floor/ceiling (tweak as needed)
     Material wall_material;
@@ -636,7 +618,7 @@ Models::Model Models::createWallLeft(float roomSize, float roomHeight) {
     std::vector<glm::vec2> wall_uvs = {{0.0f, 0.0f}, {1.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f}};
 
     // two triangles, wound CCW from the normal side
-    std::vector<GLuint> wall_indices = {0, 2, 1, 0, 3, 2};
+    std::vector<unsigned int> wall_indices = {0, 2, 1, 0, 3, 2};
 
     // same material as your floor/ceiling (tweak as needed)
     Material wall_material;
@@ -673,7 +655,7 @@ Models::Model Models::createWallBack(float roomSize, float roomHeight) {
     std::vector<glm::vec2> wall_uvs = {{0.0f, 0.0f}, {1.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f}};
 
     // two triangles, wound CCW from the normal side
-    std::vector<GLuint> wall_indices = {0, 1, 2, 0, 2, 3};
+    std::vector<unsigned int> wall_indices = {0, 1, 2, 0, 2, 3};
 
     // same material as your floor/ceiling (tweak as needed)
     Material wall_material;
