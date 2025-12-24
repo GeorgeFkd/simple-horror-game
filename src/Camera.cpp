@@ -76,7 +76,6 @@ void Camera::CameraObj::process_input(const SDL_Event &event){
 const std::array<glm::vec4,6> Camera::CameraObj::extract_frustum_planes() const{
 
     const glm::mat4 M = get_projection_matrix() * get_view_matrix();
-
     std::array<glm::vec4,6> P;
 
     glm::mat4 T = glm::transpose(M);

@@ -1,6 +1,7 @@
 #include "SceneManager.h"
 #include "Camera.h"
 #include "Light.h"
+#include "Shader.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_mixer.h>
 #include <SDL_keyboard.h>
@@ -36,12 +37,14 @@ void Game::SceneManager::initialise_opengl_sdl() {
     // SDL_GLContext
     glCtx = SDL_GL_CreateContext(window);
 
-    glewInit();
-    glEnable(GL_DEPTH_TEST);
-    glViewport(0, 0, 1280, 720);
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    initialize_glew();
+    enable_gl_features({GL_DEPTH_TEST});
+    set_viewport(0, 0,screen_width, screen_height);
+    set_clear_color(0.0f, 0.0f, 0.0f, 1.0f);
+
+    clear_buffers(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     SDL_SetRelativeMouseMode(SDL_TRUE);
 }
 
@@ -185,8 +188,9 @@ void Game::SceneManager::run_game_loop() {
         }
 
         check_collisions(dt);
-        glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        set_clear_color(0.5f, 0.5f, 0.5f, 1.0f);
+        // glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+        clear_buffers(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         // glEnable(GL_BLEND);
         // glBlendFunc(GL_ONE,GL_ONE);
 
@@ -269,8 +273,6 @@ void Game::SceneManager::run_handler_for(const std::string& m) {
 }
 
 void Game::SceneManager::render_depth_pass() {
-    auto depth2D   = get_shader_by_name("depth_2d");
-    auto depthCube = get_shader_by_name("depth_cube");
 
     for (auto& light : game_state->get_lights()) {
         if (!light->is_turned_on()) {
@@ -313,7 +315,8 @@ void Game::SceneManager::handle_sdl_events(bool& running) {
 
         if (ev.type == SDL_WINDOWEVENT && ev.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
             int w = ev.window.data1, h = ev.window.data2;
-            glViewport(0, 0, w, h);
+            camera.set_window(w,h);
+            set_viewport(0, 0, w, h);
         }
 
         const auto keys = SDL_GetKeyboardState(nullptr);
@@ -405,10 +408,11 @@ void Game::SceneManager::check_collisions(float dt) {
 }
 
 void Game::SceneManager::render(const glm::mat4& view, const glm::mat4& projection) {
-
-    GLCall(glViewport(0, 0, screen_width, screen_height));
-    GLCall(glEnable(GL_MULTISAMPLE));
-    GLCall(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
+    
+    set_viewport(0, 0, screen_width, screen_height);
+    enable_gl_features({GL_MULTISAMPLE});
+    //removing this doesnt change anything for some reason;
+    clear_buffers(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     auto shader = get_shader_by_name("blinn-phong");
 
@@ -437,11 +441,10 @@ void Game::SceneManager::render(const glm::mat4& view, const glm::mat4& projecti
         model->draw(view, projection, shader);
     }
 
-    GLCall(glDisable(GL_MULTISAMPLE));
-    glUseProgram(0);
+    disable_gl_capability(GL_MULTISAMPLE);
+    shader->unbind();
 
-    GLCall(glViewport(0, 0, screen_width, screen_height));
-    glm::mat4   text_projection = glm::ortho(0.0f, 1280.0f, 0.0f, 720.0f);
+    glm::mat4   text_projection = glm::ortho(0.0f, (float)screen_width, 0.0f, (float) screen_height);
     auto        textShader      = get_shader_by_name("text");
     std::string displayed_text  = "pages:" + std::to_string(game_state->pages_collected);
     text_renderer.render_text(textShader, displayed_text, 50.0f, 720.0f - 50.0f, 1.2f,
@@ -455,7 +458,7 @@ void Game::SceneManager::render(const glm::mat4& view, const glm::mat4& projecti
         text_renderer.render_text(textShader, bottom_text_hints, 300.0f, 720.0f - 650.0f, 0.8f,
                                   {0.5f, 0.5f, 0.0f}, text_projection);
     }
-    glUseProgram(0);
+    textShader->unbind();
 }
 
 Game::SceneManager::SceneManager(int width, int height, glm::vec3 camera_position)

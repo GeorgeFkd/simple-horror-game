@@ -31,7 +31,10 @@ void bindVAttribPointer(unsigned int,unsigned int,std::size_t size,void* offsetP
 void enable_gl_features(std::initializer_list<GLenum> features);
 void set_viewport(int x, int y, int width, int height);
 void bind_framebuffer(GLenum target, GLuint framebuffer);
-void clear_depth_buffer();
+void gl_clear();
+void clear_buffers(GLbitfield mask);
+void disable_gl_capability(GLenum cap);
+
 void set_cull_face(GLenum face);
 
 void set_color_mask(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha);
@@ -61,6 +64,9 @@ void set_texture_parameterfv(GLenum target, GLenum pname, const GLfloat* params)
 void generate_framebuffer(GLuint* fbo);
 void generate_texture(GLuint* texture);
 
+GLenum initialize_glew();
+void set_clear_color(float r, float g, float b, float a);
+
 class Shader {
 public:
 
@@ -79,6 +85,11 @@ public:
     inline void use(){
         glUseProgram(program_id);
     }
+
+    inline void unbind() {
+        glUseProgram(0);
+    }
+
 
     void bindVAO(GLuint vao);
     void unbindVAO();

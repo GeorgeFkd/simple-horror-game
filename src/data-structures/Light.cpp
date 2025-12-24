@@ -2,7 +2,6 @@
 #include "Shader.h"
 #include <iostream>
 #include <memory>
-#include "Camera.h"
 Light::Light(LightType light_type, const glm::vec3& position, const glm::vec3& direction,
              const glm::vec3& ambient, const glm::vec3& diffuse, const glm::vec3& specular,
              float cutoff,       // inner cone
@@ -19,7 +18,6 @@ Light::Light(LightType light_type, const glm::vec3& position, const glm::vec3& d
       attenuation_power(attenuation_power), light_power(light_power), is_on(is_on), label(label),
       color(color) {
 
-    
     generate_framebuffer(&depth_map_fbo);
     generate_texture(&depth_map);
     if (type == LightType::POINT) {
@@ -51,8 +49,10 @@ Light::Light(LightType light_type, const glm::vec3& position, const glm::vec3& d
         set_texture_parameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
         // GLCall(glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor));
         bind_framebuffer(GL_FRAMEBUFFER, depth_map_fbo);
-        attach_texture2d_to_framebuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depth_map, 0);
-        // GLCall(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depth_map,
+        attach_texture2d_to_framebuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
+                                        depth_map, 0);
+        // GLCall(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
+        // depth_map,
         //                               0));
     }
 
@@ -88,11 +88,31 @@ void Light::draw_lighting(std::shared_ptr<Shader> shader, const std::string& bas
     shader->set_mat4(base + "proj", get_light_projection());
 }
 
+const static std::array<glm::vec4, 6> extract_frustum_planes(const glm::mat4& M) {
+    std::array<glm::vec4, 6> P;
+
+    glm::mat4 T = glm::transpose(M);
+    P[0]        = T[3] + T[0]; // left
+    P[1]        = T[3] - T[0]; // right
+    P[2]        = T[3] + T[1]; // bottom
+    P[3]        = T[3] - T[1]; // top
+    P[4]        = T[3] + T[2]; // near
+    P[5]        = T[3] - T[2]; // far
+
+    // Normalize
+    for (auto& p : P) {
+        float len = glm::length(glm::vec3(p));
+        p /= len;
+    }
+
+    return P;
+}
+
 void Light::draw_depth_pass(std::shared_ptr<Shader>                            shader,
                             const std::vector<std::unique_ptr<Models::Model>>& models) const {
     set_viewport(0, 0, shadow_width, shadow_height);
     bind_framebuffer(GL_FRAMEBUFFER, depth_map_fbo);
-    clear_depth_buffer();
+    gl_clear();
 
     enable_gl_features({GL_DEPTH_TEST, GL_CULL_FACE});
 
@@ -109,7 +129,7 @@ void Light::draw_depth_pass(std::shared_ptr<Shader>                            s
             shader->set_float("farPlane", far_plane);
             shader->set_mat4("shadowMatrices[" + std::to_string(face) + "]", proj * views[face]);
             glm::mat4 VP     = proj * views[face];
-            auto      planes = Camera::CameraObj::extract_frustum_planes(VP);
+            auto      planes = extract_frustum_planes(VP);
 
             // draw all models into this face
             for (auto& m : models) {
@@ -126,7 +146,7 @@ void Light::draw_depth_pass(std::shared_ptr<Shader>                            s
         shader->set_mat4("uView", get_light_view());
         shader->set_mat4("uProj", get_light_projection());
         glm::mat4 VP     = get_light_projection() * get_light_view();
-        auto      planes = Camera::CameraObj::extract_frustum_planes(VP);
+        auto      planes = extract_frustum_planes(VP);
 
         for (auto& m : models) {
             m->in_frustum(planes);

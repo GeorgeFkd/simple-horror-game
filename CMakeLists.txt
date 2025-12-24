@@ -98,17 +98,13 @@ target_include_directories(renderer PUBLIC
 ${CMAKE_CURRENT_SOURCE_DIR}/src 
 ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
 ${SDL2_INCLUDE_DIRS}
-${OPENGL_INCLUDE_DIR}
-${GLEW_INCLUDE_DIRS}
 ${SDL2_mixer_INCLUDE_DIRS}
 /usr/include/glm
 )
 
 target_link_libraries(renderer PRIVATE 
-${OPENGL_LIBRARIES} 
 ${SDL2_LIBRARIES}
 ${SDL2_mixer_LIBRARIES}
-GLEW::GLEW 
 glm::glm
 opengl_backend
 obj_loader_lib 

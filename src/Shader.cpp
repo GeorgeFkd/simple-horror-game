@@ -73,7 +73,27 @@ void bind_framebuffer(GLenum target, GLuint framebuffer)
     GLCall(glBindFramebuffer(target, framebuffer));
 }
 
-void clear_depth_buffer()
+GLenum initialize_glew()
+{
+    GLenum status = glewInit();
+    if (status != GLEW_OK) {
+        std::cerr << "GLEW Initialization failed: " << glewGetErrorString(status) << "\n";
+    }
+    return status;
+}
+
+void clear_buffers(GLbitfield mask)
+{
+    GLCall(glClear(mask));
+}
+
+void disable_gl_capability(GLenum cap)
+{
+    GLCall(glDisable(cap));
+}
+
+
+void gl_clear()
 {
     GLCall(glClear(GL_DEPTH_BUFFER_BIT));
 }
@@ -87,6 +107,11 @@ void set_color_mask(GLboolean red, GLboolean green, GLboolean blue, GLboolean al
 {
     GLCall(glColorMask(red, green, blue, alpha));
 }
+void set_clear_color(float r, float g, float b, float a)
+{
+    GLCall(glClearColor(r, g, b, a));
+}
+
 
 void unbind_shader()
 {
