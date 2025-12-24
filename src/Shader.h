@@ -67,6 +67,14 @@ void generate_texture(GLuint* texture);
 GLenum initialize_glew();
 void set_clear_color(float r, float g, float b, float a);
 
+void set_pixel_store(GLenum pname, GLint param);
+void unbind_texture(GLenum target);
+void set_blend_func(GLenum sfactor, GLenum dfactor);
+void set_uniform3f(GLint location, float v0, float v1, float v2);
+void activate_texture_unit(GLenum texture);
+void draw_arrays(GLenum mode, GLint first, GLsizei count);
+void update_buffer_subdata(GLenum target, GLintptr offset, GLsizeiptr size, const void* data);
+
 class Shader {
 public:
 

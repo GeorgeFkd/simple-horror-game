@@ -82,6 +82,32 @@ GLenum initialize_glew()
     return status;
 }
 
+void set_pixel_store(GLenum pname, GLint param)
+{
+    GLCall(glPixelStorei(pname, param));
+}
+
+void set_blend_func(GLenum sfactor, GLenum dfactor)
+{
+    GLCall(glBlendFunc(sfactor, dfactor));
+}
+
+void draw_arrays(GLenum mode, GLint first, GLsizei count)
+{
+    GLCall(glDrawArrays(mode, first, count));
+}
+
+void update_buffer_subdata(GLenum target, GLintptr offset, GLsizeiptr size, const void* data)
+{
+    GLCall(glBufferSubData(target, offset, size, data));
+}
+
+
+void unbind_texture(GLenum target)
+{
+    GLCall(glBindTexture(target, 0));
+}
+
 void clear_buffers(GLbitfield mask)
 {
     GLCall(glClear(mask));
@@ -281,6 +307,23 @@ void attach_texture2d_to_framebuffer(GLenum target, GLenum attachment, GLenum te
 void set_texture_parameterfv(GLenum target, GLenum pname, const GLfloat* params)
 {
     GLCall(glTexParameterfv(target, pname, params));
+}
+
+
+
+// void set_blend_func(GLenum sfactor, GLenum dfactor)
+// {
+//     GLCall(glBlendFunc(sfactor, dfactor));
+// }
+
+void set_uniform3f(GLint location, float v0, float v1, float v2)
+{
+    GLCall(glUniform3f(location, v0, v1, v2));
+}
+
+void activate_texture_unit(GLenum texture)
+{
+    GLCall(glActiveTexture(texture));
 }
 
 

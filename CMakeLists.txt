@@ -73,7 +73,7 @@ target_include_directories(text_handler PRIVATE
 ${TEXT_HANDLER_INCLUDES} 
 ${FREETYPE_INCLUDE_DIRS}
 )
-target_link_libraries(text_handler PRIVATE ${OPENGL_LIBRARIES} GLEW::GLEW glm::glm ${FREETYPE_LIBRARIES})
+target_link_libraries(text_handler PRIVATE glm::glm ${FREETYPE_LIBRARIES})
 
 
 add_library(opengl_backend STATIC src/Shader.cpp)
