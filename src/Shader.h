@@ -74,6 +74,7 @@ void set_uniform3f(GLint location, float v0, float v1, float v2);
 void activate_texture_unit(GLenum texture);
 void draw_arrays(GLenum mode, GLint first, GLsizei count);
 void update_buffer_subdata(GLenum target, GLintptr offset, GLsizeiptr size, const void* data);
+void generate_mipmap(GLenum target);
 
 class Shader {
 public:

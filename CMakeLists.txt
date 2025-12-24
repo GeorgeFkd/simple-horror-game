@@ -52,18 +52,7 @@ if (NOT SDL2_FOUND)
     message(ERROR "SDL2 was not found")
 endif()
 
-add_library(obj_loader_lib STATIC src/OBJLoader.cpp)
-target_include_directories(obj_loader_lib 
-PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
-PRIVATE ${OPENGL_INCLUDE_DIR} ${TIFF_INCLUDE_DIR} /usr/include/glm
-)
 
-target_link_libraries(obj_loader_lib PRIVATE
-    ${OPENGL_LIBRARIES}
-    TIFF::TIFF
-    GLEW::glew
-    glm::glm
-)
 
 
 set(TEXT_HANDLER_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures)
@@ -91,6 +80,19 @@ ${OPENGL_LIBRARIES}
 GLEW::GLEW 
 glm::glm 
 )
+
+add_library(obj_loader_lib STATIC src/OBJLoader.cpp)
+target_include_directories(obj_loader_lib 
+PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
+PRIVATE ${TIFF_INCLUDE_DIR} /usr/include/glm
+)
+
+target_link_libraries(obj_loader_lib PRIVATE
+    TIFF::TIFF
+    glm::glm
+    opengl_backend
+)
+
 
 add_library(renderer STATIC src/Camera.cpp src/Model.cpp src/GameState.cpp src/Group.cpp src/Monster.cpp src/data-structures/Light.cpp src/SceneManager.cpp)
 

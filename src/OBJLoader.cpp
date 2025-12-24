@@ -1,16 +1,15 @@
 #include "OBJLoader.h"
 #include "tiffio.h"
 #define STB_IMAGE_IMPLEMENTATION
-#include "GlMacros.h"
+#include "Shader.h"
 #include "stb_image.h"
-#include <GL/glew.h>
 
 void ObjectLoader::OBJLoader::clear_cache() {
-  model_cache.clear();
+    model_cache.clear();
 }
 
-
-std::shared_ptr<ObjectLoader::ModelData> ObjectLoader::OBJLoader::read_from_file(const std::string& filename) {
+std::shared_ptr<ObjectLoader::ModelData>
+ObjectLoader::OBJLoader::read_from_file(const std::string& filename) {
 #ifdef DEBUG_OBJLOADER
     std::cout << "Reading .obj file from: " << filename << "\n";
 #endif
@@ -131,7 +130,7 @@ std::shared_ptr<ObjectLoader::ModelData> ObjectLoader::OBJLoader::read_from_file
     }
 
     this->load_textures();
-    auto shared_data = std::make_shared<ObjectLoader::ModelData>(model_data);
+    auto shared_data      = std::make_shared<ObjectLoader::ModelData>(model_data);
     model_cache[filename] = shared_data;
     return shared_data;
 }
@@ -168,17 +167,21 @@ GLuint ObjectLoader::load_texture_from_tiff(const std::string& filename) {
     }
 
     GLuint tex;
-    GLCall(glGenTextures(1, &tex));
-    GLCall(glBindTexture(GL_TEXTURE_2D, tex));
-    GLCall(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE,
-                        data.data()));
-    GLCall(glGenerateMipmap(GL_TEXTURE_2D));
+    generate_texture(&tex);           // glGenTextures
+    bind_texture(GL_TEXTURE_2D, tex); // glBindTexture
 
-    GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT));
-    GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT));
-    GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR));
-    GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
-    GLCall(glBindTexture(GL_TEXTURE_2D, 0));
+    set_texture_image_2d(GL_TEXTURE_2D, // glTexImage2D
+                         0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data.data());
+
+    generate_mipmap(GL_TEXTURE_2D); // glGenerateMipmap
+
+    set_texture_parameters(GL_TEXTURE_2D, {// glTexParameteri
+                                           {GL_TEXTURE_WRAP_S, GL_REPEAT},
+                                           {GL_TEXTURE_WRAP_T, GL_REPEAT},
+                                           {GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR},
+                                           {GL_TEXTURE_MAG_FILTER, GL_LINEAR}});
+
+    unbind_texture(GL_TEXTURE_2D);
 
     TIFFClose(tif);
     return tex;
@@ -208,17 +211,23 @@ GLuint ObjectLoader::load_texture_from_file(const std::string& filepath) {
 
     GLenum format = (channels == 4) ? GL_RGBA : GL_RGB;
     GLuint texture_id;
-    GLCall(glGenTextures(1, &texture_id));
-    GLCall(glBindTexture(GL_TEXTURE_2D, texture_id));
-    GLCall(
-        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data));
-    GLCall(glGenerateMipmap(GL_TEXTURE_2D));
 
-    GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT));
-    GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT));
-    GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR));
-    GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
-    GLCall(glBindTexture(GL_TEXTURE_2D, 0));
+    generate_texture(&texture_id);           // glGenTextures
+    bind_texture(GL_TEXTURE_2D, texture_id); // glBindTexture
+
+    set_texture_image_2d(GL_TEXTURE_2D, // glTexImage2D
+                         0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+
+    generate_mipmap(GL_TEXTURE_2D); // glGenerateMipmap
+
+    set_texture_parameters(GL_TEXTURE_2D, {// glTexParameteri
+                                           {GL_TEXTURE_WRAP_S, GL_REPEAT},
+                                           {GL_TEXTURE_WRAP_T, GL_REPEAT},
+                                           {GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR},
+                                           {GL_TEXTURE_MAG_FILTER, GL_LINEAR}});
+
+    unbind_texture(GL_TEXTURE_2D); // glBindTexture(..., 0)
+
     stbi_image_free(data);
 
     return texture_id;
@@ -452,7 +461,7 @@ void ObjectLoader::OBJLoader::read_mtllib(const char* buff, const std::string& o
     Material current_mat;
     auto     commit_mat = [&]() {
         if (!current_mat.name.empty()) {
-            int id = model_data.m_materials.size();
+            int id                                        = model_data.m_materials.size();
             model_data.m_mat_name_to_id[current_mat.name] = id;
             model_data.m_materials.push_back(std::move(current_mat));
             current_mat = Material{};

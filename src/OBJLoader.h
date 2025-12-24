@@ -1,6 +1,5 @@
 
 #pragma once
-#include "GlMacros.h"
 #include "Material.h"
 #include <cctype>
 #include <charconv>
@@ -20,7 +19,6 @@
 #endif
 
 namespace ObjectLoader {
-using namespace GlHelpers;
 
 GLuint load_texture_from_tiff(const std::string& filename);
 GLuint load_texture_from_file(const std::string& filepath);

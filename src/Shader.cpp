@@ -143,6 +143,10 @@ void unbind_shader()
 {
     GLCall(glUseProgram(0));
 }
+void generate_mipmap(GLenum target)
+{
+    GLCall(glGenerateMipmap(target));
+}
 
 GLuint create_framebuffer()
 {
