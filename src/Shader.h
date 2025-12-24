@@ -28,6 +28,39 @@ void bindElementBufferData(unsigned int size,void* ptr);
 void enableVAttribArray(unsigned int);
 void bindVAttribPointer(unsigned int,unsigned int,std::size_t size,void* offsetPtr);
 
+void enable_gl_features(std::initializer_list<GLenum> features);
+void set_viewport(int x, int y, int width, int height);
+void bind_framebuffer(GLenum target, GLuint framebuffer);
+void clear_depth_buffer();
+void set_cull_face(GLenum face);
+
+void set_color_mask(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha);
+void unbind_shader();
+
+GLuint create_framebuffer();
+GLuint create_depth_cubemap(unsigned width, unsigned height);
+GLuint create_depth_texture_2d(unsigned width, unsigned height);
+void attach_depth_texture(GLuint fbo, GLuint texture, bool cubemap);
+void validate_framebuffer();
+void disable_color_buffers();
+void unbind_framebuffer();
+void set_texture_parameter(GLenum target, GLenum pname, GLint param);
+void set_texture_parameters(GLenum target, std::initializer_list<std::tuple<GLenum, GLint>> params);
+
+void bind_texture(GLenum target, GLuint texture);
+void set_texture_image_2d(GLenum target, GLint level, GLint internalFormat,
+                          GLsizei width, GLsizei height, GLint border,
+                          GLenum format, GLenum type, const void* data);
+void set_texture_parameterfv(GLenum target, GLenum pname, const GLfloat* params);
+
+void attach_texture_to_framebuffer(GLenum target, GLenum attachment, GLuint texture, GLint level);
+
+void attach_texture2d_to_framebuffer(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
+void set_texture_parameterfv(GLenum target, GLenum pname, const GLfloat* params);
+
+void generate_framebuffer(GLuint* fbo);
+void generate_texture(GLuint* texture);
+
 class Shader {
 public:
 

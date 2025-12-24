@@ -2,9 +2,6 @@
 #include <iostream>
 
 using namespace GlHelpers;
-// GLCall(glGenVertexArrays(1, &model_data->vao));
-//     GLCall(glGenBuffers(1, &model_data->vbo));
-//     GLCall(glGenBuffers(1, &model_data->ebo));
 
 void makeVertexArray(GLuint* vao) {
     GLCall(glGenVertexArrays(1, vao));
@@ -57,6 +54,212 @@ void bindVAttribPointer(unsigned int start,unsigned  int end,std::size_t size,vo
     GLCall(glVertexAttribPointer(start , end, GL_FLOAT, GL_FALSE, size, 
                              offsetPtr));
 }
+
+void enable_gl_features(std::initializer_list<GLenum> features)
+{
+    for (GLenum feature : features) {
+        GLCall(glEnable(feature));
+    }
+}
+
+
+void set_viewport(int x, int y, int width, int height)
+{
+    GLCall(glViewport(x, y, width, height));
+}
+
+void bind_framebuffer(GLenum target, GLuint framebuffer)
+{
+    GLCall(glBindFramebuffer(target, framebuffer));
+}
+
+void clear_depth_buffer()
+{
+    GLCall(glClear(GL_DEPTH_BUFFER_BIT));
+}
+
+void set_cull_face(GLenum face)
+{
+    GLCall(glCullFace(face));
+}
+
+void set_color_mask(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha)
+{
+    GLCall(glColorMask(red, green, blue, alpha));
+}
+
+void unbind_shader()
+{
+    GLCall(glUseProgram(0));
+}
+
+GLuint create_framebuffer()
+{
+    GLuint fbo = 0;
+    GLCall(glGenFramebuffers(1, &fbo));
+    return fbo;
+}
+
+GLuint create_depth_cubemap(unsigned width, unsigned height)
+{
+    GLuint texture = 0;
+    GLCall(glGenTextures(1, &texture));
+    GLCall(glBindTexture(GL_TEXTURE_CUBE_MAP, texture));
+
+    for (unsigned i = 0; i < 6; ++i)
+    {
+        GLCall(glTexImage2D(
+            GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+            0,
+            GL_DEPTH_COMPONENT,
+            width,
+            height,
+            0,
+            GL_DEPTH_COMPONENT,
+            GL_FLOAT,
+            nullptr
+        ));
+    }
+
+    GLCall(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST));
+    GLCall(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
+    GLCall(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
+    GLCall(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
+    GLCall(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE));
+
+    return texture;
+}
+
+GLuint create_depth_texture_2d(unsigned width, unsigned height)
+{
+    GLuint texture = 0;
+    GLCall(glGenTextures(1, &texture));
+    GLCall(glBindTexture(GL_TEXTURE_2D, texture));
+
+    GLCall(glTexImage2D(
+        GL_TEXTURE_2D,
+        0,
+        GL_DEPTH_COMPONENT,
+        width,
+        height,
+        0,
+        GL_DEPTH_COMPONENT,
+        GL_FLOAT,
+        nullptr
+    ));
+
+    GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST));
+    GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
+    GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER));
+    GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER));
+
+    float border_color[] = {1.f, 1.f, 1.f, 1.f};
+    GLCall(glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, border_color));
+
+    return texture;
+}
+
+void set_texture_parameter(GLenum target, GLenum pname, GLint param)
+{
+    GLCall(glTexParameteri(target, pname, param));
+}
+void set_texture_parameters(GLenum target, std::initializer_list<std::tuple<GLenum, GLint>> params)
+{
+    for (const auto& p : params)
+    {
+        GLenum pname;
+        GLint param;
+        std::tie(pname, param) = p;
+        GLCall(glTexParameteri(target, pname, param));
+    }
+}
+
+void bind_texture(GLenum target, GLuint texture)
+{
+    GLCall(glBindTexture(target, texture));
+}
+
+void set_texture_image_2d(GLenum target, GLint level, GLint internalFormat,
+                          GLsizei width, GLsizei height, GLint border,
+                          GLenum format, GLenum type, const void* data)
+{
+    GLCall(glTexImage2D(target, level, internalFormat, width, height, border, format, type, data));
+}
+
+
+
+void generate_framebuffer(GLuint* fbo)
+{
+    GLCall(glGenFramebuffers(1, fbo));
+}
+
+void generate_texture(GLuint* texture)
+{
+    GLCall(glGenTextures(1, texture));
+}
+
+void attach_depth_texture(GLuint fbo, GLuint texture, bool cubemap)
+{
+    GLCall(glBindFramebuffer(GL_FRAMEBUFFER, fbo));
+
+    if (cubemap)
+    {
+        GLCall(glFramebufferTexture(
+            GL_FRAMEBUFFER,
+            GL_DEPTH_ATTACHMENT,
+            texture,
+            0
+        ));
+    }
+    else
+    {
+        GLCall(glFramebufferTexture2D(
+            GL_FRAMEBUFFER,
+            GL_DEPTH_ATTACHMENT,
+            GL_TEXTURE_2D,
+            texture,
+            0
+        ));
+    }
+}
+
+void attach_texture_to_framebuffer(GLenum target, GLenum attachment, GLuint texture, GLint level)
+{
+    GLCall(glFramebufferTexture(target, attachment, texture, level));
+}
+
+void validate_framebuffer()
+{
+    GLCall(GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER));
+    if (status != GL_FRAMEBUFFER_COMPLETE)
+    {
+        std::cerr << "Framebuffer not complete! Status: " << status << "\n";
+    }
+}
+
+void disable_color_buffers()
+{
+    GLCall(glDrawBuffer(GL_NONE));
+    GLCall(glReadBuffer(GL_NONE));
+}
+
+void unbind_framebuffer()
+{
+    GLCall(glBindFramebuffer(GL_FRAMEBUFFER, 0));
+}
+
+void attach_texture2d_to_framebuffer(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level)
+{
+    GLCall(glFramebufferTexture2D(target, attachment, textarget, texture, level));
+}
+
+void set_texture_parameterfv(GLenum target, GLenum pname, const GLfloat* params)
+{
+    GLCall(glTexParameterfv(target, pname, params));
+}
+
+
+
 
 Shader::Shader(const std::vector<std::string>& shader_paths,
            const std::vector<GLenum>& shader_types,

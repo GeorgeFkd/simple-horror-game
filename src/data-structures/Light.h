@@ -10,9 +10,6 @@
 #include "Shader.h"
 #include "Model.h"
 #include "fwd.hpp"
-#include "GlMacros.h"
-#include "Camera.h"
-
 enum class LightType { 
     POINT = 0,
     DIRECTIONAL = 1, 

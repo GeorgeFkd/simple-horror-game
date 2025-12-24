@@ -11,11 +11,6 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include(FetchContent)
 
-
-set(SOURCES
-    src/main.cpp
-)
-
 FetchContent_Declare(
   googletest
   URL https://github.com/google/googletest/archive/52eb8108c5bdec04579160ae17225d66034bd723.zip
@@ -81,7 +76,23 @@ ${FREETYPE_INCLUDE_DIRS}
 target_link_libraries(text_handler PRIVATE ${OPENGL_LIBRARIES} GLEW::GLEW glm::glm ${FREETYPE_LIBRARIES})
 
 
-add_library(renderer STATIC src/Camera.cpp src/Model.cpp src/GameState.cpp src/Group.cpp src/Monster.cpp src/data-structures/Light.cpp src/Shader.cpp src/SceneManager.cpp)
+add_library(opengl_backend STATIC src/Shader.cpp)
+target_include_directories(opengl_backend 
+PRIVATE 
+${OPENGL_INCLUDE_DIR} 
+${GLEW_INCLUDE_DIR} 
+/usr/include/glm 
+${CMAKE_CURRENT_SOURCE_DIR}/src 
+${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
+)
+
+target_link_libraries(opengl_backend PRIVATE
+${OPENGL_LIBRARIES} 
+GLEW::GLEW 
+glm::glm 
+)
+
+add_library(renderer STATIC src/Camera.cpp src/Model.cpp src/GameState.cpp src/Group.cpp src/Monster.cpp src/data-structures/Light.cpp src/SceneManager.cpp)
 
 target_include_directories(renderer PUBLIC 
 ${CMAKE_CURRENT_SOURCE_DIR}/src 
@@ -98,13 +109,14 @@ ${OPENGL_LIBRARIES}
 ${SDL2_LIBRARIES}
 ${SDL2_mixer_LIBRARIES}
 GLEW::GLEW 
-glm::glm 
+glm::glm
+opengl_backend
 obj_loader_lib 
 text_handler
 )
 
 
-add_executable(opengl_app ${SOURCES})
+add_executable(opengl_app src/main.cpp)
 
 target_include_directories(opengl_app PRIVATE
     /usr/include/glm
