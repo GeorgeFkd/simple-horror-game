@@ -22,7 +22,6 @@ find_package(OpenGL REQUIRED)
 find_package(SDL2 REQUIRED)
 find_package(GLEW REQUIRED)
 find_package(glm REQUIRED)
-# find_package(Catch2)
 find_package(TIFF REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(SDL2_mixer REQUIRED SDL2_mixer)
@@ -94,9 +93,35 @@ target_link_libraries(obj_loader_lib PRIVATE
 )
 
 
-add_library(renderer STATIC src/Camera.cpp src/Model.cpp src/GameState.cpp src/Group.cpp src/Monster.cpp src/data-structures/Light.cpp src/SceneManager.cpp)
+add_library(scene_objects STATIC src/Model.cpp src/Group.cpp src/data-structures/Light.cpp)
 
-target_include_directories(renderer PUBLIC 
+target_include_directories(scene_objects PRIVATE
+${CMAKE_CURRENT_SOURCE_DIR}/src
+${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
+/usr/include/glm
+)
+
+target_link_libraries(scene_objects PRIVATE
+opengl_backend
+glm::glm
+)
+
+add_library(opengl_renderer STATIC src/Renderer.cpp)
+target_include_directories(opengl_renderer PRIVATE
+${CMAKE_CURRENT_SOURCE_DIR}/src
+${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
+/usr/include/glm
+)
+
+target_link_libraries(opengl_renderer PRIVATE
+opengl_backend
+glm::glm
+scene_objects
+)
+
+add_library(game STATIC src/Camera.cpp  src/GameState.cpp  src/Monster.cpp src/SceneManager.cpp)
+
+target_include_directories(game PUBLIC 
 ${CMAKE_CURRENT_SOURCE_DIR}/src 
 ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
 ${SDL2_INCLUDE_DIRS}
@@ -104,10 +129,12 @@ ${SDL2_mixer_INCLUDE_DIRS}
 /usr/include/glm
 )
 
-target_link_libraries(renderer PRIVATE 
+target_link_libraries(game PRIVATE 
 ${SDL2_LIBRARIES}
 ${SDL2_mixer_LIBRARIES}
 glm::glm
+scene_objects
+opengl_renderer
 opengl_backend
 obj_loader_lib 
 text_handler
@@ -124,7 +151,7 @@ target_include_directories(opengl_app PRIVATE
 
 target_link_libraries(opengl_app PRIVATE
     glm::glm
-    renderer
+    game
 )
 
 
@@ -142,7 +169,7 @@ function(copy_assets TARGET NAME SRC_DIR DST_DIR)
 endfunction()
 
 copy_assets(
-    opengl_app
+    opengl_renderer
     shaders
     "${CMAKE_CURRENT_SOURCE_DIR}/assets/shaders"
     "${CMAKE_CURRENT_BINARY_DIR}/assets/shaders"

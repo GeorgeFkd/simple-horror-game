@@ -13,6 +13,7 @@
 #include <optional>
 #include <sstream>
 #include "TextRenderer.h"
+#include "Renderer.h"
 #include <string>
 #include "Monster.h"
 #include "GameState.h"
@@ -75,6 +76,7 @@ namespace Game {
         Game::GameState* game_state;
         std::vector<std::shared_ptr<Shader>> shaders;
         std::unordered_map<std::string, std::function<bool(SceneManager*)>> event_handlers;
+        Renderer renderer;
         int screen_width, screen_height;
         Camera::CameraObj camera;
         SDL_Window* window;

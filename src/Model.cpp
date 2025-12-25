@@ -327,7 +327,7 @@ void Models::Model::update_world_transform(const glm::mat4& parent_transform) {
 
 void Models::Model::draw(const glm::mat4& view, const glm::mat4& projection,
                          std::shared_ptr<Shader> shader) {
-
+    assert(false);
     // upload matrices
     shader->set_mat4("uView", view);
     shader->set_mat4("uProj", projection);

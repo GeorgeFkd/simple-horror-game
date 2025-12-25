@@ -73,6 +73,8 @@ struct VertexHasher {
 
 class Model {
   public:
+    InstanceData model_instance;
+    std::shared_ptr<MData>                                                model_data;
     void  draw_depth(std::shared_ptr<Shader> shader);
     void  draw(const glm::mat4& view, const glm::mat4& projection, std::shared_ptr<Shader> shader);
     void  set_local_transform(const glm::mat4& local_transform);
@@ -155,7 +157,7 @@ class Model {
     // this is made not for caching, but for sharing MData between instances coming from the same
     // model, this saves opengl allocations and the computation to go from raw vertices to usable data
     inline static std::unordered_map<std::string, std::shared_ptr<MData>> model_registry;
-    std::shared_ptr<MData>                                                model_data;
+    
     void compute_transformed_aabb(const glm::mat4& xf, glm::vec3& out_min, glm::vec3& out_max);
     bool aabb_in_frustum(const std::array<glm::vec4, 6>& P, const glm::vec3& minB,
                          const glm::vec3& maxB) const;
@@ -172,7 +174,7 @@ class Model {
                                         const std::vector<glm::vec3>& accumulated_bitangent,
                                         const size_t                  index);
 
-    InstanceData model_instance;
+    
     //these 2 could also be on the model_instance 
     // bool interactable = false;
     // bool active       = true;

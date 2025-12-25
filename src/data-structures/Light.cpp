@@ -63,6 +63,7 @@ Light::Light(LightType light_type, const glm::vec3& position, const glm::vec3& d
 
 void Light::draw_lighting(std::shared_ptr<Shader> shader, const std::string& base,
                           int index) const {
+    assert(false);
     shader->set_vec3(base + "position", position);
     shader->set_float(base + "power", light_power);
     shader->set_vec3(base + "color", color);
@@ -166,6 +167,8 @@ void Light::draw_depth_pass(std::shared_ptr<Shader>                            s
 
 void Light::bind_shadow_map(std::shared_ptr<Shader> shader, const std::string& base,
                             int index) const {
+    
+    assert(false);
     // pick the GLSL sampler name and GL bind‐target
     // point lights use a cube‐map
     if (type == LightType::POINT) {

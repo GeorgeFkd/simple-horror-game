@@ -37,11 +37,9 @@ void Game::SceneManager::initialise_opengl_sdl() {
     // SDL_GLContext
     glCtx = SDL_GL_CreateContext(window);
 
-
-
     initialize_glew();
     enable_gl_features({GL_DEPTH_TEST});
-    set_viewport(0, 0,screen_width, screen_height);
+    set_viewport(0, 0, screen_width, screen_height);
     set_clear_color(0.0f, 0.0f, 0.0f, 1.0f);
 
     clear_buffers(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -49,28 +47,29 @@ void Game::SceneManager::initialise_opengl_sdl() {
 }
 
 void Game::SceneManager::initialise_shaders() {
-    std::vector<std::string> shader_paths = {"assets/shaders/blinnphong.vert",
-                                             "assets/shaders/blinnphong.frag"};
-    std::vector<GLenum>      shader_types = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
-    auto blinnphong = std::make_shared<Shader>(shader_paths, shader_types, "blinn-phong");
-
-    shader_paths  = {"assets/shaders/depth_2d.vert", "assets/shaders/depth_2d.frag"};
-    shader_types  = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
-    auto depth_2d = std::make_shared<Shader>(shader_paths, shader_types, "depth_2d");
-
-    shader_paths    = {"assets/shaders/depth_cube.vert", "assets/shaders/depth_cube.geom",
-                       "assets/shaders/depth_cube.frag"};
-    shader_types    = {GL_VERTEX_SHADER, GL_GEOMETRY_SHADER, GL_FRAGMENT_SHADER};
-    auto depth_cube = std::make_shared<Shader>(shader_paths, shader_types, "depth_cube");
-
-    shader_paths    = {"assets/shaders/text.vert", "assets/shaders/text.frag"};
-    shader_types    = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
-    auto textshader = std::make_shared<Shader>(shader_paths, shader_types, "text");
-
-    add_shader(blinnphong);
-    add_shader(depth_2d);
-    add_shader(depth_cube);
-    add_shader(textshader);
+    renderer.initialise_shaders();
+    // std::vector<std::string> shader_paths = {"assets/shaders/blinnphong.vert",
+    //                                          "assets/shaders/blinnphong.frag"};
+    // std::vector<GLenum>      shader_types = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
+    // auto blinnphong = std::make_shared<Shader>(shader_paths, shader_types, "blinn-phong");
+    //
+    // shader_paths  = {"assets/shaders/depth_2d.vert", "assets/shaders/depth_2d.frag"};
+    // shader_types  = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
+    // auto depth_2d = std::make_shared<Shader>(shader_paths, shader_types, "depth_2d");
+    //
+    // shader_paths    = {"assets/shaders/depth_cube.vert", "assets/shaders/depth_cube.geom",
+    //                    "assets/shaders/depth_cube.frag"};
+    // shader_types    = {GL_VERTEX_SHADER, GL_GEOMETRY_SHADER, GL_FRAGMENT_SHADER};
+    // auto depth_cube = std::make_shared<Shader>(shader_paths, shader_types, "depth_cube");
+    //
+    // shader_paths    = {"assets/shaders/text.vert", "assets/shaders/text.frag"};
+    // shader_types    = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
+    // auto textshader = std::make_shared<Shader>(shader_paths, shader_types, "text");
+    //
+    // add_shader(blinnphong);
+    // add_shader(depth_2d);
+    // add_shader(depth_cube);
+    // add_shader(textshader);
 }
 
 #define PRINT_VEC4(v)                                                                              \
@@ -200,10 +199,9 @@ void Game::SceneManager::run_game_loop() {
         flashlight->set_position(camera.get_position() + offset);
         flashlight->set_direction(camera.get_direction());
 
-        render_depth_pass();
         glm::mat4 view = camera.get_view_matrix();
         glm::mat4 proj = camera.get_projection_matrix();
-        // TODO add this when properly fixed
+        //TODO: add this when properly fixed
         //  perform_culling();
         render(view, proj);
         run_interaction_handlers();
@@ -215,7 +213,8 @@ void Game::SceneManager::run_game_loop() {
 }
 
 std::shared_ptr<Shader> Game::SceneManager::get_shader_by_name(const std::string& shader_name) {
-
+    
+    assert(false);
     auto shaderPos =
         std::find_if(shaders.begin(), shaders.end(), [shader_name](std::shared_ptr<Shader> s) {
             return s->get_shader_name() == shader_name;
@@ -273,7 +272,8 @@ void Game::SceneManager::run_handler_for(const std::string& m) {
 }
 
 void Game::SceneManager::render_depth_pass() {
-
+    
+    assert(false);
     for (auto& light : game_state->get_lights()) {
         if (!light->is_turned_on()) {
             continue;
@@ -315,7 +315,7 @@ void Game::SceneManager::handle_sdl_events(bool& running) {
 
         if (ev.type == SDL_WINDOWEVENT && ev.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
             int w = ev.window.data1, h = ev.window.data2;
-            camera.set_window(w,h);
+            camera.set_window(w, h);
             set_viewport(0, 0, w, h);
         }
 
@@ -408,57 +408,25 @@ void Game::SceneManager::check_collisions(float dt) {
 }
 
 void Game::SceneManager::render(const glm::mat4& view, const glm::mat4& projection) {
-    
-    set_viewport(0, 0, screen_width, screen_height);
-    enable_gl_features({GL_MULTISAMPLE});
-    //removing this doesnt change anything for some reason;
-    clear_buffers(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    renderer.render(view, projection,  game_state->get_lights(),  game_state->get_models());
+    // shader->unbind();
 
-    auto shader = get_shader_by_name("blinn-phong");
-
-    shader->use();
-    shader->set_int("numLights", (GLint)game_state->get_lights().size());
-
-    for (size_t i = 0; i < game_state->get_lights().size(); ++i) {
-        auto        light = game_state->get_lights()[i].get();
-        std::string base  = "lights[" + std::to_string(i) + "].";
-        light->bind_shadow_map(shader, base, i);
-        light->draw_lighting(shader, base, i);
-    }
-
-    for (auto const& model : game_state->get_models()) {
-        if (!model->is_active()) {
-            continue;
-        }
-
-        // TODO this has a problem, in the beginning not all things are rendered properly
-        //  if (!model->is_in_frustum()) {
-        //      // std::cout << model->name() << std::endl;
-        //      continue;
-        //  }
-
-        model->update_world_transform(glm::mat4(1.0f));
-        model->draw(view, projection, shader);
-    }
-
-    disable_gl_capability(GL_MULTISAMPLE);
-    shader->unbind();
-
-    glm::mat4   text_projection = glm::ortho(0.0f, (float)screen_width, 0.0f, (float) screen_height);
-    auto        textShader      = get_shader_by_name("text");
-    std::string displayed_text  = "pages:" + std::to_string(game_state->pages_collected);
-    text_renderer.render_text(textShader, displayed_text, 50.0f, 720.0f - 50.0f, 1.2f,
-                              {1.0f, 0.0f, 0.0f}, text_projection);
-    if (!center_text.empty()) {
-        text_renderer.render_text(textShader, center_text, 1280.0f / 2 - 80.0f, 720.0f - 250.0f,
-                                  1.2f, {1.0f, 0.0f, 0.0f}, text_projection);
-    }
-
-    if (!bottom_text_hints.empty()) {
-        text_renderer.render_text(textShader, bottom_text_hints, 300.0f, 720.0f - 650.0f, 0.8f,
-                                  {0.5f, 0.5f, 0.0f}, text_projection);
-    }
-    textShader->unbind();
+    //TODO: reenable text rendering, i dont have the shaders currently thats why it is not working
+    // glm::mat4   text_projection = glm::ortho(0.0f, (float)screen_width, 0.0f, (float)screen_height);
+    // auto        textShader      = get_shader_by_name("text");
+    // std::string displayed_text  = "pages:" + std::to_string(game_state->pages_collected);
+    // text_renderer.render_text(textShader, displayed_text, 50.0f, 720.0f - 50.0f, 1.2f,
+    //                           {1.0f, 0.0f, 0.0f}, text_projection);
+    // if (!center_text.empty()) {
+    //     text_renderer.render_text(textShader, center_text, 1280.0f / 2 - 80.0f, 720.0f - 250.0f,
+    //                               1.2f, {1.0f, 0.0f, 0.0f}, text_projection);
+    // }
+    //
+    // if (!bottom_text_hints.empty()) {
+    //     text_renderer.render_text(textShader, bottom_text_hints, 300.0f, 720.0f - 650.0f, 0.8f,
+    //                               {0.5f, 0.5f, 0.0f}, text_projection);
+    // }
+    // textShader->unbind();
 }
 
 Game::SceneManager::SceneManager(int width, int height, glm::vec3 camera_position)

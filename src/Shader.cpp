@@ -39,42 +39,35 @@ void bindBufferData(unsigned int size, void* ptr) {
     GLCall(glBufferData(GL_ARRAY_BUFFER, size, ptr, GL_STATIC_DRAW));
 }
 
-void bindElementBuffer(GLuint ebo){
-     GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo));
+void bindElementBuffer(GLuint ebo) {
+    GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo));
 }
 
-void bindElementBufferData(unsigned int size,void* ptr) {
-GLCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER, size, ptr, GL_STATIC_DRAW));
-
+void bindElementBufferData(unsigned int size, void* ptr) {
+    GLCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER, size, ptr, GL_STATIC_DRAW));
 }
-void enableVAttribArray(unsigned int arr){
+void enableVAttribArray(unsigned int arr) {
     GLCall(glEnableVertexAttribArray(arr));
 }
-void bindVAttribPointer(unsigned int start,unsigned  int end,std::size_t size,void* offsetPtr){
-    GLCall(glVertexAttribPointer(start , end, GL_FLOAT, GL_FALSE, size, 
-                             offsetPtr));
+void bindVAttribPointer(unsigned int start, unsigned int end, std::size_t size, void* offsetPtr) {
+    GLCall(glVertexAttribPointer(start, end, GL_FLOAT, GL_FALSE, size, offsetPtr));
 }
 
-void enable_gl_features(std::initializer_list<GLenum> features)
-{
+void enable_gl_features(std::initializer_list<GLenum> features) {
     for (GLenum feature : features) {
         GLCall(glEnable(feature));
     }
 }
 
-
-void set_viewport(int x, int y, int width, int height)
-{
+void set_viewport(int x, int y, int width, int height) {
     GLCall(glViewport(x, y, width, height));
 }
 
-void bind_framebuffer(GLenum target, GLuint framebuffer)
-{
+void bind_framebuffer(GLenum target, GLuint framebuffer) {
     GLCall(glBindFramebuffer(target, framebuffer));
 }
 
-GLenum initialize_glew()
-{
+GLenum initialize_glew() {
     GLenum status = glewInit();
     if (status != GLEW_OK) {
         std::cerr << "GLEW Initialization failed: " << glewGetErrorString(status) << "\n";
@@ -82,98 +75,70 @@ GLenum initialize_glew()
     return status;
 }
 
-void set_pixel_store(GLenum pname, GLint param)
-{
+void set_pixel_store(GLenum pname, GLint param) {
     GLCall(glPixelStorei(pname, param));
 }
 
-void set_blend_func(GLenum sfactor, GLenum dfactor)
-{
+void set_blend_func(GLenum sfactor, GLenum dfactor) {
     GLCall(glBlendFunc(sfactor, dfactor));
 }
 
-void draw_arrays(GLenum mode, GLint first, GLsizei count)
-{
+void draw_arrays(GLenum mode, GLint first, GLsizei count) {
     GLCall(glDrawArrays(mode, first, count));
 }
 
-void update_buffer_subdata(GLenum target, GLintptr offset, GLsizeiptr size, const void* data)
-{
+void update_buffer_subdata(GLenum target, GLintptr offset, GLsizeiptr size, const void* data) {
     GLCall(glBufferSubData(target, offset, size, data));
 }
 
-
-void unbind_texture(GLenum target)
-{
+void unbind_texture(GLenum target) {
     GLCall(glBindTexture(target, 0));
 }
 
-void clear_buffers(GLbitfield mask)
-{
+void clear_buffers(GLbitfield mask) {
     GLCall(glClear(mask));
 }
 
-void disable_gl_capability(GLenum cap)
-{
+void disable_gl_capability(GLenum cap) {
     GLCall(glDisable(cap));
 }
 
-
-void gl_clear()
-{
+void gl_clear() {
     GLCall(glClear(GL_DEPTH_BUFFER_BIT));
 }
 
-void set_cull_face(GLenum face)
-{
+void set_cull_face(GLenum face) {
     GLCall(glCullFace(face));
 }
 
-void set_color_mask(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha)
-{
+void set_color_mask(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha) {
     GLCall(glColorMask(red, green, blue, alpha));
 }
-void set_clear_color(float r, float g, float b, float a)
-{
+void set_clear_color(float r, float g, float b, float a) {
     GLCall(glClearColor(r, g, b, a));
 }
 
-
-void unbind_shader()
-{
+void unbind_shader() {
     GLCall(glUseProgram(0));
 }
-void generate_mipmap(GLenum target)
-{
+void generate_mipmap(GLenum target) {
     GLCall(glGenerateMipmap(target));
 }
 
-GLuint create_framebuffer()
-{
+GLuint create_framebuffer() {
     GLuint fbo = 0;
     GLCall(glGenFramebuffers(1, &fbo));
     return fbo;
 }
 
-GLuint create_depth_cubemap(unsigned width, unsigned height)
-{
+GLuint create_depth_cubemap(unsigned width, unsigned height) {
     GLuint texture = 0;
     GLCall(glGenTextures(1, &texture));
     GLCall(glBindTexture(GL_TEXTURE_CUBE_MAP, texture));
 
-    for (unsigned i = 0; i < 6; ++i)
-    {
-        GLCall(glTexImage2D(
-            GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
-            0,
-            GL_DEPTH_COMPONENT,
-            width,
-            height,
-            0,
-            GL_DEPTH_COMPONENT,
-            GL_FLOAT,
-            nullptr
-        ));
+    for (unsigned i = 0; i < 6; ++i) {
+        GLCall(glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, width,
+                            height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr));
     }
 
     GLCall(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST));
@@ -185,23 +150,13 @@ GLuint create_depth_cubemap(unsigned width, unsigned height)
     return texture;
 }
 
-GLuint create_depth_texture_2d(unsigned width, unsigned height)
-{
+GLuint create_depth_texture_2d(unsigned width, unsigned height) {
     GLuint texture = 0;
     GLCall(glGenTextures(1, &texture));
     GLCall(glBindTexture(GL_TEXTURE_2D, texture));
 
-    GLCall(glTexImage2D(
-        GL_TEXTURE_2D,
-        0,
-        GL_DEPTH_COMPONENT,
-        width,
-        height,
-        0,
-        GL_DEPTH_COMPONENT,
-        GL_FLOAT,
-        nullptr
-    ));
+    GLCall(glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0, GL_DEPTH_COMPONENT,
+                        GL_FLOAT, nullptr));
 
     GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST));
     GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
@@ -214,130 +169,93 @@ GLuint create_depth_texture_2d(unsigned width, unsigned height)
     return texture;
 }
 
-void set_texture_parameter(GLenum target, GLenum pname, GLint param)
-{
+void set_texture_parameter(GLenum target, GLenum pname, GLint param) {
     GLCall(glTexParameteri(target, pname, param));
 }
-void set_texture_parameters(GLenum target, std::initializer_list<std::tuple<GLenum, GLint>> params)
-{
-    for (const auto& p : params)
-    {
+void set_texture_parameters(GLenum                                           target,
+                            std::initializer_list<std::tuple<GLenum, GLint>> params) {
+    for (const auto& p : params) {
         GLenum pname;
-        GLint param;
+        GLint  param;
         std::tie(pname, param) = p;
         GLCall(glTexParameteri(target, pname, param));
     }
 }
 
-void bind_texture(GLenum target, GLuint texture)
-{
+void bind_texture(GLenum target, GLuint texture) {
     GLCall(glBindTexture(target, texture));
 }
 
-void set_texture_image_2d(GLenum target, GLint level, GLint internalFormat,
-                          GLsizei width, GLsizei height, GLint border,
-                          GLenum format, GLenum type, const void* data)
-{
+void set_texture_image_2d(GLenum target, GLint level, GLint internalFormat, GLsizei width,
+                          GLsizei height, GLint border, GLenum format, GLenum type,
+                          const void* data) {
     GLCall(glTexImage2D(target, level, internalFormat, width, height, border, format, type, data));
 }
 
-
-
-void generate_framebuffer(GLuint* fbo)
-{
+void generate_framebuffer(GLuint* fbo) {
     GLCall(glGenFramebuffers(1, fbo));
 }
 
-void generate_texture(GLuint* texture)
-{
+void generate_texture(GLuint* texture) {
     GLCall(glGenTextures(1, texture));
 }
 
-void attach_depth_texture(GLuint fbo, GLuint texture, bool cubemap)
-{
+void attach_depth_texture(GLuint fbo, GLuint texture, bool cubemap) {
     GLCall(glBindFramebuffer(GL_FRAMEBUFFER, fbo));
 
-    if (cubemap)
-    {
-        GLCall(glFramebufferTexture(
-            GL_FRAMEBUFFER,
-            GL_DEPTH_ATTACHMENT,
-            texture,
-            0
-        ));
-    }
-    else
-    {
-        GLCall(glFramebufferTexture2D(
-            GL_FRAMEBUFFER,
-            GL_DEPTH_ATTACHMENT,
-            GL_TEXTURE_2D,
-            texture,
-            0
-        ));
+    if (cubemap) {
+        GLCall(glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, texture, 0));
+    } else {
+        GLCall(
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, texture, 0));
     }
 }
 
-void attach_texture_to_framebuffer(GLenum target, GLenum attachment, GLuint texture, GLint level)
-{
+void attach_texture_to_framebuffer(GLenum target, GLenum attachment, GLuint texture, GLint level) {
     GLCall(glFramebufferTexture(target, attachment, texture, level));
 }
 
-void validate_framebuffer()
-{
+void validate_framebuffer() {
     GLCall(GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER));
-    if (status != GL_FRAMEBUFFER_COMPLETE)
-    {
+    if (status != GL_FRAMEBUFFER_COMPLETE) {
         std::cerr << "Framebuffer not complete! Status: " << status << "\n";
     }
 }
 
-void disable_color_buffers()
-{
+void disable_color_buffers() {
     GLCall(glDrawBuffer(GL_NONE));
     GLCall(glReadBuffer(GL_NONE));
 }
 
-void unbind_framebuffer()
-{
+void unbind_framebuffer() {
     GLCall(glBindFramebuffer(GL_FRAMEBUFFER, 0));
 }
 
-void attach_texture2d_to_framebuffer(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level)
-{
+void attach_texture2d_to_framebuffer(GLenum target, GLenum attachment, GLenum textarget,
+                                     GLuint texture, GLint level) {
     GLCall(glFramebufferTexture2D(target, attachment, textarget, texture, level));
 }
 
-void set_texture_parameterfv(GLenum target, GLenum pname, const GLfloat* params)
-{
+void set_texture_parameterfv(GLenum target, GLenum pname, const GLfloat* params) {
     GLCall(glTexParameterfv(target, pname, params));
 }
-
-
 
 // void set_blend_func(GLenum sfactor, GLenum dfactor)
 // {
 //     GLCall(glBlendFunc(sfactor, dfactor));
 // }
 
-void set_uniform3f(GLint location, float v0, float v1, float v2)
-{
+void set_uniform3f(GLint location, float v0, float v1, float v2) {
     GLCall(glUniform3f(location, v0, v1, v2));
 }
 
-void activate_texture_unit(GLenum texture)
-{
+void activate_texture_unit(GLenum texture) {
     GLCall(glActiveTexture(texture));
 }
 
-
-
-
 Shader::Shader(const std::vector<std::string>& shader_paths,
-           const std::vector<GLenum>& shader_types,
-           const std::string& shader_name) 
-    {
-        if (shader_paths.size() != shader_types.size()) {
+               const std::vector<GLenum>& shader_types, const std::string& shader_name) {
+    if (shader_paths.size() != shader_types.size()) {
         throw std::runtime_error("Shader constructor: Mismatched input vector sizes.");
     }
 
