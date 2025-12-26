@@ -20,4 +20,8 @@ Some of the features implemented:
 - NPC that toggles between chasing the player and roaming(with a programmable interface for custom scripts)
 - Collisions w. AABB (for the monster they can be toggled on/off for more difficulty)
 
+Things practiced:
+
+- CMake Usage(extracting libraries mostly to implement proper architecture and be able to change graphics backends)
+- Architecture through abstractions and refactoring
 
