@@ -93,7 +93,7 @@ target_link_libraries(obj_loader_lib PRIVATE
 )
 
 
-add_library(scene_objects STATIC src/Model.cpp src/Group.cpp src/data-structures/Light.cpp)
+add_library(scene_objects STATIC src/Model.cpp src/Group.cpp src/data-structures/Light.cpp src/data-structures/MData.cpp)
 
 target_include_directories(scene_objects PRIVATE
 ${CMAKE_CURRENT_SOURCE_DIR}/src
@@ -106,7 +106,7 @@ opengl_backend
 glm::glm
 )
 
-add_library(opengl_renderer STATIC src/Renderer.cpp)
+add_library(opengl_renderer STATIC src/Renderer.cpp src/data-structures/GPUMeshOpenGL.cpp src/data-structures/GPULight.cpp)
 target_include_directories(opengl_renderer PRIVATE
 ${CMAKE_CURRENT_SOURCE_DIR}/src
 ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
@@ -135,7 +135,6 @@ ${SDL2_mixer_LIBRARIES}
 glm::glm
 scene_objects
 opengl_renderer
-opengl_backend
 obj_loader_lib 
 text_handler
 )

@@ -13,9 +13,6 @@ int main() {
     auto camera_position = glm::vec3(0.0f,5.0f,3.5f);
     Game::SceneManager scene_manager(1280, 720, camera_position);
     
-    scene_manager.initialise_opengl_sdl();
-    scene_manager.initialise_shaders();
-
     Game::GameState game_state;
 
     constexpr float ROOM_HEIGHT = 30.0f;

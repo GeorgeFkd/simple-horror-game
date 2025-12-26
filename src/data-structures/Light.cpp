@@ -1,5 +1,6 @@
 #include "Light.h"
 #include "Shader.h"
+#include <array>
 #include <iostream>
 #include <memory>
 Light::Light(LightType light_type, const glm::vec3& position, const glm::vec3& direction,
@@ -61,35 +62,7 @@ Light::Light(LightType light_type, const glm::vec3& position, const glm::vec3& d
     unbind_framebuffer();
 }
 
-void Light::draw_lighting(std::shared_ptr<Shader> shader, const std::string& base,
-                          int index) const {
-    assert(false);
-    shader->set_vec3(base + "position", position);
-    shader->set_float(base + "power", light_power);
-    shader->set_vec3(base + "color", color);
-    // only send direction for non-point lights
-    if (type != LightType::POINT) {
-        shader->set_vec3(base + "direction", direction);
-    }
-    shader->set_vec3(base + "ambient", ambient);
-    shader->set_vec3(base + "diffuse", diffuse);
-    shader->set_vec3(base + "specular", specular);
-    if (type == LightType::SPOT) {
-        shader->set_float(base + "cutoff", cutoff);
-        shader->set_float(base + "outerCutoff", outer_cutoff);
-    }
-    shader->set_int(base + "type", int(type));
-    shader->set_float(base + "attenuation_constant", attenuation_constant);
-    shader->set_float(base + "attenuation_linear", attenuation_linear);
-    shader->set_float(base + "attenuation_quadratic", attenuation_quadratic);
-    shader->set_float(base + "attenuation_power", attenuation_power);
-    shader->set_float(base + "nearPlane", get_near_plane());
-    shader->set_float(base + "farPlane", get_far_plane());
-    shader->set_mat4(base + "view", get_light_view());
-    shader->set_mat4(base + "proj", get_light_projection());
-}
-
-const static std::array<glm::vec4, 6> extract_frustum_planes(const glm::mat4& M) {
+std::array<glm::vec4, 6> Light::extract_frustum_planes(const glm::mat4& M) {
     std::array<glm::vec4, 6> P;
 
     glm::mat4 T = glm::transpose(M);
@@ -109,79 +82,8 @@ const static std::array<glm::vec4, 6> extract_frustum_planes(const glm::mat4& M)
     return P;
 }
 
-void Light::draw_depth_pass(std::shared_ptr<Shader>                            shader,
-                            const std::vector<std::unique_ptr<Models::Model>>& models) const {
-    set_viewport(0, 0, shadow_width, shadow_height);
-    bind_framebuffer(GL_FRAMEBUFFER, depth_map_fbo);
-    gl_clear();
 
-    enable_gl_features({GL_DEPTH_TEST, GL_CULL_FACE});
 
-    set_cull_face(GL_FRONT);
-
-    shader->use();
-    if (type == LightType::POINT) {
-        glm::mat4 proj  = get_light_projection();
-        auto      views = get_point_light_views();
-        // Six passes, one per cube face
-        for (int face = 0; face < 6; ++face) {
-            // update this face's matrix
-            shader->set_vec3("lightPos", position);
-            shader->set_float("farPlane", far_plane);
-            shader->set_mat4("shadowMatrices[" + std::to_string(face) + "]", proj * views[face]);
-            glm::mat4 VP     = proj * views[face];
-            auto      planes = extract_frustum_planes(VP);
-
-            // draw all models into this face
-            for (auto& m : models) {
-                m->in_frustum(planes);
-
-                if (!m->is_active())
-                    continue;
-                if (!m->is_in_frustum())
-                    continue;
-                m->draw_depth(shader);
-            }
-        }
-    } else {
-        shader->set_mat4("uView", get_light_view());
-        shader->set_mat4("uProj", get_light_projection());
-        glm::mat4 VP     = get_light_projection() * get_light_view();
-        auto      planes = extract_frustum_planes(VP);
-
-        for (auto& m : models) {
-            m->in_frustum(planes);
-            if (!m->is_active())
-                continue;
-            if (!m->is_in_frustum())
-                continue;
-            m->draw_depth(shader);
-        }
-    }
-
-    set_cull_face(GL_BACK);
-    set_color_mask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-    bind_framebuffer(GL_FRAMEBUFFER, 0);
-    unbind_shader();
-}
-
-void Light::bind_shadow_map(std::shared_ptr<Shader> shader, const std::string& base,
-                            int index) const {
-    
-    assert(false);
-    // pick the GLSL sampler name and GL bind‐target
-    // point lights use a cube‐map
-    if (type == LightType::POINT) {
-        std::string base = "shadowMapCube" + std::to_string(index);
-        // shader->set_int(base + "shadowMapCube", index);
-        shader->set_texture(base, get_depth_texture(), GL_TEXTURE5 + index, GL_TEXTURE_CUBE_MAP);
-    } else {
-        // spot or directional use a 2D depth map
-        // shader->set_int(base + "shadowMap2D", index);
-        std::string base = "shadowMap" + std::to_string(index);
-        shader->set_texture(base, get_depth_texture(), GL_TEXTURE0 + index, GL_TEXTURE_2D);
-    }
-}
 
 glm::mat4 Light::get_light_projection() const {
 

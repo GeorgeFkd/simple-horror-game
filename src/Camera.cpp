@@ -1,4 +1,5 @@
 #include "Camera.h"
+#include <array>
 void Camera::CameraObj::update(float delta_time)
 {
     float velocity = camera_speed * delta_time;

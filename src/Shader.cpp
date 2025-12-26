@@ -3,6 +3,21 @@
 
 using namespace GlHelpers;
 
+
+void delete_framebuffer(GLuint* fbo) {
+    if (fbo && *fbo != 0) {
+        GLCall(glDeleteFramebuffers(1, fbo));
+        *fbo = 0;
+    }
+}
+
+void delete_texture(GLuint* texture) {
+    if (texture && *texture != 0) {
+        GLCall(glDeleteTextures(1, texture));
+        *texture = 0;
+    }
+}
+
 void makeVertexArray(GLuint* vao) {
     GLCall(glGenVertexArrays(1, vao));
 }

@@ -1,13 +1,9 @@
 #include "Model.h"
+#include "Shader.h"
 #include <limits>
 #include <memory>
-#include "Shader.h"
 
-Models::MData::~MData() {
-    deleteBuffer(&ebo);
-    deleteBuffer(&vbo);
-    deleteVertexArray(&vao);
-}
+
 
 static void print_vec3(glm::vec3 v) {
     std::cout << "(" << v.x << "," << v.y << "," << v.z << ")\n";
@@ -107,7 +103,7 @@ Models::Model::Model(const std::vector<glm::vec3>& positions, const std::vector<
         orthogonalize_and_normalize_tb(model_data->unique_vertices[i], tan1, tan2, i);
     }
     // when the caching is complete those 2 will also be cached
-    reserve_open_gl_memory();
+    model_data->reserve_open_gl_memory();
     initialize_local_aabb();
 }
 
@@ -119,35 +115,12 @@ void Models::Model::initialize_local_aabb() {
         model_data->localaabbmax = glm::max(model_data->localaabbmax, v.position);
     }
 }
-void Models::Model::reserve_open_gl_memory() {
-    makeVertexArray(&model_data->vao);
-    makeBuffer(&model_data->vbo);
-    makeBuffer(&model_data->ebo);
-    
-    bindVAO(model_data->vao);
-    bindBuffer(model_data->vbo);
-    bindBufferData(model_data->unique_vertices.size() * sizeof(Vertex),model_data->unique_vertices.data());
-    bindElementBuffer(model_data->ebo);
-    bindElementBufferData(model_data->indices.size() * sizeof(GLuint),model_data->indices.data());
-
-    auto size = sizeof(Vertex);
-    enableVAttribArray(0);
-    bindVAttribPointer(0,3,size,(void*)offsetof(Vertex,position));
-    enableVAttribArray(1);
-    bindVAttribPointer(1,2, size, (void*) offsetof(Vertex,texcoord));
-    enableVAttribArray(2);
-    bindVAttribPointer(2, 3, size, (void *)offsetof(Vertex,normal));
-    enableVAttribArray(3);
-    bindVAttribPointer(3,4,size,(void*) offsetof(Vertex,tangent));
-
-    unbindVAO();
-}
 
 Models::Model::Model(const Model& model_to_replicate, std::string model_name, glm::mat4 transform) {
     model_data                     = model_to_replicate.model_data;
     model_instance.label           = std::move(model_name);
     model_instance.local_transform = transform;
-    model_instance.interactable                   = model_to_replicate.model_instance.interactable;
+    model_instance.interactable    = model_to_replicate.model_instance.interactable;
     // opengl memory is already initialised and local aabb boundaries are already initialised in
     // model data
 }
@@ -249,7 +222,7 @@ Models::Model::Model(const std::string& objFile, std::string label) {
         orthogonalize_and_normalize_tb(model_data->unique_vertices[i], tan1, tan2, i);
     }
 
-    reserve_open_gl_memory();
+    model_data->reserve_open_gl_memory();
     initialize_local_aabb();
 
     assert(model_data->vao != 0 && model_data->ebo != 0 && model_data->vbo != 0);
@@ -257,7 +230,7 @@ Models::Model::Model(const std::string& objFile, std::string label) {
 }
 
 void Models::Model::orthogonalize_and_normalize_tb(
-    Models::Vertex& vertex, const std::vector<glm::vec3>& accumulated_tangent,
+    Vertex& vertex, const std::vector<glm::vec3>& accumulated_tangent,
     const std::vector<glm::vec3>& accumulated_bitangent, const size_t index) {
     const glm::vec3& normal    = vertex.normal;
     const glm::vec3& tangent   = accumulated_tangent[index];
@@ -275,9 +248,9 @@ void Models::Model::orthogonalize_and_normalize_tb(
     vertex.tangent = glm::vec4(orth_tangent, handedness);
 }
 
-std::pair<glm::vec3, glm::vec3> Models::Model::calculate_tangent_bitangent(Models::Vertex v0,
-                                                                           Models::Vertex v1,
-                                                                           Models::Vertex v2) {
+std::pair<glm::vec3, glm::vec3> Models::Model::calculate_tangent_bitangent(Vertex v0,
+                                                                           Vertex v1,
+                                                                           Vertex v2) {
 
     glm::vec3 edge1 = v1.position - v0.position;
     glm::vec3 edge2 = v2.position - v0.position;
@@ -323,64 +296,6 @@ void Models::Model::update_world_transform(const glm::mat4& parent_transform) {
     for (Model* child : children) {
         child->update_world_transform(model_instance.world_transform);
     }
-}
-
-void Models::Model::draw(const glm::mat4& view, const glm::mat4& projection,
-                         std::shared_ptr<Shader> shader) {
-    assert(false);
-    // upload matrices
-    shader->set_mat4("uView", view);
-    shader->set_mat4("uProj", projection);
-    shader->set_mat4("uModel", model_instance.world_transform);
-
-    assert(model_data->vao != 0);
-    shader->bindVAO(model_data->vao);
-    for (auto const& sm : model_data->submeshes) {
-        shader->set_vec3("material.ambient", sm.mat.Ka);
-        shader->set_vec3("material.diffuse", sm.mat.Kd);
-        shader->set_vec3("material.specular", sm.mat.Ks);
-        shader->set_vec3("material.emissive", sm.mat.Ke);
-        shader->set_float("material.shininess", sm.mat.Ns);
-        shader->set_float("material.opacity", sm.mat.d);
-        shader->set_int("material.illumModel", sm.mat.illum);
-        shader->set_float("material.ior", sm.mat.Ni);
-        shader->set_bool("material.useBumpMap", sm.mat.use_bump_map);
-
-        if (sm.mat.tex_Ka) {
-            shader->set_texture("ambientMap", sm.mat.tex_Ka, GL_TEXTURE1);
-        }
-        shader->set_bool("useAmbientMap", sm.mat.tex_Ka != 0 ? true : false);
-
-        if (sm.mat.tex_Kd) {
-            shader->set_texture("diffuseMap", sm.mat.tex_Kd, GL_TEXTURE2);
-        }
-        shader->set_bool("useDiffuseMap", sm.mat.tex_Kd != 0 ? true : false);
-
-        if (sm.mat.tex_Ks) {
-            shader->set_texture("specularMap", sm.mat.tex_Ks, GL_TEXTURE3);
-        }
-        shader->set_bool("useSpecularMap", sm.mat.tex_Ks != 0 ? true : false);
-
-        if (sm.mat.tex_Bump) {
-            shader->set_texture("bumpMap", sm.mat.tex_Bump, GL_TEXTURE4);
-            shader->set_float("bumpScale", 4.0f);
-        }
-        void* offsetPtr = (void*)(sm.index_offset * sizeof(GLuint));
-        shader->drawElemTriangles(sm.index_count, offsetPtr);
-    }
-    shader->unbindVAO();
-}
-
-void Models::Model::draw_depth(std::shared_ptr<Shader> shader) {
-
-    shader->set_mat4("uModel", model_instance.world_transform);
-    assert(model_data->vao != 0);
-    shader->bindVAO(model_data->vao);
-    for (auto const& sm : model_data->submeshes) {
-        void* offset_ptr = (void*)(sm.index_offset * sizeof(GLuint));
-        shader->drawElemTriangles(sm.index_count, offset_ptr);
-    }
-    shader->unbindVAO();
 }
 
 void Models::Model::update_aabb() {
@@ -453,7 +368,6 @@ bool Models::Model::intersect_sphere_aabb(const glm::vec3& point, float radius) 
     return squared_distance <= radius * radius;
 }
 
-
 bool Models::Model::aabb_in_frustum(const std::array<glm::vec4, 6>& P, const glm::vec3& minB,
                                     const glm::vec3& maxB) const {
     for (auto& plane : P) {
@@ -477,17 +391,17 @@ void Models::Model::in_frustum(const std::array<glm::vec4, 6>& frustum_planes) {
     return;
 }
 
-//TODO create one function that does all of the walls in a simple way
+// TODO create one function that does all of the walls in a simple way
 Models::Model Models::createFloor(float roomSize) {
 
-    float                  y           = 0.0f;
-    std::vector<glm::vec3> floor_verts = {{-roomSize, y, -roomSize},
-                                          {-roomSize, y, roomSize},
-                                          {roomSize, y, roomSize},
-                                          {roomSize, y, -roomSize}};
-    std::vector<glm::vec3> floor_normals(4, glm::vec3(0, 1, 0));
-    std::vector<glm::vec2> floor_uvs     = {{0, 0}, {0, 1}, {1, 1}, {1, 0}};
-    std::vector<unsigned int>    floor_indices = {0, 1, 2, 0, 2, 3};
+    float                     y           = 0.0f;
+    std::vector<glm::vec3>    floor_verts = {{-roomSize, y, -roomSize},
+                                             {-roomSize, y, roomSize},
+                                             {roomSize, y, roomSize},
+                                             {roomSize, y, -roomSize}};
+    std::vector<glm::vec3>    floor_normals(4, glm::vec3(0, 1, 0));
+    std::vector<glm::vec2>    floor_uvs     = {{0, 0}, {0, 1}, {1, 1}, {1, 0}};
+    std::vector<unsigned int> floor_indices = {0, 1, 2, 0, 2, 3};
 
     Material floor_material;
     floor_material.Ka           = glm::vec3(0.15f, 0.07f, 0.02f); // dark ambient

@@ -75,6 +75,10 @@ void activate_texture_unit(GLenum texture);
 void draw_arrays(GLenum mode, GLint first, GLsizei count);
 void update_buffer_subdata(GLenum target, GLintptr offset, GLsizeiptr size, const void* data);
 void generate_mipmap(GLenum target);
+void delete_framebuffer(GLuint* fbo);
+void delete_texture(GLuint* texture);
+
+
 
 class Shader {
 public:

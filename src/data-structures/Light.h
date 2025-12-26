@@ -8,7 +8,6 @@
 #include <string>
 #include <string_view>
 #include "Shader.h"
-#include "Model.h"
 #include "fwd.hpp"
 enum class LightType { 
     POINT = 0,
@@ -147,10 +146,7 @@ public:
     glm::mat4 get_light_projection() const;
     glm::mat4 get_light_view() const;
     std::vector<glm::mat4> get_point_light_views() const;
-
-    void bind_shadow_map(std::shared_ptr<Shader> shader, const std::string& base, int index) const;
-    void draw_lighting(std::shared_ptr<Shader> shader, const std::string& base, int index) const;
-    void draw_depth_pass(std::shared_ptr<Shader>shader, const std::vector<std::unique_ptr<Models::Model>>& models) const;
+    static std::array<glm::vec4, 6> extract_frustum_planes(const glm::mat4& VP);
 public:
     LightType type;
     glm::vec3 position;

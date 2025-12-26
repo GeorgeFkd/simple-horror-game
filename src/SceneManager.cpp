@@ -1,7 +1,5 @@
 #include "SceneManager.h"
 #include "Camera.h"
-#include "Light.h"
-#include "Shader.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_mixer.h>
 #include <SDL_keyboard.h>
@@ -25,11 +23,7 @@ void Game::SceneManager::initialise_opengl_sdl() {
         return;
     }
 
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
-    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+    
 
     // SDL_Window*
     window = SDL_CreateWindow("Old room", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720,
@@ -37,39 +31,16 @@ void Game::SceneManager::initialise_opengl_sdl() {
     // SDL_GLContext
     glCtx = SDL_GL_CreateContext(window);
 
-    initialize_glew();
-    enable_gl_features({GL_DEPTH_TEST});
-    set_viewport(0, 0, screen_width, screen_height);
-    set_clear_color(0.0f, 0.0f, 0.0f, 1.0f);
 
-    clear_buffers(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    SDL_SetRelativeMouseMode(SDL_TRUE);
-}
-
-void Game::SceneManager::initialise_shaders() {
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+    
+    renderer.init(screen_width,screen_height);
     renderer.initialise_shaders();
-    // std::vector<std::string> shader_paths = {"assets/shaders/blinnphong.vert",
-    //                                          "assets/shaders/blinnphong.frag"};
-    // std::vector<GLenum>      shader_types = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
-    // auto blinnphong = std::make_shared<Shader>(shader_paths, shader_types, "blinn-phong");
-    //
-    // shader_paths  = {"assets/shaders/depth_2d.vert", "assets/shaders/depth_2d.frag"};
-    // shader_types  = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
-    // auto depth_2d = std::make_shared<Shader>(shader_paths, shader_types, "depth_2d");
-    //
-    // shader_paths    = {"assets/shaders/depth_cube.vert", "assets/shaders/depth_cube.geom",
-    //                    "assets/shaders/depth_cube.frag"};
-    // shader_types    = {GL_VERTEX_SHADER, GL_GEOMETRY_SHADER, GL_FRAGMENT_SHADER};
-    // auto depth_cube = std::make_shared<Shader>(shader_paths, shader_types, "depth_cube");
-    //
-    // shader_paths    = {"assets/shaders/text.vert", "assets/shaders/text.frag"};
-    // shader_types    = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
-    // auto textshader = std::make_shared<Shader>(shader_paths, shader_types, "text");
-    //
-    // add_shader(blinnphong);
-    // add_shader(depth_2d);
-    // add_shader(depth_cube);
-    // add_shader(textshader);
+    SDL_SetRelativeMouseMode(SDL_TRUE);
 }
 
 #define PRINT_VEC4(v)                                                                              \
@@ -187,11 +158,6 @@ void Game::SceneManager::run_game_loop() {
         }
 
         check_collisions(dt);
-        set_clear_color(0.5f, 0.5f, 0.5f, 1.0f);
-        // glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
-        clear_buffers(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        // glEnable(GL_BLEND);
-        // glBlendFunc(GL_ONE,GL_ONE);
 
         float     right_offset = 0.4f;
         glm::vec3 offset =
@@ -212,17 +178,7 @@ void Game::SceneManager::run_game_loop() {
     SDL_Delay(seconds_to_wait_before_termination * 1000);
 }
 
-std::shared_ptr<Shader> Game::SceneManager::get_shader_by_name(const std::string& shader_name) {
-    
-    assert(false);
-    auto shaderPos =
-        std::find_if(shaders.begin(), shaders.end(), [shader_name](std::shared_ptr<Shader> s) {
-            return s->get_shader_name() == shader_name;
-        });
 
-    assert(shaderPos != shaders.end());
-    return *shaderPos;
-}
 
 void Game::SceneManager::move_model(const std::string& name, const glm::vec3& direction) {
     auto model_pos = game_state->find_model(name);
@@ -271,24 +227,6 @@ void Game::SceneManager::run_handler_for(const std::string& m) {
     }
 }
 
-void Game::SceneManager::render_depth_pass() {
-    
-    assert(false);
-    for (auto& light : game_state->get_lights()) {
-        if (!light->is_turned_on()) {
-            continue;
-        }
-        std::shared_ptr<Shader> sh;
-        if (light->get_type() == LightType::POINT) {
-            auto depthCube = get_shader_by_name("depth_cube");
-            sh             = depthCube;
-        } else {
-            auto depth2D = get_shader_by_name("depth_2d");
-            sh           = depth2D;
-        }
-        light->draw_depth_pass(sh, game_state->get_models());
-    }
-}
 
 void Game::SceneManager::run_interaction_handlers() {
     constexpr float INTERACTION_DISTANCE = 8.0f;
@@ -432,6 +370,22 @@ void Game::SceneManager::render(const glm::mat4& view, const glm::mat4& projecti
 Game::SceneManager::SceneManager(int width, int height, glm::vec3 camera_position)
     : screen_width(width), screen_height(height), camera(width, height, camera_position) {
     event_handlers = {};
+    initialise_opengl_sdl();
+}
+
+void Game::SceneManager::set_game_state(Game::GameState& g) {
+    game_state = &g;
+}
+
+void Game::SceneManager::allocate_game_state_to_gpu() {
+    assert(game_state);
+    for(auto const& light: game_state->get_lights()){
+        renderer.upload_light(light.get());
+    }
+
+    for(auto const& model: game_state->get_models()){
+        renderer.upload_model(model.get());
+    }
 }
 
 Game::SceneManager::~SceneManager() {

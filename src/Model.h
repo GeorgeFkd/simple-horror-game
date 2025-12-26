@@ -1,8 +1,5 @@
 #pragma once
 #include "OBJLoader.h"
-#include "Shader.h"
-#include "SubMesh.h"
-#include <GL/glew.h>
 #include <algorithm>
 #include <cfloat>
 #include <functional>
@@ -17,34 +14,9 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include "Vertex.h"
+#include "MData.h"
 namespace Models {
-
-using namespace GlHelpers;
-
-struct Vertex {
-    glm::vec3 position;
-    glm::vec2 texcoord;
-    glm::vec3 normal;
-    glm::vec4 tangent;
-
-    bool operator==(Vertex const& o) const {
-        return glm::all(glm::epsilonEqual(position, o.position, glm::epsilon<float>())) &&
-               glm::all(glm::epsilonEqual(texcoord, o.texcoord, glm::epsilon<float>())) &&
-               glm::all(glm::epsilonEqual(normal, o.normal, glm::epsilon<float>()));
-    }
-};
-
-class MData {
-  public:
-    ~MData();
-    std::vector<GLuint>  indices;
-    std::vector<Vertex>  unique_vertices;
-    std::vector<SubMesh> submeshes;
-    // Object-space AABB (min/max corners in mesh local coords)
-    glm::vec3 localaabbmin, localaabbmax;
-    // for the same model data the memory reserved will be the same, thus fewer allocations
-    GLuint vao, vbo, ebo = 0;
-};
 
 struct InstanceData {
     std::string label;
@@ -75,8 +47,6 @@ class Model {
   public:
     InstanceData model_instance;
     std::shared_ptr<MData>                                                model_data;
-    void  draw_depth(std::shared_ptr<Shader> shader);
-    void  draw(const glm::mat4& view, const glm::mat4& projection, std::shared_ptr<Shader> shader);
     void  set_local_transform(const glm::mat4& local_transform);
     void  update_world_transform(const glm::mat4& parent_transform);
     void  add_child(Model* child);
@@ -155,7 +125,7 @@ class Model {
 
   private:
     // this is made not for caching, but for sharing MData between instances coming from the same
-    // model, this saves opengl allocations and the computation to go from raw vertices to usable data
+    // model, this saves opengl allocations and the computation to go from raw vertices to usable data(which is generally cheap)
     inline static std::unordered_map<std::string, std::shared_ptr<MData>> model_registry;
     
     void compute_transformed_aabb(const glm::mat4& xf, glm::vec3& out_min, glm::vec3& out_max);
@@ -164,12 +134,11 @@ class Model {
 
     std::pair<std::vector<glm::vec3>, std::vector<glm::vec3>> prepare_bitangents();
     std::pair<glm::vec3, glm::vec3>
-    calculate_tangent_bitangent(Models::Vertex v0, Models::Vertex v1, Models::Vertex v2);
+    calculate_tangent_bitangent(Vertex v0, Vertex v1, Vertex v2);
 
     void initialize_local_aabb();
-    void reserve_open_gl_memory();
     void update_aabb();
-    void orthogonalize_and_normalize_tb(Models::Vertex&               vertex,
+    void orthogonalize_and_normalize_tb(Vertex&               vertex,
                                         const std::vector<glm::vec3>& accumulated_tangent,
                                         const std::vector<glm::vec3>& accumulated_bitangent,
                                         const size_t                  index);
