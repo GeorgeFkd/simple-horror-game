@@ -103,7 +103,6 @@ Models::Model::Model(const std::vector<glm::vec3>& positions, const std::vector<
         orthogonalize_and_normalize_tb(model_data->unique_vertices[i], tan1, tan2, i);
     }
     // when the caching is complete those 2 will also be cached
-    model_data->reserve_open_gl_memory();
     initialize_local_aabb();
 }
 
@@ -222,10 +221,9 @@ Models::Model::Model(const std::string& objFile, std::string label) {
         orthogonalize_and_normalize_tb(model_data->unique_vertices[i], tan1, tan2, i);
     }
 
-    model_data->reserve_open_gl_memory();
     initialize_local_aabb();
 
-    assert(model_data->vao != 0 && model_data->ebo != 0 && model_data->vbo != 0);
+    // assert(model_data->vao != 0 && model_data->ebo != 0 && model_data->vbo != 0);
     model_registry[objFile] = model_data;
 }
 

@@ -1,4 +1,5 @@
 #include "Light.h"
+#include "EntityID.h"
 #include "Shader.h"
 #include <array>
 #include <iostream>
@@ -18,48 +19,8 @@ Light::Light(LightType light_type, const glm::vec3& position, const glm::vec3& d
       attenuation_linear(attenuation_linear), attenuation_quadratic(attenuation_quadratic),
       attenuation_power(attenuation_power), light_power(light_power), is_on(is_on), label(label),
       color(color) {
-
-    generate_framebuffer(&depth_map_fbo);
-    generate_texture(&depth_map);
-    if (type == LightType::POINT) {
-        bind_texture(GL_TEXTURE_CUBE_MAP, depth_map);
-        for (unsigned i = 0; i < 6; ++i) {
-            set_texture_image_2d(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT,
-                                 shadow_width, shadow_height, 0, GL_DEPTH_COMPONENT, GL_FLOAT,
-                                 nullptr);
-        }
-
-        set_texture_parameters(GL_TEXTURE_CUBE_MAP, {{GL_TEXTURE_MIN_FILTER, GL_NEAREST},
-                                                     {GL_TEXTURE_MAG_FILTER, GL_NEAREST},
-                                                     {GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE},
-                                                     {GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE},
-                                                     {GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE}});
-        bind_framebuffer(GL_FRAMEBUFFER, depth_map_fbo);
-        attach_texture_to_framebuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depth_map, 0);
-        // GLCall(glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depth_map, 0));
-    } else {
-        // -- spot or directional: 2D depth texture --
-        bind_texture(GL_TEXTURE_2D, depth_map);
-        set_texture_image_2d(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, shadow_width, shadow_height, 0,
-                             GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
-        set_texture_parameters(GL_TEXTURE_2D, {{GL_TEXTURE_MIN_FILTER, GL_NEAREST},
-                                               {GL_TEXTURE_MAG_FILTER, GL_NEAREST},
-                                               {GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER},
-                                               {GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER}});
-        float borderColor[] = {1.0f, 1.0f, 1.0f, 1.0f};
-        set_texture_parameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
-        // GLCall(glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor));
-        bind_framebuffer(GL_FRAMEBUFFER, depth_map_fbo);
-        attach_texture2d_to_framebuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
-                                        depth_map, 0);
-        // GLCall(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
-        // depth_map,
-        //                               0));
-    }
-
-    validate_framebuffer();
-    disable_color_buffers();
-    unbind_framebuffer();
+    
+    id = next_entity_id();
 }
 
 std::array<glm::vec4, 6> Light::extract_frustum_planes(const glm::mat4& M) {

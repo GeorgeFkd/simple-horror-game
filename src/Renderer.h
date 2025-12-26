@@ -5,6 +5,7 @@
 #include "GPULight.h"
 #include "GPUMesh.h"
 #include <memory>
+#include "EntityID.h"
 class Renderer {
 public:
     Renderer();
@@ -21,8 +22,8 @@ public:
 
 private:
     std::vector<std::shared_ptr<Shader>> shaders;
-    std::unordered_map<std::string,std::unique_ptr<GPULight>> allocated_lights;
-    std::unordered_map<std::string,std::unique_ptr<GPUMesh>> allocated_models;
+    std::unordered_map<EntityID,std::unique_ptr<GPULight>> allocated_lights;
+    std::unordered_map<EntityID,std::unique_ptr<GPUMesh>> allocated_models;
     std::shared_ptr<Shader> get_shader_by_name(const std::string& shader_name);
     void draw(Models::Model* model,const glm::mat4& view, const glm::mat4& projection);
     void draw_model_depth(Models::Model* model,std::shared_ptr<Shader> shader);

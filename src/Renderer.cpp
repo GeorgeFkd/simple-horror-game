@@ -1,18 +1,32 @@
 #include "Renderer.h"
-#include "GPUMesh.h"
 #include "GPULight.h"
+#include "GPUMesh.h"
+#include "Shader.h"
 void Renderer::draw_light(Light* light, int index, std::shared_ptr<Shader> shader) {
+
+    auto gpulight = allocated_lights.find(light->id);
+    GLuint depth_map = 0;
+    if (gpulight != allocated_lights.end()) {
+        std::cout << "rendering light: " << light->id << "\n";
+        depth_map = gpulight->second->depth_map;
+    } else {
+        std::cout << "Did not find light with id: " << light->id;
+        assert(false);
+        // std::cout << "Did not find it from cache, reading file normally\n";
+    }
+
     std::string base = "lights[" + std::to_string(index) + "].";
+    assert(depth_map != 0);
     if (light->type == LightType::POINT) {
         std::string base = "shadowMapCube" + std::to_string(index);
         // shader->set_int(base + "shadowMapCube", index);
-        shader->set_texture(base, light->get_depth_texture(), GL_TEXTURE5 + index,
+        shader->set_texture(base, depth_map, GL_TEXTURE5 + index,
                             GL_TEXTURE_CUBE_MAP);
     } else {
         // spot or directional use a 2D depth map
         // shader->set_int(base + "shadowMap2D", index);
         std::string base = "shadowMap" + std::to_string(index);
-        shader->set_texture(base, light->get_depth_texture(), GL_TEXTURE0 + index, GL_TEXTURE_2D);
+        shader->set_texture(base, depth_map, GL_TEXTURE0 + index, GL_TEXTURE_2D);
     }
     // light->bind_shadow_map(shader, base, index);
 
@@ -49,18 +63,28 @@ void Renderer::init(int screen_width, int screen_height) {
     clear_buffers(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
-void Renderer::upload_model(Models::Model* model) {
-    if(!model) return;
-
-    auto mesh = std::make_unique<GPUMesh>();
-    mesh->reserve_opengl_memory(model->model_data.get());
-    allocated_models[model->name()];
+void Renderer::upload_model(Models::Model* m) {
+    auto model_data_entry = allocated_models.find(m->model_data->id);
+    if (model_data_entry == allocated_models.end()) {
+        std::cout << "Uploading model with id: " << m->model_data->id << "\n";
+        auto mesh = std::make_unique<GPUMesh>();
+        mesh->reserve_opengl_memory(m->model_data.get());
+        allocated_models.insert({m->model_data->id, std::move(mesh)});
+    } else {
+        std::cout << "Model with id: " << m->model_data->id << " is already uploaded. \n";
+    }
 }
 
 void Renderer::upload_light(Light* light) {
-    auto gpulight = GPULight();
-    gpulight.reserve_opengl_memory(light);
-    allocated_lights[std::string(light->name())];
+    auto light_entry = allocated_lights.find(light->id);
+    if (light_entry == allocated_lights.end()) {
+        std::cout << "Uploading light with id: " << light->id << "\n";
+        auto gpulight = std::make_unique<GPULight>();
+        gpulight->reserve_opengl_memory(light);
+        allocated_lights.insert({light->id, std::move(gpulight)});
+    } else {
+        std::cout << "Light with id: " << light->id << "is already uploaded\n";
+    }
 }
 
 void Renderer::draw_light_depth(Light*                                             light,
@@ -74,7 +98,14 @@ void Renderer::draw_light_depth(Light*                                          
         shader       = depth2D;
     }
     set_viewport(0, 0, light->shadow_width, light->shadow_height);
-    bind_framebuffer(GL_FRAMEBUFFER, light->depth_map_fbo);
+    auto gpulight = allocated_lights.find(light->id);
+    if (gpulight != allocated_lights.end()) {
+        bind_framebuffer(GL_FRAMEBUFFER, gpulight->second->depth_map_fbo);
+    } else {
+        std::cout << "Did not find light with id: " << light->id;
+        assert(false);
+    }
+
     gl_clear();
 
     enable_gl_features({GL_DEPTH_TEST, GL_CULL_FACE});
@@ -102,14 +133,14 @@ void Renderer::draw_light_depth(Light*                                          
                     continue;
                 if (!m->is_in_frustum())
                     continue;
-                draw_model_depth(m.get(),shader);
+                draw_model_depth(m.get(), shader);
             }
         }
     } else {
         shader->set_mat4("uView", light->get_light_view());
         shader->set_mat4("uProj", light->get_light_projection());
         glm::mat4 VP     = light->get_light_projection() * light->get_light_view();
-        auto      planes = Light::extract_frustum_planes(VP);
+        auto      planes = light->extract_frustum_planes(VP);
 
         for (auto& m : models) {
             m->in_frustum(planes);
@@ -117,7 +148,7 @@ void Renderer::draw_light_depth(Light*                                          
                 continue;
             if (!m->is_in_frustum())
                 continue;
-            draw_model_depth(m.get(),shader);
+            draw_model_depth(m.get(), shader);
         }
     }
 
@@ -125,21 +156,25 @@ void Renderer::draw_light_depth(Light*                                          
     set_color_mask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     bind_framebuffer(GL_FRAMEBUFFER, 0);
     unbind_shader();
-
-    // light->draw_depth_pass(sh, models);
 }
 
-void Renderer::draw_model_depth(Models::Model* m,std::shared_ptr<Shader> shader) {
+void Renderer::draw_model_depth(Models::Model* m, std::shared_ptr<Shader> shader) {
     shader->set_mat4("uModel", m->model_instance.world_transform);
-    assert(m->model_data->vao != 0);
-    shader->bindVAO(m->model_data->vao);
+    auto model_entry =allocated_models.find(m->model_data->id);
+    if(model_entry != allocated_models.end()){
+        shader->bindVAO(model_entry->second->vao);
+    }else{
+        std::cout << "No VAO found for: " << m->model_instance.label << "\n";
+        assert(false);
+    }
     for (auto const& sm : m->model_data->submeshes) {
         void* offset_ptr = (void*)(sm.index_offset * sizeof(GLuint));
         shader->drawElemTriangles(sm.index_count, offset_ptr);
     }
     shader->unbindVAO();
-}
 
+
+}
 
 void Renderer::draw_lights_depth(const std::vector<std::unique_ptr<Light>>&         lights,
                                  const std::vector<std::unique_ptr<Models::Model>>& models) {
@@ -182,8 +217,13 @@ void Renderer::draw(Models::Model* m, const glm::mat4& view, const glm::mat4& pr
     shader->set_mat4("uProj", projection);
     shader->set_mat4("uModel", m->model_instance.world_transform);
 
-    assert(m->model_data->vao != 0);
-    shader->bindVAO(m->model_data->vao);
+    auto model_entry =allocated_models.find(m->model_data->id);
+    if(model_entry != allocated_models.end()){
+        shader->bindVAO(model_entry->second->vao);
+    }else {
+        std::cout << "No VAO found to draw model: " << m->model_instance.label << "\n";
+        assert(false);
+    }
     for (auto const& sm : m->model_data->submeshes) {
         shader->set_vec3("material.ambient", sm.mat.Ka);
         shader->set_vec3("material.diffuse", sm.mat.Kd);

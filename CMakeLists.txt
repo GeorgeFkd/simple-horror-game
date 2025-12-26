@@ -102,7 +102,6 @@ ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
 )
 
 target_link_libraries(scene_objects PRIVATE
-opengl_backend
 glm::glm
 )
 
@@ -121,7 +120,7 @@ scene_objects
 
 add_library(game STATIC src/Camera.cpp  src/GameState.cpp  src/Monster.cpp src/SceneManager.cpp)
 
-target_include_directories(game PUBLIC 
+target_include_directories(game PRIVATE
 ${CMAKE_CURRENT_SOURCE_DIR}/src 
 ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
 ${SDL2_INCLUDE_DIRS}
@@ -133,8 +132,8 @@ target_link_libraries(game PRIVATE
 ${SDL2_LIBRARIES}
 ${SDL2_mixer_LIBRARIES}
 glm::glm
-scene_objects
 opengl_renderer
+scene_objects
 obj_loader_lib 
 text_handler
 )

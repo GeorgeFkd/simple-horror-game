@@ -1,13 +1,12 @@
 #pragma once
 
-#include <GL/glew.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <memory>
 #include <string>
 #include <string_view>
-#include "Shader.h"
+#include <vector>
+#include "EntityID.h"
 #include "fwd.hpp"
 enum class LightType { 
     POINT = 0,
@@ -121,10 +120,6 @@ public:
         return type;
     }
 
-    inline GLuint get_depth_texture() const {
-        return depth_map;
-    }
-
     inline float get_far_plane() const{
         return far_plane;
     }
@@ -169,9 +164,7 @@ public:
     float attenuation_power;
     float light_power ;
     float prev_light_power;    
-    GLuint   depth_map_fbo;
-    GLuint   depth_map;
-
+    EntityID id;
     bool is_on;
     std::string_view label;
     glm::vec3 color;

@@ -29,19 +29,7 @@ struct InstanceData {
     bool        active = true;
 };
 
-struct VertexHasher {
-    // TODO I don't know if thats good enough
-    size_t operator()(Vertex const& v) const noexcept {
-        auto h = std::hash<float>{};
-        // xor mixes the bits together
-        // while shifting them reduces collisions so they can be
-        // distributed evenly across buckets
-        size_t h0 = h(v.position.x) ^ (h(v.position.y) << 1) ^ (h(v.position.z) << 2);
-        size_t h1 = h(v.texcoord.x) ^ (h(v.texcoord.y) << 1);
-        size_t h2 = h(v.normal.x) ^ (h(v.normal.y) << 1) ^ (h(v.normal.z) << 2);
-        return h0 ^ (h1 << 1) ^ (h2 << 2);
-    }
-};
+
 
 class Model {
   public:
@@ -122,10 +110,10 @@ class Model {
           std::string label, const Material& mat = Material());
 
     Model(const std::string& objFile, std::string label);
-
+    
   private:
     // this is made not for caching, but for sharing MData between instances coming from the same
-    // model, this saves opengl allocations and the computation to go from raw vertices to usable data(which is generally cheap)
+    // model, this saves opengl allocations(expensive most likely) and the computation to go from raw vertices to usable data(which is generally cheap)
     inline static std::unordered_map<std::string, std::shared_ptr<MData>> model_registry;
     
     void compute_transformed_aabb(const glm::mat4& xf, glm::vec3& out_min, glm::vec3& out_max);
@@ -144,9 +132,6 @@ class Model {
                                         const size_t                  index);
 
     
-    //these 2 could also be on the model_instance 
-    // bool interactable = false;
-    // bool active       = true;
     // should be part of model data probably
     std::vector<Model*> children;
 };

@@ -58,6 +58,7 @@ bool Game::SceneManager::has_user_won() {
 
 void Game::SceneManager::run_game_loop() {
 
+    allocate_game_state_to_gpu();
     text_renderer.load_font("assets/fonts/scary.ttf");
 
     Mix_Music* horror_music = Mix_LoadMUS("assets/audio/scary.mp3");
@@ -77,6 +78,7 @@ void Game::SceneManager::run_game_loop() {
     last_monster_transform        = glm::translate(glm::mat4(1.0f), monster_initial_position);
     auto monster_init             = Models::Model("assets/models/monster.obj", "monster");
     game_state->add_model(std::move(monster_init), "monster");
+    allocate_game_state_to_gpu();
     auto monster_model = game_state->find_model("monster");
     if (!monster_model) {
         throw std::runtime_error("Could not find monster model before starting game...");
