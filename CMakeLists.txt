@@ -89,7 +89,6 @@ PRIVATE ${TIFF_INCLUDE_DIR} /usr/include/glm
 target_link_libraries(obj_loader_lib PRIVATE
     TIFF::TIFF
     glm::glm
-    opengl_backend
 )
 
 
@@ -104,6 +103,49 @@ ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
 target_link_libraries(scene_objects PRIVATE
 glm::glm
 )
+
+set(gen_dir ${CMAKE_BINARY_DIR}/generated)
+
+add_executable(AssetCodegen)
+
+target_sources(AssetCodegen 
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/Codegen.cpp
+)
+target_include_directories(AssetCodegen PRIVATE
+${CMAKE_CURRENT_SOURCE_DIR}/src
+${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
+/usr/include/glm
+)
+
+target_link_libraries(AssetCodegen PRIVATE
+glm::glm
+obj_loader_lib
+scene_objects
+)
+
+add_custom_command(
+    OUTPUT ${gen_dir}/AssetLoader.cpp
+    COMMAND AssetCodegen ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp ${gen_dir} ModelInit.cpp
+    DEPENDS AssetCodegen ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
+    COMMENT "Doing Asset Codegen for caching inside: ${gen_dir}"
+    VERBATIM
+)
+
+add_custom_target(RunAssetCodegen DEPENDS ${gen_dir}/AssetLoader.cpp)
+
+add_library(AssetLoading ${gen_dir}/AssetLoader.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/ModelLoader.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/ModelInit.cpp)
+target_include_directories(AssetLoading PRIVATE
+${CMAKE_CURRENT_SOURCE_DIR}/src
+${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
+)
+target_link_libraries(AssetLoading
+    PRIVATE
+    obj_loader_lib
+    scene_objects
+)
+
+
 
 add_library(opengl_renderer STATIC src/Renderer.cpp src/data-structures/GPUMeshOpenGL.cpp src/data-structures/GPULight.cpp)
 target_include_directories(opengl_renderer PRIVATE
@@ -136,7 +178,10 @@ opengl_renderer
 scene_objects
 obj_loader_lib 
 text_handler
+AssetLoading
 )
+
+# add_dependencies(game RunAssetCodegen)
 
 
 add_executable(opengl_app src/main.cpp)

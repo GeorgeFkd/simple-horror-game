@@ -259,6 +259,30 @@ void set_texture_parameterfv(GLenum target, GLenum pname, const GLfloat* params)
 // {
 //     GLCall(glBlendFunc(sfactor, dfactor));
 // }
+//
+
+static GLuint reserve_opengl_texture(uint32_t width, uint32_t height, uint32_t border,
+                                     uint32_t format, const void* data) {
+    GLuint tex;
+    generate_texture(&tex);           // glGenTextures
+    bind_texture(GL_TEXTURE_2D, tex); // glBindTexture
+
+    set_texture_image_2d(GL_TEXTURE_2D, // glTexImage2D
+                         0, format, width, height, border, format, GL_UNSIGNED_BYTE, data);
+
+    generate_mipmap(GL_TEXTURE_2D); // glGenerateMipmap
+
+    set_texture_parameters(GL_TEXTURE_2D, {// glTexParameteri
+                                           {GL_TEXTURE_WRAP_S, GL_REPEAT},
+                                           {GL_TEXTURE_WRAP_T, GL_REPEAT},
+                                           {GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR},
+                                           {GL_TEXTURE_MAG_FILTER, GL_LINEAR}});
+
+    unbind_texture(GL_TEXTURE_2D);
+
+    return tex;
+}
+
 
 void set_uniform3f(GLint location, float v0, float v1, float v2) {
     GLCall(glUniform3f(location, v0, v1, v2));

@@ -20,8 +20,6 @@
 
 namespace ObjectLoader {
 
-GLuint load_texture_from_tiff(const std::string& filename);
-GLuint load_texture_from_file(const std::string& filepath);
 struct Face {
     glm::ivec4 vertices;
     glm::ivec4 normals;
@@ -116,7 +114,6 @@ bool parse_components_sv(std::string_view sv, float out[N]) {
 
 class OBJLoader {
   private:
-    void load_textures();
     void read_normal(const char* buff);
     void read_vertex(const char* buff);
     void read_texcoord(const char* buff);

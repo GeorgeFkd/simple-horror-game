@@ -78,6 +78,9 @@ void generate_mipmap(GLenum target);
 void delete_framebuffer(GLuint* fbo);
 void delete_texture(GLuint* texture);
 
+static GLuint reserve_opengl_texture(uint32_t width, uint32_t height, uint32_t border,
+                                     uint32_t format, const void* data);
+
 
 
 class Shader {
