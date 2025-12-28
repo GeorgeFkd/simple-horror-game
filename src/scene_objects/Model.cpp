@@ -1,9 +1,7 @@
-#include "Model.h"
-#include "Shader.h"
+#include "scene_objects/Model.h"
 #include <limits>
 #include <memory>
-
-
+#include <iostream>
 
 static void print_vec3(glm::vec3 v) {
     std::cout << "(" << v.x << "," << v.y << "," << v.z << ")\n";
@@ -42,7 +40,7 @@ void Models::Model::move_relative_to(const glm::vec3& direction) {
     this->set_local_transform(tf);
 }
 
-std::pair<std::vector<glm::vec3>, std::vector<glm::vec3>> Models::Model::prepare_bitangents() {
+std::pair<std::vector<glm::vec3>, std::vector<glm::vec3>> Models::Model::prepare_bitangents(MData* model_data) {
     std::vector<glm::vec3> tan1(model_data->unique_vertices.size(), glm::vec3(0.0f));
     std::vector<glm::vec3> tan2(model_data->unique_vertices.size(), glm::vec3(0.0f));
 
@@ -98,15 +96,15 @@ Models::Model::Model(const std::vector<glm::vec3>& positions, const std::vector<
     sm.index_count  = static_cast<GLuint>(model_data->indices.size());
     model_data->submeshes.push_back(sm);
 
-    auto [tan1, tan2] = prepare_bitangents();
+    auto [tan1, tan2] = prepare_bitangents(model_data.get());
     for (size_t i = 0; i < model_data->unique_vertices.size(); ++i) {
         orthogonalize_and_normalize_tb(model_data->unique_vertices[i], tan1, tan2, i);
     }
     // when the caching is complete those 2 will also be cached
-    initialize_local_aabb();
+    initialize_local_aabb(model_data.get());
 }
 
-void Models::Model::initialize_local_aabb() {
+void Models::Model::initialize_local_aabb(MData* model_data) {
     model_data->localaabbmin = glm::vec3(std::numeric_limits<float>::max());
     model_data->localaabbmax = glm::vec3(-std::numeric_limits<float>::max());
     for (auto const& v : model_data->unique_vertices) {
@@ -124,107 +122,12 @@ Models::Model::Model(const Model& model_to_replicate, std::string model_name, gl
     // model data
 }
 
+
 Models::Model::Model(const std::string& objFile, std::string label) {
     model_instance.local_transform = 1.0f;
     model_instance.world_transform = 1.0f;
     model_instance.label           = std::move(label);
-
-    auto it = model_registry.find(objFile);
-    if (it != model_registry.end()) {
-        std::cout << "Model: " << objFile << " already exists in model registry \n";
-        model_data = it->second;
-        return;
-    } else {
-        std::cout << "Model: " << objFile << " not in registry\n";
-        std::cout << "Registry size: " << model_registry.size() << "\n";
-    }
-
-    ObjectLoader::OBJLoader loader;
-    auto                    obj_model_data = loader.read_from_file(objFile);
-
-    model_data = std::make_shared<MData>();
-    // build unique_vertices & a cache
-    std::unordered_map<Vertex, GLuint, VertexHasher> cache;
-    cache.reserve(obj_model_data->m_faces.size() * 4);
-
-    // bucket indices by material_id
-    std::unordered_map<int, std::vector<GLuint>> buckets;
-
-    auto default_texcoord = glm::vec2(0.0f, 0.0f);
-    auto default_normal   = glm::vec3(0.0f, 0.0f, 1.0f);
-    auto add_vertex       = [&](int vi, int ti, int ni) {
-        Vertex vert;
-        vert.position = glm::vec3(obj_model_data->m_vertices[vi]);
-        if (ti >= 0 && ti < (int)obj_model_data->m_texture_coords.size()) {
-            vert.texcoord = obj_model_data->m_texture_coords[ti];
-        } else {
-            vert.texcoord = default_texcoord;
-        }
-
-        if (ni >= 0 && ni < (int)obj_model_data->m_vertex_normals.size()) {
-            vert.normal = obj_model_data->m_vertex_normals[ni];
-        } else {
-            vert.normal = default_normal;
-        }
-
-        auto [it, inserted] = cache.emplace(vert, (GLuint)this->model_data->unique_vertices.size());
-        if (inserted) {
-            this->model_data->unique_vertices.push_back(vert);
-        }
-        return it->second;
-    };
-
-    for (auto const& face : obj_model_data->m_faces) {
-        int material_id = face.material_id;
-        // unpack up to 4 verts; 3 if w == -1
-        int vertex_count = (face.vertices.w == -1 ? 3 : 4);
-        // first tri
-        buckets[material_id].push_back(
-            add_vertex(face.vertices[0], face.texcoords[0], face.normals[0]));
-        buckets[material_id].push_back(
-            add_vertex(face.vertices[1], face.texcoords[1], face.normals[1]));
-        buckets[material_id].push_back(
-            add_vertex(face.vertices[2], face.texcoords[2], face.normals[2]));
-        // second tri if quad
-        if (vertex_count == 4) {
-            buckets[material_id].push_back(
-                add_vertex(face.vertices[0], face.texcoords[0], face.normals[0]));
-            buckets[material_id].push_back(
-                add_vertex(face.vertices[2], face.texcoords[2], face.normals[2]));
-            buckets[material_id].push_back(
-                add_vertex(face.vertices[3], face.texcoords[3], face.normals[3]));
-        }
-    }
-
-    // flatten buckets → one big index array, record submeshes
-    model_data->indices.reserve(
-        std::accumulate(buckets.begin(), buckets.end(), 0u,
-                        [](auto sum, auto& p) { return sum + p.second.size(); }));
-
-    for (auto& [material_id, indexes] : buckets) {
-        SubMesh sm;
-        if (material_id >= 0) {
-            sm.mat = obj_model_data->m_materials[material_id];
-        } else {
-            sm.mat = Material{};
-        }
-        sm.index_offset = (GLuint)model_data->indices.size();
-        sm.index_count  = (GLuint)indexes.size();
-
-        model_data->indices.insert(model_data->indices.end(), indexes.begin(), indexes.end());
-        model_data->submeshes.push_back(sm);
-    }
-
-    // storage for accumulating each shared vertex's contributions
-    auto [tan1, tan2] = prepare_bitangents();
-    for (int i = 0; i < model_data->unique_vertices.size(); i++) {
-        orthogonalize_and_normalize_tb(model_data->unique_vertices[i], tan1, tan2, i);
-    }
-
-    initialize_local_aabb();
-
-    // assert(model_data->vao != 0 && model_data->ebo != 0 && model_data->vbo != 0);
-    model_registry[objFile] = model_data;
+    model_data = ModelLoader::load_or_get_cached(objFile);
 }
 
 void Models::Model::orthogonalize_and_normalize_tb(
@@ -234,7 +137,6 @@ void Models::Model::orthogonalize_and_normalize_tb(
     const glm::vec3& tangent   = accumulated_tangent[index];
     const glm::vec3& bitangent = accumulated_bitangent[index];
 
-    //
     // Gram–Schmidt orthogonalize the tangent against the normal
     glm::vec3 orth_tangent = glm::normalize(tangent - normal * glm::dot(normal, tangent));
 
@@ -246,8 +148,7 @@ void Models::Model::orthogonalize_and_normalize_tb(
     vertex.tangent = glm::vec4(orth_tangent, handedness);
 }
 
-std::pair<glm::vec3, glm::vec3> Models::Model::calculate_tangent_bitangent(Vertex v0,
-                                                                           Vertex v1,
+std::pair<glm::vec3, glm::vec3> Models::Model::calculate_tangent_bitangent(Vertex v0, Vertex v1,
                                                                            Vertex v2) {
 
     glm::vec3 edge1 = v1.position - v0.position;

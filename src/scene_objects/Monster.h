@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Camera.h"
+#include "game/Camera.h"
 #include "Model.h"
 #include <chrono>
 #include <queue>

@@ -2,9 +2,10 @@ enable_testing()
 set(TEST_ASSETS ${CMAKE_SOURCE_DIR}/test.obj ${CMAKE_SOURCE_DIR}/cube.mtl)
 message(STATUS "Root CMake directory: ${CMAKE_SOURCE_DIR}")
 add_executable(obj_loader_test ObjLoaderTest.cpp)
+target_include_directories(obj_loader_test PRIVATE ${CMAKE_SOURCE_DIR}/src/data-structures ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(obj_loader_test 
 	PRIVATE 
-		obj_loader_lib
+		model_loader
 		GTest::gtest_main
 )
 

@@ -1,7 +1,7 @@
 
 #pragma once
-#include <Light.h>
-#include <Model.h>
+#include "scene_objects/Light.h"
+#include "scene_objects/Model.h"
 #include <memory>
 #include <string>
 #include <vector>

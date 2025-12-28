@@ -1,7 +1,7 @@
 // main.cpp
-#include "Group.h"
-#include "Light.h"
-#include "SceneManager.h"
+#include "scene_objects/Group.h"
+#include "scene_objects/Light.h"
+#include "game/SceneManager.h"
 #include "fwd.hpp"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>

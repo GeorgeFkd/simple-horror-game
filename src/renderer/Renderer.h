@@ -1,6 +1,6 @@
 
-#include "Model.h"
-#include "Light.h"
+#include "scene_objects/Model.h"
+#include "scene_objects/Light.h"
 #include "Shader.h"
 #include "GPULight.h"
 #include "GPUMesh.h"

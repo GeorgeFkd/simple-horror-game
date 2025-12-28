@@ -1,8 +1,5 @@
 #include "OBJLoader.h"
-#include "tiffio.h"
 #define STB_IMAGE_IMPLEMENTATION
-#include "Shader.h"
-#include "stb_image.h"
 
 void ObjectLoader::OBJLoader::clear_cache() {
     model_cache.clear();

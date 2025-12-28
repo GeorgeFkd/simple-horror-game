@@ -1,4 +1,4 @@
-#include "../OBJLoader.h"
+#include "loaders/OBJLoader.h"
 #include <gtest/gtest.h>
 
 

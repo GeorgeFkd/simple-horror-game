@@ -1,5 +1,5 @@
 #pragma once
-#include "Light.h"
+#include "scene_objects/Light.h"
 #include <GL/glew.h>
 class GPULight {
 public:

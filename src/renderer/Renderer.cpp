@@ -7,7 +7,6 @@ void Renderer::draw_light(Light* light, int index, std::shared_ptr<Shader> shade
     auto gpulight = allocated_lights.find(light->id);
     GLuint depth_map = 0;
     if (gpulight != allocated_lights.end()) {
-        std::cout << "rendering light: " << light->id << "\n";
         depth_map = gpulight->second->depth_map;
     } else {
         std::cout << "Did not find light with id: " << light->id;

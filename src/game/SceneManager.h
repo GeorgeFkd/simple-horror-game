@@ -1,9 +1,9 @@
 #pragma once
 #include "Camera.h"
 #include "GameState.h"
-#include "Monster.h"
-#include "Renderer.h"
-#include "TextRenderer.h"
+#include "scene_objects/Monster.h"
+#include "renderer/Renderer.h"
+#include "renderer/TextRenderer.h"
 #include <algorithm>
 #include <glm/glm.hpp>
 #include <glm/gtc/epsilon.hpp>

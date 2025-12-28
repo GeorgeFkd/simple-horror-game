@@ -1,6 +1,5 @@
 #include "Light.h"
 #include "EntityID.h"
-#include "Shader.h"
 #include <array>
 #include <iostream>
 #include <memory>

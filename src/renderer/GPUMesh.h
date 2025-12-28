@@ -1,5 +1,5 @@
 #pragma once
-#include "MData.h"
+#include "scene_objects/MData.h"
 
 class GPUMesh {
 public:

@@ -54,9 +54,9 @@ endif()
 
 
 
-set(TEXT_HANDLER_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures)
+set(TEXT_HANDLER_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer)
 message(STATUS "Including ${TEXT_HANDLER_INCLUDES} for text handler")
-add_library(text_handler STATIC src/TextRenderer.cpp)
+add_library(text_handler STATIC src/renderer/TextRenderer.cpp)
 target_include_directories(text_handler PRIVATE 
 ${TEXT_HANDLER_INCLUDES} 
 ${FREETYPE_INCLUDE_DIRS}
@@ -64,7 +64,7 @@ ${FREETYPE_INCLUDE_DIRS}
 target_link_libraries(text_handler PRIVATE glm::glm ${FREETYPE_LIBRARIES})
 
 
-add_library(opengl_backend STATIC src/Shader.cpp)
+add_library(opengl_backend STATIC src/renderer/Shader.cpp)
 target_include_directories(opengl_backend 
 PRIVATE 
 ${OPENGL_INCLUDE_DIR} 
@@ -72,6 +72,7 @@ ${GLEW_INCLUDE_DIR}
 /usr/include/glm 
 ${CMAKE_CURRENT_SOURCE_DIR}/src 
 ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
+${CMAKE_CURRENT_SOURCE_DIR}/src/renderer
 )
 
 target_link_libraries(opengl_backend PRIVATE
@@ -80,74 +81,79 @@ GLEW::GLEW
 glm::glm 
 )
 
-add_library(obj_loader_lib STATIC src/OBJLoader.cpp)
-target_include_directories(obj_loader_lib 
-PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
-PRIVATE ${TIFF_INCLUDE_DIR} /usr/include/glm
+add_library(model_loader STATIC src/loaders/OBJLoader.cpp src/loaders/ModelLoader.cpp)
+target_include_directories(model_loader PRIVATE 
+${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures 
+${CMAKE_CURRENT_SOURCE_DIR}/src
+${CMAKE_CURRENT_SOURCE_DIR}/loaders
+${TIFF_INCLUDE_DIR} /usr/include/glm
 )
 
-target_link_libraries(obj_loader_lib PRIVATE
+target_link_libraries(model_loader PRIVATE
     TIFF::TIFF
     glm::glm
 )
 
 
-add_library(scene_objects STATIC src/Model.cpp src/Group.cpp src/data-structures/Light.cpp src/data-structures/MData.cpp)
+add_library(scene_objects STATIC src/scene_objects/Model.cpp src/scene_objects/Group.cpp src/scene_objects/Light.cpp src/scene_objects/MData.cpp)
 
 target_include_directories(scene_objects PRIVATE
 ${CMAKE_CURRENT_SOURCE_DIR}/src
 ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
+${CMAKE_CURRENT_SOURCE_DIR}/src/scene_objects
+${TIFF_INCLUDE_DIR}
 /usr/include/glm
 )
 
 target_link_libraries(scene_objects PRIVATE
 glm::glm
+TIFF::TIFF
 )
 
-set(gen_dir ${CMAKE_BINARY_DIR}/generated)
+# set(gen_dir ${CMAKE_BINARY_DIR}/generated)
+#
+# add_executable(AssetCodegen)
+#
+# target_sources(AssetCodegen 
+#     PRIVATE
+#         ${CMAKE_CURRENT_SOURCE_DIR}/src/Codegen.cpp
+# )
+# target_include_directories(AssetCodegen PRIVATE
+# ${CMAKE_CURRENT_SOURCE_DIR}/src
+# ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
+# /usr/include/glm
+# )
 
-add_executable(AssetCodegen)
+# target_link_libraries(AssetCodegen PRIVATE
+# glm::glm
+# model_loader
+# scene_objects
+# )
 
-target_sources(AssetCodegen 
-    PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/Codegen.cpp
-)
-target_include_directories(AssetCodegen PRIVATE
-${CMAKE_CURRENT_SOURCE_DIR}/src
-${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
-/usr/include/glm
-)
+# add_custom_command(
+#     OUTPUT ${gen_dir}/ModelInit.cpp
+#     COMMAND AssetCodegen ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp ${gen_dir} ModelInit.cpp
+#     DEPENDS AssetCodegen ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
+#     COMMENT "Doing Asset Codegen for caching inside: ${gen_dir}"
+#     VERBATIM
+# )
+#
+# add_custom_target(RunAssetCodegen DEPENDS ${gen_dir}/ModelInit.cpp)
 
-target_link_libraries(AssetCodegen PRIVATE
-glm::glm
-obj_loader_lib
-scene_objects
-)
-
-add_custom_command(
-    OUTPUT ${gen_dir}/AssetLoader.cpp
-    COMMAND AssetCodegen ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp ${gen_dir} ModelInit.cpp
-    DEPENDS AssetCodegen ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
-    COMMENT "Doing Asset Codegen for caching inside: ${gen_dir}"
-    VERBATIM
-)
-
-add_custom_target(RunAssetCodegen DEPENDS ${gen_dir}/AssetLoader.cpp)
-
-add_library(AssetLoading ${gen_dir}/AssetLoader.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/ModelLoader.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/ModelInit.cpp)
-target_include_directories(AssetLoading PRIVATE
-${CMAKE_CURRENT_SOURCE_DIR}/src
-${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
-)
-target_link_libraries(AssetLoading
-    PRIVATE
-    obj_loader_lib
-    scene_objects
-)
+# add_library(AssetLoading ${gen_dir}/ModelInit.cpp)
+# target_include_directories(AssetLoading PRIVATE
+# ${CMAKE_CURRENT_SOURCE_DIR}/src
+# ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
+# )
+# target_link_libraries(AssetLoading
+#     PRIVATE
+#     model_loader
+#     scene_objects
+# )
 
 
 
-add_library(opengl_renderer STATIC src/Renderer.cpp src/data-structures/GPUMeshOpenGL.cpp src/data-structures/GPULight.cpp)
+add_library(opengl_renderer STATIC src/renderer/Renderer.cpp src/renderer/GPUMeshOpenGL.cpp src/renderer/GPULight.cpp)
 target_include_directories(opengl_renderer PRIVATE
 ${CMAKE_CURRENT_SOURCE_DIR}/src
 ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
@@ -160,11 +166,13 @@ glm::glm
 scene_objects
 )
 
-add_library(game STATIC src/Camera.cpp  src/GameState.cpp  src/Monster.cpp src/SceneManager.cpp)
+add_library(game STATIC src/game/Camera.cpp  src/game/GameState.cpp  src/scene_objects/Monster.cpp src/game/SceneManager.cpp)
 
 target_include_directories(game PRIVATE
 ${CMAKE_CURRENT_SOURCE_DIR}/src 
 ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
+${CMAKE_CURRENT_SOURCE_DIR}/src/game
+${CMAKE_CURRENT_SOURCE_DIR}/src/scene_objects
 ${SDL2_INCLUDE_DIRS}
 ${SDL2_mixer_INCLUDE_DIRS}
 /usr/include/glm
@@ -176,9 +184,8 @@ ${SDL2_mixer_LIBRARIES}
 glm::glm
 opengl_renderer
 scene_objects
-obj_loader_lib 
+model_loader
 text_handler
-AssetLoading
 )
 
 # add_dependencies(game RunAssetCodegen)

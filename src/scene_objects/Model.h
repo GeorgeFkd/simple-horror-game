@@ -1,5 +1,4 @@
 #pragma once
-#include "OBJLoader.h"
 #include <algorithm>
 #include <cfloat>
 #include <functional>
@@ -16,6 +15,7 @@
 #include <vector>
 #include "Vertex.h"
 #include "MData.h"
+#include "loaders/ModelLoader.h"
 namespace Models {
 
 struct InstanceData {
@@ -110,27 +110,22 @@ class Model {
           std::string label, const Material& mat = Material());
 
     Model(const std::string& objFile, std::string label);
-    
+
   private:
-    // this is made not for caching, but for sharing MData between instances coming from the same
-    // model, this saves opengl allocations(expensive most likely) and the computation to go from raw vertices to usable data(which is generally cheap)
-    inline static std::unordered_map<std::string, std::shared_ptr<MData>> model_registry;
     
     void compute_transformed_aabb(const glm::mat4& xf, glm::vec3& out_min, glm::vec3& out_max);
     bool aabb_in_frustum(const std::array<glm::vec4, 6>& P, const glm::vec3& minB,
                          const glm::vec3& maxB) const;
 
-    std::pair<std::vector<glm::vec3>, std::vector<glm::vec3>> prepare_bitangents();
-    std::pair<glm::vec3, glm::vec3>
-    calculate_tangent_bitangent(Vertex v0, Vertex v1, Vertex v2);
+    static std::pair<std::vector<glm::vec3>, std::vector<glm::vec3>> prepare_bitangents(MData* model_data);
+    static std::pair<glm::vec3, glm::vec3> calculate_tangent_bitangent(Vertex v0, Vertex v1, Vertex v2);
 
-    void initialize_local_aabb();
+    static void initialize_local_aabb(MData* model_data);
     void update_aabb();
-    void orthogonalize_and_normalize_tb(Vertex&               vertex,
+    static void orthogonalize_and_normalize_tb(Vertex&               vertex,
                                         const std::vector<glm::vec3>& accumulated_tangent,
                                         const std::vector<glm::vec3>& accumulated_bitangent,
                                         const size_t                  index);
-
     
     // should be part of model data probably
     std::vector<Model*> children;
