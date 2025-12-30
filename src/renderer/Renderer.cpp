@@ -2,6 +2,20 @@
 #include "GPULight.h"
 #include "GPUMesh.h"
 #include "Shader.h"
+
+
+
+void Renderer::renderText(
+                    const std::string& text,
+                    float x,
+                    float y,
+                    float scale,
+                    const glm::vec3& color,
+                    const glm::mat4& projection){
+    
+    textRenderer.render_text(get_shader_by_name("text"),  text, x, y, scale, color, projection);
+}
+
 void Renderer::draw_light(Light* light, int index, std::shared_ptr<Shader> shader) {
 
     auto gpulight = allocated_lights.find(light->id);
@@ -60,6 +74,7 @@ void Renderer::init(int screen_width, int screen_height) {
     set_viewport(0, 0, screen_width, screen_height);
     set_clear_color(0.0f, 0.0f, 0.0f, 1.0f);
     clear_buffers(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    textRenderer.load_font("assets/fonts/scary.ttf");
 }
 
 void Renderer::upload_model(Models::Model* m) {

@@ -83,6 +83,7 @@ class SceneManager {
     glm::vec3                                                           last_camera_position;
     glm::mat4                                                           last_monster_transform;
     bool                                                                running = false;
-    unsigned int seconds_to_wait_before_termination                             = 5;
+    unsigned int seconds_to_wait_before_termination                             = 3;
+    float fps = -1;
 };
 }; // namespace Game

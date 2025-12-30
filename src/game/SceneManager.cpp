@@ -59,7 +59,6 @@ bool Game::SceneManager::has_user_won() {
 void Game::SceneManager::run_game_loop() {
 
     allocate_game_state_to_gpu();
-    text_renderer.load_font("assets/fonts/scary.ttf");
 
     Mix_Music* horror_music = Mix_LoadMUS("assets/audio/scary.mp3");
     if (!horror_music) {
@@ -132,6 +131,8 @@ void Game::SceneManager::run_game_loop() {
         }
         Uint64 now = SDL_GetPerformanceCounter();
         float  dt  = float(now - lastTicks) / float(SDL_GetPerformanceFrequency());
+        assert(dt != 0);
+        fps = 1/dt;
         lastTicks  = now;
         handle_sdl_events(running);
         last_camera_position   = camera.get_position();
@@ -156,6 +157,7 @@ void Game::SceneManager::run_game_loop() {
             distance_f       = std::clamp(distance_f, 0.0f, 255.0f);
 
             uint8_t distance_byte = static_cast<uint8_t>(distance_f + 0.5f);
+            //mb i mean distance byte here? 
             Mix_SetPosition(footsteps_sound_channel, angle_deg, distance_f);
         }
 
@@ -349,24 +351,24 @@ void Game::SceneManager::check_collisions(float dt) {
 
 void Game::SceneManager::render(const glm::mat4& view, const glm::mat4& projection) {
     renderer.render(view, projection,  game_state->get_lights(),  game_state->get_models());
-    // shader->unbind();
 
-    //TODO: reenable text rendering, i dont have the shaders currently thats why it is not working
-    // glm::mat4   text_projection = glm::ortho(0.0f, (float)screen_width, 0.0f, (float)screen_height);
-    // auto        textShader      = get_shader_by_name("text");
-    // std::string displayed_text  = "pages:" + std::to_string(game_state->pages_collected);
-    // text_renderer.render_text(textShader, displayed_text, 50.0f, 720.0f - 50.0f, 1.2f,
-    //                           {1.0f, 0.0f, 0.0f}, text_projection);
-    // if (!center_text.empty()) {
-    //     text_renderer.render_text(textShader, center_text, 1280.0f / 2 - 80.0f, 720.0f - 250.0f,
-    //                               1.2f, {1.0f, 0.0f, 0.0f}, text_projection);
-    // }
-    //
-    // if (!bottom_text_hints.empty()) {
-    //     text_renderer.render_text(textShader, bottom_text_hints, 300.0f, 720.0f - 650.0f, 0.8f,
-    //                               {0.5f, 0.5f, 0.0f}, text_projection);
-    // }
-    // textShader->unbind();
+
+    glm::mat4   textProjection = glm::ortho(0.0f, (float)screen_width, 0.0f, (float)screen_height);
+    std::string displayed_text  = "pages:" + std::to_string(game_state->pages_collected);
+        renderer.renderText(displayed_text, 50.0f, 720.0f - 50.0f, 1.2f,
+                              {1.0f, 0.0f, 0.0f}, textProjection);
+
+    if (!center_text.empty()) {
+        renderer.renderText(center_text, 1280.0f / 2 - 80.0f, 720.0f - 250.0f,
+                                  1.2f, {1.0f, 0.0f, 0.0f}, textProjection);
+    }
+
+    if (!bottom_text_hints.empty()) {
+        renderer.renderText(bottom_text_hints, 300.0f, 720.0f - 650.0f, 0.8f,
+                                  {0.5f, 0.5f, 0.0f}, textProjection);
+    }else {
+            renderer.renderText(std::to_string(fps),300.0f,720.0f - 650.0f,0.8f,{0.5f,0.5f,0.0f},textProjection);
+    }
 }
 
 Game::SceneManager::SceneManager(int width, int height, glm::vec3 camera_position)

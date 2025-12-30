@@ -1,4 +1,5 @@
 
+#include "renderer/TextRenderer.h"
 #include "scene_objects/Model.h"
 #include "scene_objects/Light.h"
 #include "Shader.h"
@@ -11,7 +12,13 @@ public:
     Renderer();
     
     void render(const glm::mat4& view, const glm::mat4& projection,const std::vector<std::unique_ptr<Light>>& lights,const std::vector<std::unique_ptr<Models::Model>>& models);
-    
+    void renderText(
+                    const std::string& text,
+                    float x,
+                    float y,
+                    float scale,
+                    const glm::vec3& color,
+                    const glm::mat4& projection);
     //methods to allocate things on the gpu
     void upload_model(Models::Model* model);
     void upload_light(Light* light);
@@ -22,6 +29,7 @@ public:
 
 private:
     std::vector<std::shared_ptr<Shader>> shaders;
+    TextRenderer textRenderer;
     std::unordered_map<EntityID,std::unique_ptr<GPULight>> allocated_lights;
     std::unordered_map<EntityID,std::unique_ptr<GPUMesh>> allocated_models;
     std::shared_ptr<Shader> get_shader_by_name(const std::string& shader_name);
