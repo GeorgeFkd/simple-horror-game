@@ -1,7 +1,8 @@
 #include "scene_objects/Model.h"
+#include "gtc/epsilon.hpp"
+#include <iostream>
 #include <limits>
 #include <memory>
-#include <iostream>
 
 static void print_vec3(glm::vec3 v) {
     std::cout << "(" << v.x << "," << v.y << "," << v.z << ")\n";
@@ -40,7 +41,8 @@ void Models::Model::move_relative_to(const glm::vec3& direction) {
     this->set_local_transform(tf);
 }
 
-std::pair<std::vector<glm::vec3>, std::vector<glm::vec3>> Models::Model::prepare_bitangents(MData* model_data) {
+std::pair<std::vector<glm::vec3>, std::vector<glm::vec3>>
+Models::Model::prepare_bitangents(MData* model_data) {
     std::vector<glm::vec3> tan1(model_data->unique_vertices.size(), glm::vec3(0.0f));
     std::vector<glm::vec3> tan2(model_data->unique_vertices.size(), glm::vec3(0.0f));
 
@@ -122,12 +124,11 @@ Models::Model::Model(const Model& model_to_replicate, std::string model_name, gl
     // model data
 }
 
-
 Models::Model::Model(const std::string& objFile, std::string label) {
     model_instance.local_transform = 1.0f;
     model_instance.world_transform = 1.0f;
     model_instance.label           = std::move(label);
-    model_data = ModelLoader::load_or_get_cached(objFile);
+    model_data                     = ModelLoader::load_or_get_cached(objFile);
 }
 
 void Models::Model::orthogonalize_and_normalize_tb(
@@ -185,15 +186,31 @@ void Models::Model::add_child(Model* child) {
 }
 
 void Models::Model::set_local_transform(const glm::mat4& local_transform) {
-    model_instance.local_transform = local_transform;
+    constexpr float eps = 1e-5f;
+
+    bool equal =
+        glm::all(glm::epsilonEqual(local_transform[0], model_instance.local_transform[0], eps)) &&
+        glm::all(glm::epsilonEqual(local_transform[1], model_instance.local_transform[1], eps)) &&
+        glm::all(glm::epsilonEqual(local_transform[2], model_instance.local_transform[2], eps)) &&
+        glm::all(glm::epsilonEqual(local_transform[3], model_instance.local_transform[3], eps));
+    if (!equal) {
+        dirtyTransform                 = true;
+        model_instance.local_transform = local_transform;
+    }else{
+        dirtyTransform = false;
+    }
 }
 
 void Models::Model::update_world_transform(const glm::mat4& parent_transform) {
-    model_instance.world_transform = parent_transform * model_instance.local_transform;
+    //we assume that parent_transform does not change as seen in the code
+    if (dirtyTransform) {
+        model_instance.world_transform = parent_transform * model_instance.local_transform;
 
-    update_aabb();
-    for (Model* child : children) {
-        child->update_world_transform(model_instance.world_transform);
+        update_aabb();
+        for (Model* child : children) {
+            child->update_world_transform(model_instance.world_transform);
+        }
+        dirtyTransform = false;
     }
 }
 

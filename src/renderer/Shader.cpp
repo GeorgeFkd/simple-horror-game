@@ -292,6 +292,7 @@ void activate_texture_unit(GLenum texture) {
     GLCall(glActiveTexture(texture));
 }
 
+
 Shader::Shader(const std::vector<std::string>& shader_paths,
                const std::vector<GLenum>& shader_types, const std::string& shader_name) {
     if (shader_paths.size() != shader_types.size()) {
@@ -330,11 +331,6 @@ Shader::Shader(const std::vector<std::string>& shader_paths,
 }
 
 GLuint Shader::compile_shader(GLenum type, const std::string& source) {
-    // Every symbolic constant you pass to an OpenGL
-    // function—like GL_ARRAY_BUFFER, GL_TRIANGLES, GL_FLOAT,
-    // GL_BLEND, etc.—is actually just an integer constant
-    // of type GLenum.
-    // glBindBuffer((GLenum)0x8892, vbo);
     GLCall(GLuint shader = glCreateShader(type));
     const char* src = source.c_str();
     GLCall(glShaderSource(shader, 1, &src, nullptr));

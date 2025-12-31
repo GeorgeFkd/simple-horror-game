@@ -4,6 +4,7 @@
 #include <SDL2/SDL_mixer.h>
 #include <SDL_keyboard.h>
 #include <SDL_timer.h>
+#include <SDL_video.h>
 #include <algorithm>
 #include <chrono>
 #include <glm/gtx/vector_angle.hpp>
@@ -31,7 +32,8 @@ void Game::SceneManager::initialise_opengl_sdl() {
     // SDL_GLContext
     glCtx = SDL_GL_CreateContext(window);
 
-
+    
+    // SDL_GL_SetSwapInterval(1);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
@@ -55,6 +57,16 @@ void Game::SceneManager::terminate_game(const std::string& text) {
 bool Game::SceneManager::has_user_won() {
     return game_state->pages_collected >= game_state->pages_collected_to_win;
 }
+
+
+#define PERF(label,block) \
+    do { \
+        Uint64 _start = SDL_GetPerformanceCounter(); \
+        block; \
+        Uint64 _end = SDL_GetPerformanceCounter(); \
+        float elapsedMS = (_end - _start) / (float)SDL_GetPerformanceFrequency() * 1000.0f; \
+        std::cout << label << " TIME: " << elapsedMS << "ms. \n"; \
+    } while (0)
 
 void Game::SceneManager::run_game_loop() {
 
@@ -134,13 +146,16 @@ void Game::SceneManager::run_game_loop() {
         assert(dt != 0);
         fps = 1/dt;
         lastTicks  = now;
-        handle_sdl_events(running);
+        PERF("SDL Events polling",handle_sdl_events(running););
         last_camera_position   = camera.get_position();
         last_monster_transform = monster.monster_model()->get_local_transform();
-        camera.update(dt);
+        PERF("Camera update" ,{ 
+            camera.update(dt);
+        });
         // std::cout << "Last camera position and current: \n";
         auto camera_dir = glm::normalize(camera.get_direction());
         monster.update(dt, camera_dir, last_camera_position);
+        PERF("monster mixing sound", { 
         if (monster.monster_model()->is_active()) {
             glm::vec3 cam_pos    = camera.get_position();
             glm::mat4 mon_tf     = monster.monster_model()->get_local_transform();
@@ -160,8 +175,10 @@ void Game::SceneManager::run_game_loop() {
             //mb i mean distance byte here? 
             Mix_SetPosition(footsteps_sound_channel, angle_deg, distance_f);
         }
+        };);
+        
 
-        check_collisions(dt);
+        PERF("Collisions checking",check_collisions(dt));
 
         float     right_offset = 0.4f;
         glm::vec3 offset =
@@ -173,9 +190,9 @@ void Game::SceneManager::run_game_loop() {
         glm::mat4 proj = camera.get_projection_matrix();
         //TODO: add this when properly fixed
         //  perform_culling();
-        render(view, proj);
-        run_interaction_handlers();
-        SDL_GL_SwapWindow(window);
+        PERF("render",render(view, proj););
+        PERF("interaction handlers",run_interaction_handlers(););
+        PERF("SDL Swap Window",SDL_GL_SwapWindow(window););
     }
     Mix_FreeChunk(footsteps_sound);
     Mix_FreeMusic(horror_music);
@@ -282,6 +299,7 @@ void Game::SceneManager::perform_culling() {
 
 void Game::SceneManager::check_collisions(float dt) {
     // Reset at the start of each loop
+    // Uint64 start = SDL_GetPerformanceCounter();
     game_state->distance_from_closest_model = std::numeric_limits<float>::max();
 
     auto monster_model = game_state->find_model("monster");
@@ -347,6 +365,9 @@ void Game::SceneManager::check_collisions(float dt) {
             break;
         }
     }
+    // Uint64 end = SDL_GetPerformanceCounter();
+    // float elapsedMS = (end - start) / (float)SDL_GetPerformanceFrequency() * 1000.0f;
+    // std::cout << "Checking collisions took" << elapsedMS << "ms.\n";
 }
 
 void Game::SceneManager::render(const glm::mat4& view, const glm::mat4& projection) {

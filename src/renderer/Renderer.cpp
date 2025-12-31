@@ -16,7 +16,7 @@ void Renderer::renderText(
     textRenderer.render_text(get_shader_by_name("text"),  text, x, y, scale, color, projection);
 }
 
-void Renderer::draw_light(Light* light, int index, std::shared_ptr<Shader> shader) {
+void Renderer::draw_light(Light* light, int index, Shader* shader) {
 
     auto gpulight = allocated_lights.find(light->id);
     GLuint depth_map = 0;
@@ -147,7 +147,7 @@ void Renderer::draw_light_depth(Light*                                          
                     continue;
                 if (!m->is_in_frustum())
                     continue;
-                draw_model_depth(m.get(), shader);
+                draw_model_depth(m.get(), shader.get());
             }
         }
     } else {
@@ -162,7 +162,7 @@ void Renderer::draw_light_depth(Light*                                          
                 continue;
             if (!m->is_in_frustum())
                 continue;
-            draw_model_depth(m.get(), shader);
+            draw_model_depth(m.get(), shader.get());
         }
     }
 
@@ -172,7 +172,7 @@ void Renderer::draw_light_depth(Light*                                          
     unbind_shader();
 }
 
-void Renderer::draw_model_depth(Models::Model* m, std::shared_ptr<Shader> shader) {
+void Renderer::draw_model_depth(Models::Model* m, Shader* shader) {
     shader->set_mat4("uModel", m->model_instance.world_transform);
     auto model_entry =allocated_models.find(m->model_data->id);
     if(model_entry != allocated_models.end()){
@@ -208,7 +208,7 @@ void Renderer::draw_lights(const std::vector<std::unique_ptr<Light>>& lights) {
 
     for (size_t i = 0; i < lights.size(); ++i) {
         auto light = lights[i].get();
-        draw_light(light, i, shader);
+        draw_light(light, i, shader.get());
     }
 }
 

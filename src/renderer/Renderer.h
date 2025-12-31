@@ -34,8 +34,8 @@ private:
     std::unordered_map<EntityID,std::unique_ptr<GPUMesh>> allocated_models;
     std::shared_ptr<Shader> get_shader_by_name(const std::string& shader_name);
     void draw(Models::Model* model,const glm::mat4& view, const glm::mat4& projection);
-    void draw_model_depth(Models::Model* model,std::shared_ptr<Shader> shader);
-    void draw_light(Light* light,int index,std::shared_ptr<Shader> shader);
+    void draw_model_depth(Models::Model* model,Shader* shader);
+    void draw_light(Light* light,int index,Shader* shader);
     void draw_light_depth(Light* light,const std::vector<std::unique_ptr<Models::Model>>& models);
     void draw_lights(const std::vector<std::unique_ptr<Light>>& lights);
     void draw_lights_depth(const std::vector<std::unique_ptr<Light>>& lights,const std::vector<std::unique_ptr<Models::Model>>& models);

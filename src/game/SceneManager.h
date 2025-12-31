@@ -1,9 +1,9 @@
 #pragma once
 #include "Camera.h"
 #include "GameState.h"
-#include "scene_objects/Monster.h"
 #include "renderer/Renderer.h"
 #include "renderer/TextRenderer.h"
+#include "scene_objects/Monster.h"
 #include <algorithm>
 #include <glm/glm.hpp>
 #include <glm/gtc/epsilon.hpp>
@@ -21,8 +21,8 @@ class SceneManager {
     SceneManager(int width, int height, glm::vec3 camera_position);
     ~SceneManager();
     void debug_dump_model_names();
-    
-    //probs should be a move tho
+
+    // probs should be a move tho
     void set_game_state(Game::GameState& g);
     // inline void set_game_state(Game::GameState& g) {
     //     game_state = &g;
@@ -84,6 +84,9 @@ class SceneManager {
     glm::mat4                                                           last_monster_transform;
     bool                                                                running = false;
     unsigned int seconds_to_wait_before_termination                             = 3;
-    float fps = -1;
+    float        fps                                                            = -1;
+    //used in perf measuring
+    Uint64 start = 0;
+    Uint64 end = 0;
 };
 }; // namespace Game

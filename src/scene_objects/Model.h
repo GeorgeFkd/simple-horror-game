@@ -112,7 +112,7 @@ class Model {
     Model(const std::string& objFile, std::string label);
 
   private:
-    
+    bool dirtyTransform = true;
     void compute_transformed_aabb(const glm::mat4& xf, glm::vec3& out_min, glm::vec3& out_max);
     bool aabb_in_frustum(const std::array<glm::vec4, 6>& P, const glm::vec3& minB,
                          const glm::vec3& maxB) const;

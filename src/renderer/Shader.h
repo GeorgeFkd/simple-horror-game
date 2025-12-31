@@ -130,6 +130,7 @@ public:
     Shader(const std::vector<std::string>& shader_paths,
            const std::vector<GLenum>& shader_types,
            const std::string& shader_name);
+    Shader();
     ~Shader();
 private: 
     GLuint program_id; 

@@ -18,7 +18,7 @@ Light::Light(LightType light_type, const glm::vec3& position, const glm::vec3& d
       attenuation_linear(attenuation_linear), attenuation_quadratic(attenuation_quadratic),
       attenuation_power(attenuation_power), light_power(light_power), is_on(is_on), label(label),
       color(color) {
-    
+
     id = next_entity_id();
 }
 
@@ -41,9 +41,6 @@ std::array<glm::vec4, 6> Light::extract_frustum_planes(const glm::mat4& M) {
 
     return P;
 }
-
-
-
 
 glm::mat4 Light::get_light_projection() const {
 
@@ -78,6 +75,8 @@ glm::mat4 Light::get_light_view() const {
     return glm::lookAt(position, position + dir, up);
 }
 
+
+//could be a std::array<6>
 std::vector<glm::mat4> Light::get_point_light_views() const {
     return {
         glm::lookAt(position, position + glm::vec3(1, 0, 0), glm::vec3(0, -1, 0)),  // +X
