@@ -1,0 +1,11 @@
+{
+  "dependencies": [
+    "freetype",
+    "glew",
+    "glm",
+    "sdl2",
+    "sdl2-mixer",
+    "tiff",
+    "opengl"
+  ]
+}
