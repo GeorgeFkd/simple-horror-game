@@ -3,6 +3,7 @@
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <array>
 
 static void print_vec3(glm::vec3 v) {
     std::cout << "(" << v.x << "," << v.y << "," << v.z << ")\n";
