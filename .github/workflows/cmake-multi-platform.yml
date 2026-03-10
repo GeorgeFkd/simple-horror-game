@@ -32,9 +32,14 @@ jobs:
             c_compiler: cl
     steps:
     - uses: actions/checkout@v4
-    - name: Install dependencies
+    - name: Install dependencies (Linux)
       if: matrix.os == 'ubuntu-latest'
       run: sudo apt-get install -y libfreetype6-dev libglew-dev libglm-dev libsdl2-dev libsdl2-mixer-dev libtiff-dev libgl1-mesa-dev
+    - name: Setup vcpkg (Windows)
+      if: matrix.os == 'windows-latest'
+      uses: lukka/run-vcpkg@v11
+      with:
+        vcpkgGitCommitId: 'a42af01b72c28a8e1d7b48107b33e4f286a55ef6'
     - name: Set reusable strings
       id: strings
       shell: bash
@@ -47,5 +52,6 @@ jobs:
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
         -S ${{ github.workspace }}
+        ${{ matrix.os == 'windows-latest' && '-DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake' || '' }}
     - name: Build
       run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }}
