@@ -178,6 +178,9 @@ scene_objects
 
 add_library(game STATIC src/game/Camera.cpp  src/game/GameState.cpp  src/scene_objects/Monster.cpp src/game/SceneManager.cpp)
 
+
+
+
 target_include_directories(game PRIVATE
 ${CMAKE_CURRENT_SOURCE_DIR}/src 
 ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
@@ -187,20 +190,6 @@ ${SDL2_INCLUDE_DIRS}
 ${SDL2_mixer_INCLUDE_DIRS}
 /usr/include/glm
 )
-
-target_link_libraries(game PRIVATE 
-${SDL2_LIBRARIES}
-${SDL2_mixer_LIBRARIES}
-glm::glm
-opengl_renderer
-scene_objects
-model_loader
-text_handler
-)
-
-# add_dependencies(game RunAssetCodegen)
-
-
 add_executable(opengl_app src/main.cpp)
 
 target_include_directories(opengl_app PRIVATE
@@ -209,10 +198,74 @@ target_include_directories(opengl_app PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
 )
 
-target_link_libraries(opengl_app PRIVATE
-    glm::glm
-    game
-)
+if(LINUX)
+    target_link_libraries(game PRIVATE 
+        ${SDL2_LIBRARIES}
+        ${SDL2_mixer_LIBRARIES}
+        glm::glm
+        opengl_renderer
+        scene_objects
+        model_loader
+        text_handler
+    )
+    target_link_libraries(opengl_app PRIVATE
+        glm::glm
+        game
+    )
+else()
+    target_link_libraries(game PRIVATE 
+        $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
+        $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
+        $<IF:$<TARGET_EXISTS:SDL2_mixer::SDL2_mixer>,SDL2_mixer::SDL2_mixer,SDL2_mixer::SDL2_mixer-static>
+        glm::glm
+        opengl_renderer
+        scene_objects
+        model_loader
+        text_handler
+    )
+    target_link_libraries(opengl_app PRIVATE
+        $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
+        glm::glm
+        game
+    )
+endif()
+
+# target_link_libraries(game PRIVATE 
+#     $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
+#     $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
+#     $<IF:$<TARGET_EXISTS:SDL2_mixer::SDL2_mixer>,SDL2_mixer::SDL2_mixer,SDL2_mixer::SDL2_mixer-static>
+#     glm::glm
+#     opengl_renderer
+#     scene_objects
+#     model_loader
+#     text_handler
+# )
+#
+# target_link_libraries(game PRIVATE 
+# ${SDL2_LIBRARIES}
+# ${SDL2_mixer_LIBRARIES}
+# glm::glm
+# opengl_renderer
+# scene_objects
+# model_loader
+# text_handler
+# )
+
+# add_dependencies(game RunAssetCodegen)
+
+
+
+
+# target_link_libraries(opengl_app PRIVATE
+#     $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
+#     glm::glm
+#     game
+# )
+#
+# target_link_libraries(opengl_app PRIVATE
+#     glm::glm
+#     game
+# )
 
 
 ##############
