@@ -37,6 +37,7 @@ jobs:
       run: sudo apt-get install -y libfreetype6-dev libglew-dev libglm-dev libsdl2-dev libsdl2-mixer-dev libtiff-dev libgl1-mesa-dev
     - name: Setup vcpkg (Windows)
       if: matrix.os == 'windows-latest'
+      id: vcpkg
       uses: lukka/run-vcpkg@v11
       with:
         vcpkgGitCommitId: 'a42af01b72c28a8e1d7b48107b33e4f286a55ef6'
@@ -52,6 +53,6 @@ jobs:
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
         -S ${{ github.workspace }}
-        ${{ matrix.os == 'windows-latest' && '-DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake' || '' }}
+        ${{ matrix.os == 'windows-latest' && format('-DCMAKE_TOOLCHAIN_FILE={0}/scripts/buildsystems/vcpkg.cmake', steps.vcpkg.outputs.RUNVCPKG_VCPKG_ROOT_OUT) || '' }}
     - name: Build
       run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }}
