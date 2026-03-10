@@ -2,7 +2,7 @@
 #include "GPULight.h"
 #include "GPUMesh.h"
 #include "Shader.h"
-
+#include <array>
 
 
 void Renderer::renderText(
