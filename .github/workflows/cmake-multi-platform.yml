@@ -40,7 +40,7 @@ jobs:
       id: vcpkg
       uses: lukka/run-vcpkg@v11
       with:
-        vcpkgGitCommitId: 'a42af01b72c28a8e1d7b48107b33e4f286a55ef6'
+        vcpkgGitCommitId: 'f6735d5aa1537081e8d425372ea7e585b0ad65e8'
     - name: Set reusable strings
       id: strings
       shell: bash
