@@ -7,7 +7,7 @@
 #include <string_view>
 #include <vector>
 #include "EntityID.h"
-#include "fwd.hpp"
+#include <glm/fwd.hpp>
 enum class LightType { 
     POINT = 0,
     DIRECTIONAL = 1, 

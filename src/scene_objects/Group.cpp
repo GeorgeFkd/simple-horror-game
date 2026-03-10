@@ -1,5 +1,5 @@
 #include "Group.h"
-#include "ext/matrix_transform.hpp"
+#include <glm/ext/matrix_transform.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
 Group::Group(const std::string& room_name,

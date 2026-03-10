@@ -1,5 +1,5 @@
 #include "scene_objects/Model.h"
-#include "gtc/epsilon.hpp"
+#include <glm/gtc/epsilon.hpp>
 #include <iostream>
 #include <limits>
 #include <memory>
