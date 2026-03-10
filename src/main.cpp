@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-int main() {
+int main(int argc, char* argv[]) {
 
     auto camera_position = glm::vec3(0.0f,5.0f,3.5f);
     Game::SceneManager scene_manager(1280, 720, camera_position);
