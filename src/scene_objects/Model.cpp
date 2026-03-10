@@ -72,8 +72,8 @@ Models::Model::Model(const std::vector<glm::vec3>& positions, const std::vector<
                      std::string label, const Material& mat)
 
 {
-    model_instance.local_transform = 1.0f;
-    model_instance.world_transform = 1.0f;
+    model_instance.local_transform = glm::mat4(1.0f);
+    model_instance.world_transform = glm::mat4(1.0f);
     model_instance.label           = std::move(label);
     model_data                     = std::make_shared<MData>();
 
@@ -125,8 +125,8 @@ Models::Model::Model(const Model& model_to_replicate, std::string model_name, gl
 }
 
 Models::Model::Model(const std::string& objFile, std::string label) {
-    model_instance.local_transform = 1.0f;
-    model_instance.world_transform = 1.0f;
+    model_instance.local_transform = glm::mat4(1.0f);
+    model_instance.world_transform = glm::mat4(1.0f);
     model_instance.label           = std::move(label);
     model_data                     = ModelLoader::load_or_get_cached(objFile);
 }
