@@ -32,15 +32,13 @@ jobs:
             c_compiler: cl
     steps:
     - uses: actions/checkout@v4
-    - name: Install dependencies (Linux)
-      if: matrix.os == 'ubuntu-latest'
-      run: sudo apt-get install -y libfreetype6-dev libglew-dev libglm-dev libsdl2-dev libsdl2-mixer-dev libtiff-dev libgl1-mesa-dev
-    - name: Setup vcpkg (Windows)
-      if: matrix.os == 'windows-latest'
+    - name: Setup vcpkg
       id: vcpkg
       uses: lukka/run-vcpkg@v11
       with:
         vcpkgGitCommitId: 'f6735d5aa1537081e8d425372ea7e585b0ad65e8'
+      env:
+        VCPKG_DEFAULT_TRIPLET: ${{ matrix.os == 'windows-latest' && 'x64-windows-static' || 'x64-linux' }}
     - name: Set reusable strings
       id: strings
       shell: bash
@@ -52,7 +50,7 @@ jobs:
         -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+        -DCMAKE_TOOLCHAIN_FILE=${{ steps.vcpkg.outputs.RUNVCPKG_VCPKG_ROOT_OUT }}/scripts/buildsystems/vcpkg.cmake
         -S ${{ github.workspace }}
-        ${{ matrix.os == 'windows-latest' && format('-DCMAKE_TOOLCHAIN_FILE={0}/scripts/buildsystems/vcpkg.cmake', steps.vcpkg.outputs.RUNVCPKG_VCPKG_ROOT_OUT) || '' }}
     - name: Build
       run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }}
