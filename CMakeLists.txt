@@ -6,6 +6,7 @@ add_compile_definitions(GLM_ENABLE_EXPERIMENTAL)
 project(OpenGLApp LANGUAGES CXX)
 
 option(BUILD_TESTS "Build Tests(Installs GoogleTest Dependency)" OFF)
+option(BUILD_SDL2 "Build SDL2" OFF)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -25,7 +26,16 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(googletest)
 
 find_package(OpenGL REQUIRED)
-find_package(SDL2 REQUIRED)
+
+
+if(NOT BUILD_SDL2)
+    find_package(SDL2 REQUIRED)
+else() 
+    message(STATUS "Building SDL2 from source")
+endif()
+
+
+# find_package(SDL2 REQUIRED)
 find_package(GLEW REQUIRED)
 find_package(glm REQUIRED)
 find_package(TIFF REQUIRED)
@@ -120,48 +130,6 @@ glm::glm
 TIFF::TIFF
 )
 
-# set(gen_dir ${CMAKE_BINARY_DIR}/generated)
-#
-# add_executable(AssetCodegen)
-#
-# target_sources(AssetCodegen 
-#     PRIVATE
-#         ${CMAKE_CURRENT_SOURCE_DIR}/src/Codegen.cpp
-# )
-# target_include_directories(AssetCodegen PRIVATE
-# ${CMAKE_CURRENT_SOURCE_DIR}/src
-# ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
-# /usr/include/glm
-# )
-
-# target_link_libraries(AssetCodegen PRIVATE
-# glm::glm
-# model_loader
-# scene_objects
-# )
-
-# add_custom_command(
-#     OUTPUT ${gen_dir}/ModelInit.cpp
-#     COMMAND AssetCodegen ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp ${gen_dir} ModelInit.cpp
-#     DEPENDS AssetCodegen ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
-#     COMMENT "Doing Asset Codegen for caching inside: ${gen_dir}"
-#     VERBATIM
-# )
-#
-# add_custom_target(RunAssetCodegen DEPENDS ${gen_dir}/ModelInit.cpp)
-
-# add_library(AssetLoading ${gen_dir}/ModelInit.cpp)
-# target_include_directories(AssetLoading PRIVATE
-# ${CMAKE_CURRENT_SOURCE_DIR}/src
-# ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
-# )
-# target_link_libraries(AssetLoading
-#     PRIVATE
-#     model_loader
-#     scene_objects
-# )
-
-
 
 add_library(opengl_renderer STATIC src/renderer/Renderer.cpp src/renderer/GPUMeshOpenGL.cpp src/renderer/GPULight.cpp)
 target_include_directories(opengl_renderer PRIVATE
@@ -200,8 +168,10 @@ target_include_directories(opengl_app PRIVATE
 
 if(LINUX)
     target_link_libraries(game PRIVATE 
-        ${SDL2_LIBRARIES}
-        ${SDL2_mixer_LIBRARIES}
+            SDL2::SDL2
+            SDL2_mixer::SDL2_mixer
+        # ${SDL2_LIBRARIES}
+        # ${SDL2_mixer_LIBRARIES}
         glm::glm
         opengl_renderer
         scene_objects
@@ -229,43 +199,6 @@ else()
         game
     )
 endif()
-
-# target_link_libraries(game PRIVATE 
-#     $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
-#     $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
-#     $<IF:$<TARGET_EXISTS:SDL2_mixer::SDL2_mixer>,SDL2_mixer::SDL2_mixer,SDL2_mixer::SDL2_mixer-static>
-#     glm::glm
-#     opengl_renderer
-#     scene_objects
-#     model_loader
-#     text_handler
-# )
-#
-# target_link_libraries(game PRIVATE 
-# ${SDL2_LIBRARIES}
-# ${SDL2_mixer_LIBRARIES}
-# glm::glm
-# opengl_renderer
-# scene_objects
-# model_loader
-# text_handler
-# )
-
-# add_dependencies(game RunAssetCodegen)
-
-
-
-
-# target_link_libraries(opengl_app PRIVATE
-#     $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
-#     glm::glm
-#     game
-# )
-#
-# target_link_libraries(opengl_app PRIVATE
-#     glm::glm
-#     game
-# )
 
 
 ##############
