@@ -32,6 +32,9 @@ jobs:
             c_compiler: cl
     steps:
     - uses: actions/checkout@v4
+    - name: Install Linux build dependencies
+      if: matrix.os == 'ubuntu-latest'
+      run: sudo apt-get install -y ninja-build libgl1-mesa-dev
     - name: Setup vcpkg
       id: vcpkg
       uses: lukka/run-vcpkg@v11
