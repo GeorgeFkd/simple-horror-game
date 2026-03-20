@@ -39,10 +39,12 @@ endif()
 find_package(GLEW REQUIRED)
 find_package(glm REQUIRED)
 find_package(TIFF REQUIRED)
-if(LINUX)
+if(LINUX AND (NOT CMAKE_TOOLCHAIN_FILE MATCHES "vcpkg"))
+    message(STATUS "using pkg config to find sdl2_mixer")
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(SDL2_mixer REQUIRED SDL2_mixer)
 else() 
+    message(STATUS "not using pkg config to find sdl2_mixer")
     find_package(SDL2_mixer CONFIG REQUIRED)
 endif()
 find_package(Freetype REQUIRED)
@@ -167,17 +169,30 @@ target_include_directories(opengl_app PRIVATE
 )
 
 if(LINUX)
-    target_link_libraries(game PRIVATE 
-            # SDL2::SDL2
-            # SDL2_mixer::SDL2_mixer
-        ${SDL2_LIBRARIES}
-        ${SDL2_mixer_LIBRARIES}
-        glm::glm
-        opengl_renderer
-        scene_objects
-        model_loader
-        text_handler
-    )
+    if(CMAKE_TOOLCHAIN_FILE MATCHES "vcpkg")
+            message(STATUS "Linking SDL2_mixer and SDL with vcpkg style")
+            target_link_libraries(game PRIVATE 
+            SDL2::SDL2
+            $<IF:$<TARGET_EXISTS:SDL2_mixer::SDL2_mixer>,SDL2_mixer::SDL2_mixer,SDL2_mixer::SDL2_mixer-static>
+            glm::glm
+            opengl_renderer
+            scene_objects
+            model_loader
+            text_handler
+            )
+    else()
+        target_link_libraries(game PRIVATE 
+                    # SDL2::SDL2
+                    # SDL2_mixer::SDL2_mixer
+                ${SDL2_LIBRARIES}
+                ${SDL2_mixer_LIBRARIES}
+                glm::glm
+                opengl_renderer
+                scene_objects
+                model_loader
+                text_handler
+            )
+    endif()
     target_link_libraries(opengl_app PRIVATE
         glm::glm
         game
