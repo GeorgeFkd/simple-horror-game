@@ -168,10 +168,10 @@ target_include_directories(opengl_app PRIVATE
 
 if(LINUX)
     target_link_libraries(game PRIVATE 
-            SDL2::SDL2
-            SDL2_mixer::SDL2_mixer
-        # ${SDL2_LIBRARIES}
-        # ${SDL2_mixer_LIBRARIES}
+            # SDL2::SDL2
+            # SDL2_mixer::SDL2_mixer
+        ${SDL2_LIBRARIES}
+        ${SDL2_mixer_LIBRARIES}
         glm::glm
         opengl_renderer
         scene_objects
