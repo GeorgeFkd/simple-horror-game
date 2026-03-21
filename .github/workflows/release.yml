@@ -79,5 +79,3 @@ jobs:
       with:
         artifacts: "Linux-x86_64.tar.gz/Linux-x86_64.tar.gz,Windows-x86_64.zip/Windows-x86_64.zip"
         tag: v${{ github.event.inputs.version }}
-        artifacts: "Linux-x86_64.tar.gz/Linux-x86_64.tar.gz,Windows-x86_64.zip/Windows-x86_64.zip"
-        tag: v${{ github.event.inputs.version }}
