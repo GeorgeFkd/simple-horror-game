@@ -6,6 +6,7 @@
     "sdl2",
     "sdl2-mixer",
     "tiff",
-    "opengl"
+    "opengl",
+    "libpng"
   ]
 }
