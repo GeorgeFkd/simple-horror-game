@@ -83,7 +83,7 @@ target_include_directories(text_handler PRIVATE
 ${TEXT_HANDLER_INCLUDES} 
 ${FREETYPE_INCLUDE_DIRS}
 )
-target_link_libraries(text_handler PRIVATE glm::glm ${FREETYPE_LIBRARIES})
+target_link_libraries(text_handler PRIVATE glm::glm Freetype::Freetype PNG::PNG)
 
 
 add_library(opengl_backend STATIC src/renderer/Shader.cpp)
@@ -98,7 +98,8 @@ ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer
 )
 
 target_link_libraries(opengl_backend PRIVATE
-${OPENGL_LIBRARIES} 
+OpenGL::GL
+$<$<BOOL:${LINUX}>:OpenGL::GLX>
 GLEW::GLEW 
 glm::glm 
 )
