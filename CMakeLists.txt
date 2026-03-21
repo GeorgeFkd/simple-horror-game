@@ -15,6 +15,11 @@ if(NOT CMAKE_BUILD_TYPE)
       "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel."
       FORCE)
 endif()
+if(CMAKE_TOOLCHAIN_FILE MATCHES "vcpkg")
+    set(USING_VCPKG TRUE)
+else()
+    set(USING_VCPKG FALSE)
+endif()
 
 include(FetchContent)
 
@@ -84,7 +89,8 @@ ${TEXT_HANDLER_INCLUDES}
 ${FREETYPE_INCLUDE_DIRS}
 )
 target_link_libraries(text_handler PRIVATE glm::glm Freetype::Freetype 
-$<$<BOOL:${LINUX}>:PNG::PNG>)
+$<$<AND:$<BOOL:${LINUX}>,$<BOOL:${VCPKG}>>:PNG::PNG>
+)
 
 
 add_library(opengl_backend STATIC src/renderer/Shader.cpp)

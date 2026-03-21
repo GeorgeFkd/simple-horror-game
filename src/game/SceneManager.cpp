@@ -14,13 +14,13 @@
 void Game::SceneManager::initialise_opengl_sdl() {
 
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) == -1) {
-        std::cerr << "Something went wrong when initialising SDL\n";
+        std::cerr << "Something went wrong when initialising SDL: " << SDL_GetError() << "\n";
         return;
     }
 
     if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 4, 2048) < 0) {
         std::cerr << "SDL_mixer could not initialize! SDL_mixer Error: " << Mix_GetError()
-                  << std::endl;
+                  << "\n";
         return;
     }
 
