@@ -83,7 +83,8 @@ target_include_directories(text_handler PRIVATE
 ${TEXT_HANDLER_INCLUDES} 
 ${FREETYPE_INCLUDE_DIRS}
 )
-target_link_libraries(text_handler PRIVATE glm::glm Freetype::Freetype PNG::PNG)
+target_link_libraries(text_handler PRIVATE glm::glm Freetype::Freetype 
+$<$<BOOL:${LINUX}>:PNG::PNG>)
 
 
 add_library(opengl_backend STATIC src/renderer/Shader.cpp)
@@ -197,6 +198,7 @@ if(LINUX)
     target_link_libraries(opengl_app PRIVATE
         glm::glm
         game
+        OpenGL::GLX
     )
 else()
     target_link_libraries(game PRIVATE 
