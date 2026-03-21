@@ -13,26 +13,38 @@ jobs:
         include:
           - os: ubuntu-latest
             artifact_name: Linux-x86_64.tar.gz
+            cpp_compiler: clang++
+            c_compiler: clang
           - os: windows-latest
             artifact_name: Windows-x86_64.zip
+            cpp_compiler: cl
+            c_compiler: cl
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v4
-    - name: Install dependencies (Linux)
+    - name: Install Linux build dependencies
       if: matrix.os == 'ubuntu-latest'
-      run: sudo apt-get install -y libfreetype6-dev libglew-dev libglm-dev libsdl2-dev libsdl2-mixer-dev libtiff-dev libgl1-mesa-dev
-    - name: Setup vcpkg (Windows)
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --fix-missing libltdl-dev make ninja-build libgl1-mesa-dev libglu1-mesa-dev gcc libudev-dev libdbus-1-dev libx11-dev libxft-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxinerama-dev libibus-1.0-dev libxss-dev libwayland-dev libegl1-mesa-dev libxkbcommon-dev wayland-protocols autoconf autoconf-archive automake libtool
+    - name: Setup MSVC
       if: matrix.os == 'windows-latest'
+      uses: ilammy/msvc-dev-cmd@v1
+    - name: Setup vcpkg
       id: vcpkg
       uses: lukka/run-vcpkg@v11
       with:
         vcpkgGitCommitId: 'f6735d5aa1537081e8d425372ea7e585b0ad65e8'
+      env:
+        VCPKG_DEFAULT_TRIPLET: ${{ matrix.os == 'windows-latest' && 'x64-windows-static' || 'x64-linux' }}
     - name: Configure CMake
       run: >
         cmake -B build
+        -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
+        -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
         -DCMAKE_BUILD_TYPE=Release
+        -DCMAKE_TOOLCHAIN_FILE=${{ steps.vcpkg.outputs.RUNVCPKG_VCPKG_ROOT_OUT }}/scripts/buildsystems/vcpkg.cmake
         -S ${{ github.workspace }}
-        ${{ matrix.os == 'windows-latest' && format('-DCMAKE_TOOLCHAIN_FILE={0}/scripts/buildsystems/vcpkg.cmake', steps.vcpkg.outputs.RUNVCPKG_VCPKG_ROOT_OUT) || '' }}
     - name: Build
       run: cmake --build build --config Release
     - name: Package (Linux)
@@ -65,5 +77,7 @@ jobs:
     - name: Create Release
       uses: ncipollo/release-action@v1
       with:
+        artifacts: "Linux-x86_64.tar.gz/Linux-x86_64.tar.gz,Windows-x86_64.zip/Windows-x86_64.zip"
+        tag: v${{ github.event.inputs.version }}
         artifacts: "Linux-x86_64.tar.gz/Linux-x86_64.tar.gz,Windows-x86_64.zip/Windows-x86_64.zip"
         tag: v${{ github.event.inputs.version }}
