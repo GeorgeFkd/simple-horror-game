@@ -15,10 +15,12 @@ jobs:
             artifact_name: Linux-x86_64.tar.gz
             cpp_compiler: clang++
             c_compiler: clang
+            build_type: RelWithDebInfo
           - os: windows-latest
             artifact_name: Windows-x86_64.zip
             cpp_compiler: cl
             c_compiler: cl
+            build_type: RelWithDebInfo
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v4
@@ -42,7 +44,7 @@ jobs:
         cmake -B build
         -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
-        -DCMAKE_BUILD_TYPE=Release
+        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
         -DCMAKE_TOOLCHAIN_FILE=${{ steps.vcpkg.outputs.RUNVCPKG_VCPKG_ROOT_OUT }}/scripts/buildsystems/vcpkg.cmake
         -S ${{ github.workspace }}
     - name: Build
