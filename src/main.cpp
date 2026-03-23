@@ -461,7 +461,8 @@ int main(int argc, char* argv[]) {
     // game_state.add_model(std::move(overhead_point_light_model), "overhead_pointlight_model");
 
     for (auto& m : room2.models()) {
-        game_state.add_model(std::move(m), m->name());
+        auto name = m->name();
+        game_state.add_model(std::move(m),name); 
     }
 
     glm::vec3 room_offset3 = glm::vec3(ROOM_WIDTH - room_size, 0.0f, -ROOM_DEPTH + room_size * 2);
@@ -485,7 +486,8 @@ int main(int argc, char* argv[]) {
     spotlight3.set_position(room_offset3 + spotlight_offset);
     game_state.add_light(std::move(spotlight3),"room-3-light");
     for (auto& m : room3.models()) {
-        game_state.add_model(std::move(m), m->name());
+        auto name = m->name();
+        game_state.add_model(std::move(m), name);
     }
 
     glm::vec3 page3_pos = room_offset3 + glm::vec3(5.0f, 0.15f, 8.0f);
@@ -518,8 +520,9 @@ int main(int argc, char* argv[]) {
 
     auto room4_models = room4.models();
     for (auto& m : room4_models) {
+        auto name = m->name();
         // std::cout << "Model: " << m->name() << std::endl;
-        game_state.add_model(std::move(m), m->name());
+        game_state.add_model(std::move(m), name);
     }
 
     Group dining_room("dining-room", glm::vec3(ROOM_DEPTH - ROOM_DEPTH / 4, 0.0f, 0.0f));
@@ -544,7 +547,8 @@ int main(int argc, char* argv[]) {
     game_state.add_light(std::move(spotlight), "dining-room-light");
 
     for (auto& m : dining_room.models()) {
-        game_state.add_model(std::move(m), m->name());
+        auto name = m->name();
+        game_state.add_model(std::move(m), name);
     }
 
     game_state.add_model(std::move(wall), "wall");
