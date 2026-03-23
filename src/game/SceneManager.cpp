@@ -19,12 +19,9 @@ void Game::SceneManager::initialise_opengl_sdl() {
     }
 
     if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 4, 2048) < 0) {
-        std::cerr << "SDL_mixer could not initialize! SDL_mixer Error: " << Mix_GetError()
-                  << "\n";
+        std::cerr << "SDL_mixer could not initialize! SDL_mixer Error: " << Mix_GetError() << "\n";
         return;
     }
-
-    
 
     // SDL_Window*
     window = SDL_CreateWindow("Old room", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720,
@@ -32,15 +29,14 @@ void Game::SceneManager::initialise_opengl_sdl() {
     // SDL_GLContext
     glCtx = SDL_GL_CreateContext(window);
 
-    
     // SDL_GL_SetSwapInterval(1);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
     SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-    
-    renderer.init(screen_width,screen_height);
+
+    renderer.init(screen_width, screen_height);
     renderer.initialise_shaders();
     SDL_SetRelativeMouseMode(SDL_TRUE);
 }
@@ -58,19 +54,29 @@ bool Game::SceneManager::has_user_won() {
     return game_state->pages_collected >= game_state->pages_collected_to_win;
 }
 
-
-#define PERF(label,block) \
-    do { \
-        Uint64 _start = SDL_GetPerformanceCounter(); \
-        block; \
-        Uint64 _end = SDL_GetPerformanceCounter(); \
-        float elapsedMS = (_end - _start) / (float)SDL_GetPerformanceFrequency() * 1000.0f; \
-        std::cout << label << " TIME: " << elapsedMS << "ms. \n"; \
+#define PERF(label, block)                                                                         \
+    do {                                                                                           \
+        Uint64 _start = SDL_GetPerformanceCounter();                                               \
+        block;                                                                                     \
+        Uint64 _end      = SDL_GetPerformanceCounter();                                            \
+        float  elapsedMS = (_end - _start) / (float)SDL_GetPerformanceFrequency() * 1000.0f;       \
+        std::cout << label << " TIME: " << elapsedMS << "ms. \n";                                  \
     } while (0)
 
 void Game::SceneManager::run_game_loop() {
 
     allocate_game_state_to_gpu();
+    
+    std::cout << "Checking audio support \n";
+    int numDecoders = Mix_GetNumChunkDecoders();
+    for (int i = 0; i < numDecoders; i++) {
+        std::cout << "Chunk decoder: " << Mix_GetChunkDecoder(i) << "\n";
+    }
+
+    int numMusicDecoders = Mix_GetNumMusicDecoders();
+    for (int i = 0; i < numMusicDecoders; i++) {
+        std::cout << "Music decoder: " << Mix_GetMusicDecoder(i) << "\n";
+    }
 
     Mix_Music* horror_music = Mix_LoadMUS("assets/audio/scary.mp3");
     if (!horror_music) {
@@ -144,41 +150,39 @@ void Game::SceneManager::run_game_loop() {
         Uint64 now = SDL_GetPerformanceCounter();
         float  dt  = float(now - lastTicks) / float(SDL_GetPerformanceFrequency());
         assert(dt != 0);
-        fps = 1/dt;
-        lastTicks  = now;
-        PERF("SDL Events polling",handle_sdl_events(running););
+        fps       = 1 / dt;
+        lastTicks = now;
+        PERF("SDL Events polling", handle_sdl_events(running););
         last_camera_position   = camera.get_position();
         last_monster_transform = monster.monster_model()->get_local_transform();
-        PERF("Camera update" ,{ 
-            camera.update(dt);
-        });
+        PERF("Camera update", { camera.update(dt); });
         // std::cout << "Last camera position and current: \n";
         auto camera_dir = glm::normalize(camera.get_direction());
         monster.update(dt, camera_dir, last_camera_position);
-        PERF("monster mixing sound", { 
-        if (monster.monster_model()->is_active()) {
-            glm::vec3 cam_pos    = camera.get_position();
-            glm::mat4 mon_tf     = monster.monster_model()->get_local_transform();
-            glm::vec3 mon_pos    = glm::vec3(mon_tf[3]);
-            glm::vec3 to_monster = mon_pos - cam_pos;
-            glm::vec3 dir_xz     = glm::normalize(glm::vec3(to_monster.x, 0.0f, to_monster.z));
-            glm::vec3 forward    = camera.get_direction();
-            glm::vec3 forward_xz = glm::normalize(glm::vec3(forward.x, 0.0f, forward.z));
+        PERF("monster mixing sound", {
+            if (monster.monster_model()->is_active()) {
+                glm::vec3 cam_pos    = camera.get_position();
+                glm::mat4 mon_tf     = monster.monster_model()->get_local_transform();
+                glm::vec3 mon_pos    = glm::vec3(mon_tf[3]);
+                glm::vec3 to_monster = mon_pos - cam_pos;
+                glm::vec3 dir_xz     = glm::normalize(glm::vec3(to_monster.x, 0.0f, to_monster.z));
+                glm::vec3 forward    = camera.get_direction();
+                glm::vec3 forward_xz = glm::normalize(glm::vec3(forward.x, 0.0f, forward.z));
 
-            float angle_rad = glm::orientedAngle(forward_xz, dir_xz, glm::vec3(0.0f, 1.0f, 0.0f));
-            float angle_deg = glm::degrees(angle_rad);
+                float angle_rad =
+                    glm::orientedAngle(forward_xz, dir_xz, glm::vec3(0.0f, 1.0f, 0.0f));
+                float angle_deg = glm::degrees(angle_rad);
 
-            float distance_f = glm::length(to_monster);
-            distance_f       = std::clamp(distance_f, 0.0f, 255.0f);
+                float distance_f = glm::length(to_monster);
+                distance_f       = std::clamp(distance_f, 0.0f, 255.0f);
 
-            uint8_t distance_byte = static_cast<uint8_t>(distance_f + 0.5f);
-            //mb i mean distance byte here? 
-            Mix_SetPosition(footsteps_sound_channel, angle_deg, distance_f);
-        }
+                uint8_t distance_byte = static_cast<uint8_t>(distance_f + 0.5f);
+                // mb i mean distance byte here?
+                Mix_SetPosition(footsteps_sound_channel, angle_deg, distance_f);
+            }
         };);
-        
 
-        PERF("Collisions checking",check_collisions(dt));
+        PERF("Collisions checking", check_collisions(dt));
 
         float     right_offset = 0.4f;
         glm::vec3 offset =
@@ -188,18 +192,16 @@ void Game::SceneManager::run_game_loop() {
 
         glm::mat4 view = camera.get_view_matrix();
         glm::mat4 proj = camera.get_projection_matrix();
-        //TODO: add this when properly fixed
-        //  perform_culling();
-        PERF("render",render(view, proj););
-        PERF("interaction handlers",run_interaction_handlers(););
-        PERF("SDL Swap Window",SDL_GL_SwapWindow(window););
+        // TODO: add this when properly fixed
+        //   perform_culling();
+        PERF("render", render(view, proj););
+        PERF("interaction handlers", run_interaction_handlers(););
+        PERF("SDL Swap Window", SDL_GL_SwapWindow(window););
     }
     Mix_FreeChunk(footsteps_sound);
     Mix_FreeMusic(horror_music);
     SDL_Delay(seconds_to_wait_before_termination * 1000);
 }
-
-
 
 void Game::SceneManager::move_model(const std::string& name, const glm::vec3& direction) {
     auto model_pos = game_state->find_model(name);
@@ -247,7 +249,6 @@ void Game::SceneManager::run_handler_for(const std::string& m) {
         }
     }
 }
-
 
 void Game::SceneManager::run_interaction_handlers() {
     constexpr float INTERACTION_DISTANCE = 8.0f;
@@ -371,24 +372,24 @@ void Game::SceneManager::check_collisions(float dt) {
 }
 
 void Game::SceneManager::render(const glm::mat4& view, const glm::mat4& projection) {
-    renderer.render(view, projection,  game_state->get_lights(),  game_state->get_models());
-
+    renderer.render(view, projection, game_state->get_lights(), game_state->get_models());
 
     glm::mat4   textProjection = glm::ortho(0.0f, (float)screen_width, 0.0f, (float)screen_height);
-    std::string displayed_text  = "pages:" + std::to_string(game_state->pages_collected);
-        renderer.renderText(displayed_text, 50.0f, 720.0f - 50.0f, 1.2f,
-                              {1.0f, 0.0f, 0.0f}, textProjection);
+    std::string displayed_text = "pages:" + std::to_string(game_state->pages_collected);
+    renderer.renderText(displayed_text, 50.0f, 720.0f - 50.0f, 1.2f, {1.0f, 0.0f, 0.0f},
+                        textProjection);
 
     if (!center_text.empty()) {
-        renderer.renderText(center_text, 1280.0f / 2 - 80.0f, 720.0f - 250.0f,
-                                  1.2f, {1.0f, 0.0f, 0.0f}, textProjection);
+        renderer.renderText(center_text, 1280.0f / 2 - 80.0f, 720.0f - 250.0f, 1.2f,
+                            {1.0f, 0.0f, 0.0f}, textProjection);
     }
 
     if (!bottom_text_hints.empty()) {
-        renderer.renderText(bottom_text_hints, 300.0f, 720.0f - 650.0f, 0.8f,
-                                  {0.5f, 0.5f, 0.0f}, textProjection);
-    }else {
-            renderer.renderText(std::to_string(fps),300.0f,720.0f - 650.0f,0.8f,{0.5f,0.5f,0.0f},textProjection);
+        renderer.renderText(bottom_text_hints, 300.0f, 720.0f - 650.0f, 0.8f, {0.5f, 0.5f, 0.0f},
+                            textProjection);
+    } else {
+        renderer.renderText(std::to_string(fps), 300.0f, 720.0f - 650.0f, 0.8f, {0.5f, 0.5f, 0.0f},
+                            textProjection);
     }
 }
 
@@ -404,11 +405,11 @@ void Game::SceneManager::set_game_state(Game::GameState& g) {
 
 void Game::SceneManager::allocate_game_state_to_gpu() {
     assert(game_state);
-    for(auto const& light: game_state->get_lights()){
+    for (auto const& light : game_state->get_lights()) {
         renderer.upload_light(light.get());
     }
 
-    for(auto const& model: game_state->get_models()){
+    for (auto const& model : game_state->get_models()) {
         renderer.upload_model(model.get());
     }
 }
