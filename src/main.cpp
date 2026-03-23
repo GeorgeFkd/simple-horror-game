@@ -419,7 +419,8 @@ int main(int argc, char* argv[]) {
     // game_state.add_light(std::move(spotlight), "spotlight");
     auto room1_models = room1.models();
     for (auto& m : room1_models) {
-        game_state.add_model(std::move(m), m->name());
+        auto name = m->name();
+        game_state.add_model(std::move(m), name);
     }
 
     glm::vec3 room_offset2 = glm::vec3(-ROOM_WIDTH + room_size, 0.0f, -ROOM_DEPTH + room_size * 2);
