@@ -5,9 +5,9 @@
     "glm",
     "sdl2",
     {
-      "name": "sdl2_mixer",
+      "name": "sdl2-mixer",
       "features": [
-        "mp3"
+        "mpg123"
       ]
     },
     "tiff",
