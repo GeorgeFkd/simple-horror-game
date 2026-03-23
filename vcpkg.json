@@ -4,7 +4,12 @@
     "glew",
     "glm",
     "sdl2",
-    "sdl2-mixer",
+    {
+      "name": "sdl2_mixer",
+      "features": [
+        "mp3"
+      ]
+    },
     "tiff",
     "opengl",
     "libpng"
