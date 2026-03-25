@@ -3,13 +3,15 @@ cmake_policy(SET CMP0072 NEW)
 
 add_compile_definitions(GLM_ENABLE_EXPERIMENTAL)
 
-project(OpenGLApp LANGUAGES CXX)
+project(OpenGLApp LANGUAGES C CXX)
 
 option(BUILD_TESTS "Build Tests(Installs GoogleTest Dependency)" OFF)
 option(BUILD_SDL2 "Build SDL2" OFF)
-
+option(ENABLE_ASSET_PIPELINES "Enable assets pipelines" OFF)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE
       RelWithDebInfo
@@ -146,6 +148,48 @@ target_include_directories(
           ${CMAKE_CURRENT_SOURCE_DIR}/src/scene_objects
           ${SDL2_INCLUDE_DIRS}
           ${SDL2_mixer_INCLUDE_DIRS})
+
+if(ENABLE_ASSET_PIPELINES)
+  message(STATUS "Asset pipelines are enabled")
+  # https://github.com/Sirraide/clang-minimal-example/blob/master/README.md
+  set(LLVM_DIR "~/programming/llvm-project/build/lib/cmake/llvm")
+  set(Clang_DIR "~/programming/llvm-project/build/lib/cmake/clang")
+  find_package(LLVM REQUIRED CONFIG NO_DEFAULT_PATH)
+  message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION} in ${LLVM_INCLUDE_DIRS}")
+  find_package(Clang REQUIRED CONFIG NO_DEFAULT_PATH)
+  message(STATUS "Found Clang in ${CLANG_INCLUDE_DIRS}")
+  list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
+  list(APPEND CMAKE_MODULE_PATH "${CLANG_CMAKE_DIR}")
+  include(AddLLVM)
+  include(AddClang)
+  add_clang_executable(asset_extractor src/AssetExtractor.cpp)
+
+  target_include_directories(asset_extractor SYSTEM
+                             PRIVATE ${LLVM_INCLUDE_DIRS} ${CLANG_INCLUDE_DIRS})
+  target_link_libraries(
+    asset_extractor
+    PRIVATE LLVMSupport
+            LLVMFrontendOpenMP
+            clangTooling
+            clangASTMatchers
+            clangAST
+            clangBasic
+            clangFrontend
+            clangSerialization)
+  target_compile_definitions(
+    asset_extractor
+    PRIVATE "CLANG_PATH=\"~/programming/llvm-project/build/bin/clang++\"")
+  set(MENTIONED_ASSETS_FILENAME mentioned_assets.txt)
+  add_custom_command(
+    OUTPUT ${CMAKE_BINARY_DIR}/${MENTIONED_ASSETS_FILENAME}
+    COMMAND asset_extractor ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/assets
+            ${CMAKE_BINARY_DIR}/${MENTIONED_ASSETS_FILENAME} ${CMAKE_BINARY_DIR}
+    DEPENDS asset_extractor)
+  add_custom_target(run_asset_extractor
+                    DEPENDS ${CMAKE_BINARY_DIR}/${MENTIONED_ASSETS_FILENAME})
+
+endif()
+
 add_executable(opengl_app src/main.cpp)
 
 target_include_directories(
@@ -191,6 +235,10 @@ else()
       text_handler)
   target_link_libraries(
     opengl_app PRIVATE $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main> glm::glm game)
+endif()
+
+if(ENABLE_ASSET_PIPELINES)
+  add_dependencies(opengl_app run_asset_extractor)
 endif()
 
 # ##############################################################################
