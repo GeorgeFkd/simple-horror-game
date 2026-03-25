@@ -188,6 +188,24 @@ if(ENABLE_ASSET_PIPELINES)
   add_custom_target(run_asset_extractor
                     DEPENDS ${CMAKE_BINARY_DIR}/${MENTIONED_ASSETS_FILENAME})
 
+  set(REQUIRED_ASSETS_FILENAME required_assets.txt)
+  add_executable(asset_dependent_files_finder src/AssetDependentFileFinder.cpp)
+  target_include_directories(
+    asset_dependent_files_finder
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
+            ${CMAKE_CURRENT_SOURCE_DIR}/src)
+  target_link_libraries(asset_dependent_files_finder PRIVATE model_loader
+                                                             scene_objects)
+  add_custom_command(
+    OUTPUT ${CMAKE_BINARY_DIR}/${REQUIRED_ASSETS_FILENAME}
+    COMMAND
+      asset_dependent_files_finder
+      ${CMAKE_BINARY_DIR}/${MENTIONED_ASSETS_FILENAME}
+      ${CMAKE_BINARY_DIR}/${REQUIRED_ASSETS_FILENAME}
+    DEPENDS asset_dependent_files_finder)
+  add_dependencies(asset_dependent_files_finder run_asset_extractor)
+  add_custom_target(run_asset_dependent_files_finder
+                    DEPENDS ${CMAKE_BINARY_DIR}/${REQUIRED_ASSETS_FILENAME})
 endif()
 
 add_executable(opengl_app src/main.cpp)
@@ -238,7 +256,7 @@ else()
 endif()
 
 if(ENABLE_ASSET_PIPELINES)
-  add_dependencies(opengl_app run_asset_extractor)
+  add_dependencies(opengl_app run_asset_dependent_files_finder)
 endif()
 
 # ##############################################################################
