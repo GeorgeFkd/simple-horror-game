@@ -15,7 +15,6 @@ void printExecInfo(CliInput* input) {
 }
 
 std::vector<std::string> extractDependentsFrom(const std::string& filename) {
-    //PROBLEM: I CANT GET FONTS FOLDER
     auto ext   = std::filesystem::path(filename).extension();
     if (ext != ".obj") {
         return {filename};

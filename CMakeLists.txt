@@ -152,11 +152,18 @@ target_include_directories(
 if(ENABLE_ASSET_PIPELINES)
   message(STATUS "Asset pipelines are enabled")
   # https://github.com/Sirraide/clang-minimal-example/blob/master/README.md
-  set(LLVM_DIR "~/programming/llvm-project/build/lib/cmake/llvm")
-  set(Clang_DIR "~/programming/llvm-project/build/lib/cmake/clang")
-  find_package(LLVM REQUIRED CONFIG NO_DEFAULT_PATH)
+  if(NOT DEFINED LLVM_PATH)
+    # on windows we use choco install llvm --version=21.1.8
+    # and ubuntu apt install llvm-21 llvm21-dev
+    find_package(LLVM REQUIRED)
+    find_package(Clang REQUIRED)
+  else()
+    set(LLVM_DIR "${LLVM_PATH}/lib/cmake/llvm")
+    set(Clang_DIR "${LLVM_PATH}/lib/cmake/clang")
+    find_package(LLVM REQUIRED CONFIG NO_DEFAULT_PATH)
+    find_package(Clang REQUIRED CONFIG NO_DEFAULT_PATH)
+  endif()
   message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION} in ${LLVM_INCLUDE_DIRS}")
-  find_package(Clang REQUIRED CONFIG NO_DEFAULT_PATH)
   message(STATUS "Found Clang in ${CLANG_INCLUDE_DIRS}")
   list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
   list(APPEND CMAKE_MODULE_PATH "${CLANG_CMAKE_DIR}")
@@ -282,21 +289,21 @@ function(copy_assets TARGET NAME SRC_DIR DST_DIR)
   add_dependencies(${TARGET} copy_${NAME})
 endfunction()
 
-# copy_assets(
-#   opengl_renderer shaders "${CMAKE_CURRENT_SOURCE_DIR}/assets/shaders"
-#   "${CMAKE_CURRENT_BINARY_DIR}/assets/shaders")
+# copy_assets( opengl_renderer shaders
+# "${CMAKE_CURRENT_SOURCE_DIR}/assets/shaders"
+# "${CMAKE_CURRENT_BINARY_DIR}/assets/shaders")
 #
 # copy_assets(opengl_app models "${CMAKE_CURRENT_SOURCE_DIR}/assets/models"
-#             "${CMAKE_CURRENT_BINARY_DIR}/assets/models")
+# "${CMAKE_CURRENT_BINARY_DIR}/assets/models")
 #
 # copy_assets(opengl_app textures "${CMAKE_CURRENT_SOURCE_DIR}/assets/textures"
-#             "${CMAKE_CURRENT_BINARY_DIR}/assets/textures")
+# "${CMAKE_CURRENT_BINARY_DIR}/assets/textures")
 #
 # copy_assets(opengl_app audio "${CMAKE_CURRENT_SOURCE_DIR}/assets/audio"
-#             "${CMAKE_CURRENT_BINARY_DIR}/assets/audio")
+# "${CMAKE_CURRENT_BINARY_DIR}/assets/audio")
 #
 # copy_assets(opengl_app fonts "${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts"
-#             "${CMAKE_CURRENT_BINARY_DIR}/assets/fonts")
+# "${CMAKE_CURRENT_BINARY_DIR}/assets/fonts")
 
 if(BUILD_TESTS)
   message(STATUS "building tests using googletest library")
