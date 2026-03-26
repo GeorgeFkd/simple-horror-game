@@ -74,7 +74,8 @@ void Renderer::init(int screen_width, int screen_height) {
     set_viewport(0, 0, screen_width, screen_height);
     set_clear_color(0.0f, 0.0f, 0.0f, 1.0f);
     clear_buffers(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    textRenderer.load_font("assets/fonts/scary.ttf");
+    auto font_path = "assets/fonts/scary.ttf";
+    textRenderer.load_font(font_path);
 }
 
 void Renderer::upload_model(Models::Model* m) {

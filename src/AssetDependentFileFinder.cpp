@@ -15,18 +15,18 @@ void printExecInfo(CliInput* input) {
 }
 
 std::vector<std::string> extractDependentsFrom(const std::string& filename) {
+    //PROBLEM: I CANT GET FONTS FOLDER
     auto ext   = std::filesystem::path(filename).extension();
-    std::cout << "Extension is: " << ext << "\n";
     if (ext != ".obj") {
-        return {};
+        return {filename};
     }
     auto mdata = ModelLoader::load_or_get_cached(filename);
     
-    std::cout << "Reading file " << filename << " to extract dependencies.\n";
 
     std::vector<std::string> dependents;
     for (const auto& submesh : mdata->submeshes) {
-        std::cout << "Material name: " << submesh.mat.name << "\n";
+        std::cout << "Material filename: " << submesh.mat.filename << "\n";
+        dependents.push_back(submesh.mat.filename);
         for (const auto& map :
              {submesh.mat.map_Ka, submesh.mat.map_Kd, submesh.mat.map_Ks, submesh.mat.map_Bump}) {
             if (!map.empty())

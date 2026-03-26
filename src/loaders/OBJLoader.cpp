@@ -306,7 +306,7 @@ void ObjectLoader::OBJLoader::read_mtllib(const char* buff, const std::string& o
     auto        slash = obj_filename.find_last_of("/\\");
     std::string dir   = (slash == std::string::npos ? "" : obj_filename.substr(0, slash + 1));
     std::string path  = dir + mtl_name;
-
+    
     std::ifstream file{path, std::ios::binary};
     if (!file) {
         std::cerr << "Failed to open MTL: " << path << "\n";
@@ -319,12 +319,14 @@ void ObjectLoader::OBJLoader::read_mtllib(const char* buff, const std::string& o
     file.read(contents.data(), sz);
 
     Material current_mat;
+    current_mat.filename = path;
     auto     commit_mat = [&]() {
         if (!current_mat.name.empty()) {
             int id                                        = model_data.m_materials.size();
             model_data.m_mat_name_to_id[current_mat.name] = id;
             model_data.m_materials.push_back(std::move(current_mat));
             current_mat = Material{};
+            current_mat.filename = path;
         }
     };
 

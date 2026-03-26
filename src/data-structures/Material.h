@@ -2,6 +2,7 @@
 #include <glm/glm.hpp>
 #include <string>
 struct Material {
+    std::string filename;
     std::string name;
     glm::vec3 Ka{0.f};     // ambient
     glm::vec3 Kd{0.f};     // diffuse

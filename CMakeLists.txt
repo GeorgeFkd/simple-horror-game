@@ -206,6 +206,16 @@ if(ENABLE_ASSET_PIPELINES)
   add_dependencies(asset_dependent_files_finder run_asset_extractor)
   add_custom_target(run_asset_dependent_files_finder
                     DEPENDS ${CMAKE_BINARY_DIR}/${REQUIRED_ASSETS_FILENAME})
+
+  add_executable(copy_asset_files src/CopyFilesForBuild.cpp)
+  add_custom_command(
+    OUTPUT ${CMAKE_BINARY_DIR}/assets
+    COMMAND
+      copy_asset_files ${CMAKE_SOURCE_DIR}/assets ${CMAKE_BINARY_DIR}/assets
+      ${CMAKE_BINARY_DIR}/${REQUIRED_ASSETS_FILENAME}
+    DEPENDS copy_asset_files)
+  add_dependencies(copy_asset_files run_asset_dependent_files_finder)
+  add_custom_target(run_copy_asset_files DEPENDS ${CMAKE_BINARY_DIR}/assets)
 endif()
 
 add_executable(opengl_app src/main.cpp)
@@ -256,7 +266,7 @@ else()
 endif()
 
 if(ENABLE_ASSET_PIPELINES)
-  add_dependencies(opengl_app run_asset_dependent_files_finder)
+  add_dependencies(opengl_app run_copy_asset_files)
 endif()
 
 # ##############################################################################
@@ -272,21 +282,21 @@ function(copy_assets TARGET NAME SRC_DIR DST_DIR)
   add_dependencies(${TARGET} copy_${NAME})
 endfunction()
 
-copy_assets(
-  opengl_renderer shaders "${CMAKE_CURRENT_SOURCE_DIR}/assets/shaders"
-  "${CMAKE_CURRENT_BINARY_DIR}/assets/shaders")
-
-copy_assets(opengl_app models "${CMAKE_CURRENT_SOURCE_DIR}/assets/models"
-            "${CMAKE_CURRENT_BINARY_DIR}/assets/models")
-
-copy_assets(opengl_app textures "${CMAKE_CURRENT_SOURCE_DIR}/assets/textures"
-            "${CMAKE_CURRENT_BINARY_DIR}/assets/textures")
-
-copy_assets(opengl_app audio "${CMAKE_CURRENT_SOURCE_DIR}/assets/audio"
-            "${CMAKE_CURRENT_BINARY_DIR}/assets/audio")
-
-copy_assets(opengl_app fonts "${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts"
-            "${CMAKE_CURRENT_BINARY_DIR}/assets/fonts")
+# copy_assets(
+#   opengl_renderer shaders "${CMAKE_CURRENT_SOURCE_DIR}/assets/shaders"
+#   "${CMAKE_CURRENT_BINARY_DIR}/assets/shaders")
+#
+# copy_assets(opengl_app models "${CMAKE_CURRENT_SOURCE_DIR}/assets/models"
+#             "${CMAKE_CURRENT_BINARY_DIR}/assets/models")
+#
+# copy_assets(opengl_app textures "${CMAKE_CURRENT_SOURCE_DIR}/assets/textures"
+#             "${CMAKE_CURRENT_BINARY_DIR}/assets/textures")
+#
+# copy_assets(opengl_app audio "${CMAKE_CURRENT_SOURCE_DIR}/assets/audio"
+#             "${CMAKE_CURRENT_BINARY_DIR}/assets/audio")
+#
+# copy_assets(opengl_app fonts "${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts"
+#             "${CMAKE_CURRENT_BINARY_DIR}/assets/fonts")
 
 if(BUILD_TESTS)
   message(STATUS "building tests using googletest library")
