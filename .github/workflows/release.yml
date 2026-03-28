@@ -28,6 +28,7 @@ jobs:
         -DCMAKE_C_COMPILER=clang
         -DCMAKE_BUILD_TYPE=RelWithDebInfo
         -DCMAKE_PREFIX_PATH=${{ github.workspace }}/build/vcpkg_installed/x64-linux
+        -DLLVM_PATH=/usr/lib/llvm-19
         -DENABLE_ASSET_PIPELINES=ON
         -DCMAKE_TOOLCHAIN_FILE=${{ steps.vcpkg.outputs.RUNVCPKG_VCPKG_ROOT_OUT }}/scripts/buildsystems/vcpkg.cmake
         -S ${{ github.workspace }}
