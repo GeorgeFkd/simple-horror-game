@@ -153,10 +153,9 @@ if(ENABLE_ASSET_PIPELINES)
   message(STATUS "Asset pipelines are enabled")
   # https://github.com/Sirraide/clang-minimal-example/blob/master/README.md
   if(NOT DEFINED LLVM_PATH)
-    # on windows we use choco install llvm --version=21.1.8
-    # and ubuntu apt install llvm-21 llvm21-dev
-    find_package(LLVM REQUIRED)
-    find_package(Clang REQUIRED)
+    # on ubuntu apt install llvm-19 llvm-19-dev
+    find_package(LLVM 19 REQUIRED)
+    find_package(Clang 19 REQUIRED)
   else()
     set(LLVM_DIR "${LLVM_PATH}/lib/cmake/llvm")
     set(Clang_DIR "${LLVM_PATH}/lib/cmake/clang")
