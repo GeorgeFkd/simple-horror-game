@@ -13,7 +13,7 @@ jobs:
     - name: Install Linux build dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y --fix-missing clang-19 libclang-19-dev llvm-19 llvm-19-dev libasound2-dev libpulse-dev libltdl-dev make ninja-build libgl1-mesa-dev libglu1-mesa-dev gcc libudev-dev libdbus-1-dev libx11-dev libxft-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxinerama-dev libibus-1.0-dev libxss-dev libwayland-dev libegl1-mesa-dev libxkbcommon-dev wayland-protocols autoconf autoconf-archive automake libtool
+        sudo apt-get install -y --fix-missing libzstd-dev clang-19 libclang-19-dev llvm-19 llvm-19-dev libasound2-dev libpulse-dev libltdl-dev make ninja-build libgl1-mesa-dev libglu1-mesa-dev gcc libudev-dev libdbus-1-dev libx11-dev libxft-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxinerama-dev libibus-1.0-dev libxss-dev libwayland-dev libegl1-mesa-dev libxkbcommon-dev wayland-protocols autoconf autoconf-archive automake libtool
     - name: Setup vcpkg
       id: vcpkg
       uses: lukka/run-vcpkg@v11
@@ -28,7 +28,6 @@ jobs:
         -DCMAKE_C_COMPILER=clang
         -DCMAKE_BUILD_TYPE=RelWithDebInfo
         -DENABLE_ASSET_PIPELINES=ON
-        -DVCPKG_BUILD_TYPE=release
         -DCMAKE_TOOLCHAIN_FILE=${{ steps.vcpkg.outputs.RUNVCPKG_VCPKG_ROOT_OUT }}/scripts/buildsystems/vcpkg.cmake
         -S ${{ github.workspace }}
     - name: Build
@@ -76,7 +75,6 @@ jobs:
         -DCMAKE_C_COMPILER=cl
         -DCMAKE_BUILD_TYPE=RelWithDebInfo
         -DENABLE_ASSET_PIPELINES=OFF
-        -DVCPKG_BUILD_TYPE=release
         -DCMAKE_TOOLCHAIN_FILE=${{ steps.vcpkg.outputs.RUNVCPKG_VCPKG_ROOT_OUT }}/scripts/buildsystems/vcpkg.cmake
         -S ${{ github.workspace }}
     - name: Build
