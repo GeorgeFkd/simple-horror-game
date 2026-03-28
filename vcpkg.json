@@ -1,6 +1,5 @@
 {
   "dependencies": [
-    "zstd",
     "freetype",
     "glew",
     "glm",
