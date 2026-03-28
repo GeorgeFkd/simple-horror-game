@@ -6,35 +6,60 @@ on:
         description: 'Version to release'
         required: true
 jobs:
-  build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            artifact_name: Linux-x86_64.tar.gz
-            cpp_compiler: clang++
-            c_compiler: clang
-            build_type: RelWithDebInfo
-          - os: windows-latest
-            artifact_name: Windows-x86_64.zip
-            cpp_compiler: cl
-            c_compiler: cl
-            build_type: RelWithDebInfo
-    runs-on: ${{ matrix.os }}
+  build-linux:
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - name: Install Linux build dependencies
-      if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt-get update
         sudo apt-get install -y --fix-missing llvm-19 llvm-19-dev libasound2-dev libpulse-dev libltdl-dev make ninja-build libgl1-mesa-dev libglu1-mesa-dev gcc libudev-dev libdbus-1-dev libx11-dev libxft-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxinerama-dev libibus-1.0-dev libxss-dev libwayland-dev libegl1-mesa-dev libxkbcommon-dev wayland-protocols autoconf autoconf-archive automake libtool
-    - name: Install Windows dependencies
-      if: matrix.os == 'windows-latest'
+    - name: Setup vcpkg
+      id: vcpkg
+      uses: lukka/run-vcpkg@v11
+      with:
+        vcpkgGitCommitId: 'f6735d5aa1537081e8d425372ea7e585b0ad65e8'
+      env:
+        VCPKG_DEFAULT_TRIPLET: x64-linux
+    - name: Configure CMake
+      run: >
+        cmake -B build
+        -DCMAKE_CXX_COMPILER=clang++
+        -DCMAKE_C_COMPILER=clang
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo
+        -DENABLE_ASSET_PIPELINES=ON
+        -DCMAKE_TOOLCHAIN_FILE=${{ steps.vcpkg.outputs.RUNVCPKG_VCPKG_ROOT_OUT }}/scripts/buildsystems/vcpkg.cmake
+        -S ${{ github.workspace }}
+    - name: Build
+      run: cmake --build build --config Release
+    - name: Upload generated assets
+      uses: actions/upload-artifact@v4
+      with:
+        name: assets
+        path: ${{ github.workspace }}/build/assets/
+    - name: Package
       run: |
-          choco install llvm --version=21.1.8
+        mkdir release
+        cp build/opengl_app release/
+        cp -r ${{ github.workspace }}/assets release/
+        tar -czf Linux-x86_64.tar.gz -C release .
+    - name: Upload Linux artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Linux-x86_64.tar.gz
+        path: Linux-x86_64.tar.gz
+
+  build-windows:
+    needs: build-linux
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Download generated assets
+      uses: actions/download-artifact@v4
+      with:
+        name: assets
+        path: ${{ github.workspace }}/assets/
     - name: Setup MSVC
-      if: matrix.os == 'windows-latest'
       uses: ilammy/msvc-dev-cmd@v1
     - name: Setup vcpkg
       id: vcpkg
@@ -42,39 +67,32 @@ jobs:
       with:
         vcpkgGitCommitId: 'f6735d5aa1537081e8d425372ea7e585b0ad65e8'
       env:
-        VCPKG_DEFAULT_TRIPLET: ${{ matrix.os == 'windows-latest' && 'x64-windows-static' || 'x64-linux' }}
+        VCPKG_DEFAULT_TRIPLET: x64-windows-static
     - name: Configure CMake
       run: >
         cmake -B build
-        -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
-        -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
-        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-        -DENABLE_ASSET_PIPELINES=ON
+        -DCMAKE_CXX_COMPILER=cl
+        -DCMAKE_C_COMPILER=cl
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo
+        -DENABLE_ASSET_PIPELINES=OFF
         -DCMAKE_TOOLCHAIN_FILE=${{ steps.vcpkg.outputs.RUNVCPKG_VCPKG_ROOT_OUT }}/scripts/buildsystems/vcpkg.cmake
         -S ${{ github.workspace }}
     - name: Build
       run: cmake --build build --config Release
-    - name: Package (Linux)
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        mkdir release
-        cp build/opengl_app release/
-        cp -r assets release/
-        tar -czf Linux-x86_64.tar.gz -C release .
-    - name: Package (Windows)
-      if: matrix.os == 'windows-latest'
+    - name: Package
       run: |
         mkdir release
         cp build/Release/opengl_app.exe release/
-        cp -r assets release/
+        cp -r ${{ github.workspace }}/assets release/
         Compress-Archive -Path release/* -DestinationPath Windows-x86_64.zip
-    - name: Upload artifact
+    - name: Upload Windows artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ matrix.artifact_name }}
-        path: ${{ matrix.artifact_name }}
+        name: Windows-x86_64.zip
+        path: Windows-x86_64.zip
+
   create-release:
-    needs: [build]
+    needs: [build-linux, build-windows]
     runs-on: ubuntu-latest
     permissions:
       contents: write
