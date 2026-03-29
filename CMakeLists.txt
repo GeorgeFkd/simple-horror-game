@@ -225,6 +225,10 @@ if(ENABLE_ASSET_PIPELINES)
 endif()
 
 add_executable(opengl_app src/main.cpp)
+if(MSVC)
+    set_property(TARGET opengl_app PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
+
 
 target_include_directories(
   opengl_app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
