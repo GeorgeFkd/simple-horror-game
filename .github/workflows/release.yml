@@ -67,7 +67,7 @@ jobs:
       with:
         vcpkgGitCommitId: 'f6735d5aa1537081e8d425372ea7e585b0ad65e8'
       env:
-        VCPKG_DEFAULT_TRIPLET: x64-windows-static
+        VCPKG_DEFAULT_TRIPLET: x64-windows-static-release
     - name: Configure CMake
       run: >
         cmake -B build
@@ -75,7 +75,7 @@ jobs:
         -DCMAKE_C_COMPILER=cl
         -DCMAKE_BUILD_TYPE=RelWithDebInfo
         -DENABLE_ASSET_PIPELINES=OFF
-        -DVCPKG_TARGET_TRIPLET=x64-windows-static
+        -DVCPKG_TARGET_TRIPLET=x64-windows-static-release
         -DCMAKE_TOOLCHAIN_FILE=${{ steps.vcpkg.outputs.RUNVCPKG_VCPKG_ROOT_OUT }}/scripts/buildsystems/vcpkg.cmake
         -S ${{ github.workspace }}
     - name: Build
