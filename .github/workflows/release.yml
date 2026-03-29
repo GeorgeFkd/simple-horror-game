@@ -28,6 +28,7 @@ jobs:
         -DCMAKE_C_COMPILER=clang
         -DCMAKE_BUILD_TYPE=RelWithDebInfo
         -DENABLE_ASSET_PIPELINES=OFF
+        -DVCPKG_TARGET_TRIPLET=x64-linux-release
         -DCMAKE_TOOLCHAIN_FILE=${{ steps.vcpkg.outputs.RUNVCPKG_VCPKG_ROOT_OUT }}/scripts/buildsystems/vcpkg.cmake
         -S ${{ github.workspace }}
     - name: Build
@@ -74,6 +75,7 @@ jobs:
         -DCMAKE_C_COMPILER=cl
         -DCMAKE_BUILD_TYPE=RelWithDebInfo
         -DENABLE_ASSET_PIPELINES=OFF
+        -DVCPKG_TARGET_TRIPLET=x64-windows-static
         -DCMAKE_TOOLCHAIN_FILE=${{ steps.vcpkg.outputs.RUNVCPKG_VCPKG_ROOT_OUT }}/scripts/buildsystems/vcpkg.cmake
         -S ${{ github.workspace }}
     - name: Build
