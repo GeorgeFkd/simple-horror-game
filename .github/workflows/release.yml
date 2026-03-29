@@ -7,13 +7,13 @@ on:
         required: true
 jobs:
   build-linux:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
     - name: Install Linux build dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y --fix-missing libzstd1 libzstd-dev clang-19 libclang-19-dev llvm-19 llvm-19-dev libasound2-dev libpulse-dev libltdl-dev make ninja-build libgl1-mesa-dev libglu1-mesa-dev gcc libudev-dev libdbus-1-dev libx11-dev libxft-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxinerama-dev libibus-1.0-dev libxss-dev libwayland-dev libegl1-mesa-dev libxkbcommon-dev wayland-protocols autoconf autoconf-archive automake libtool
+        sudo apt-get install -y --fix-missing libasound2-dev libpulse-dev libltdl-dev make ninja-build libgl1-mesa-dev libglu1-mesa-dev gcc libudev-dev libdbus-1-dev libx11-dev libxft-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxinerama-dev libibus-1.0-dev libxss-dev libwayland-dev libegl1-mesa-dev libxkbcommon-dev wayland-protocols autoconf autoconf-archive automake libtool
     - name: Setup vcpkg
       id: vcpkg
       uses: lukka/run-vcpkg@v11
@@ -24,21 +24,21 @@ jobs:
     - name: Configure CMake
       run: >
         cmake -B build
+        # gcc had some obscure errors so only clang will be supported
         -DCMAKE_CXX_COMPILER=clang++
         -DCMAKE_C_COMPILER=clang
         -DCMAKE_BUILD_TYPE=RelWithDebInfo
-        -DCMAKE_PREFIX_PATH=${{ github.workspace }}/build/vcpkg_installed/x64-linux
-        -DLLVM_PATH=/usr/lib/llvm-19
-        -DENABLE_ASSET_PIPELINES=ON
+        # it will be reworked soon for easier integration
+        -DENABLE_ASSET_PIPELINES=OFF
         -DCMAKE_TOOLCHAIN_FILE=${{ steps.vcpkg.outputs.RUNVCPKG_VCPKG_ROOT_OUT }}/scripts/buildsystems/vcpkg.cmake
         -S ${{ github.workspace }}
     - name: Build
       run: cmake --build build --config Release
-    - name: Upload generated assets
-      uses: actions/upload-artifact@v4
-      with:
-        name: assets
-        path: ${{ github.workspace }}/build/assets/
+    # - name: Upload generated assets
+    #   uses: actions/upload-artifact@v4
+    #   with:
+    #     name: assets
+    #     path: ${{ github.workspace }}/build/assets/
     - name: Package
       run: |
         mkdir release
@@ -56,11 +56,12 @@ jobs:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Download generated assets
-      uses: actions/download-artifact@v4
-      with:
-        name: assets
-        path: ${{ github.workspace }}/assets/
+    # will rework this part soon
+    # - name: Download generated assets
+    #   uses: actions/download-artifact@v4
+    #   with:
+    #     name: assets
+    #     path: ${{ github.workspace }}/assets/
     - name: Setup MSVC
       uses: ilammy/msvc-dev-cmd@v1
     - name: Setup vcpkg
@@ -95,7 +96,7 @@ jobs:
 
   create-release:
     needs: [build-linux, build-windows]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
