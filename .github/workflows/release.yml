@@ -24,11 +24,9 @@ jobs:
     - name: Configure CMake
       run: >
         cmake -B build
-        # gcc had some obscure errors so only clang will be supported
         -DCMAKE_CXX_COMPILER=clang++
         -DCMAKE_C_COMPILER=clang
         -DCMAKE_BUILD_TYPE=RelWithDebInfo
-        # it will be reworked soon for easier integration
         -DENABLE_ASSET_PIPELINES=OFF
         -DCMAKE_TOOLCHAIN_FILE=${{ steps.vcpkg.outputs.RUNVCPKG_VCPKG_ROOT_OUT }}/scripts/buildsystems/vcpkg.cmake
         -S ${{ github.workspace }}
@@ -55,7 +53,6 @@ jobs:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v4
-    # will rework this part soon
     # - name: Download generated assets
     #   uses: actions/download-artifact@v4
     #   with:
