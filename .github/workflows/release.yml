@@ -40,11 +40,12 @@ jobs:
         -DCMAKE_C_COMPILER=clang
         -DCMAKE_BUILD_TYPE=RelWithDebInfo
         -DENABLE_ASSET_PIPELINES=OFF
+        -G Ninja
         -DVCPKG_TARGET_TRIPLET=${{ env.VCPKG_TRIPLET }}
         -DCMAKE_TOOLCHAIN_FILE=${{ steps.vcpkg.outputs.RUNVCPKG_VCPKG_ROOT_OUT }}/scripts/buildsystems/vcpkg.cmake
         -S ${{ github.workspace }}
     - name: Build
-      run: cmake --build build --config Release
+      run: cmake --build build --config Release --parallel
     - name: Package
       run: |
         mkdir release
