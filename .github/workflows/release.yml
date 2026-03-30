@@ -5,22 +5,34 @@ on:
       version:
         description: 'Version to release'
         required: true
+
+env:
+  VCPKG_COMMIT_ID: 'f6735d5aa1537081e8d425372ea7e585b0ad65e8'
+
 jobs:
   build-linux:
     runs-on: ubuntu-24.04
+    env:
+      VCPKG_TRIPLET: x64-linux-release
+      COMPILER: clang
     steps:
     - uses: actions/checkout@v4
     - name: Install Linux build dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y --fix-missing libasound2-dev libpulse-dev libltdl-dev make ninja-build libgl1-mesa-dev libglu1-mesa-dev gcc libudev-dev libdbus-1-dev libx11-dev libxft-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxinerama-dev libibus-1.0-dev libxss-dev libwayland-dev libegl1-mesa-dev libxkbcommon-dev wayland-protocols autoconf autoconf-archive automake libtool
+    - name: Cache vcpkg
+      uses: actions/cache@v4
+      with:
+        path: ${{ github.workspace }}/build/vcpkg_installed
+        key: vcpkg-${{ env.VCPKG_TRIPLET }}-${{ env.VCPKG_COMMIT_ID }}-${{ env.COMPILER }}-${{ hashFiles('vcpkg.json') }}
     - name: Setup vcpkg
       id: vcpkg
       uses: lukka/run-vcpkg@v11
       with:
-        vcpkgGitCommitId: 'f6735d5aa1537081e8d425372ea7e585b0ad65e8'
+        vcpkgGitCommitId: ${{ env.VCPKG_COMMIT_ID }}
       env:
-        VCPKG_DEFAULT_TRIPLET: x64-linux-release
+        VCPKG_DEFAULT_TRIPLET: ${{ env.VCPKG_TRIPLET }}
     - name: Configure CMake
       run: >
         cmake -B build
@@ -28,16 +40,11 @@ jobs:
         -DCMAKE_C_COMPILER=clang
         -DCMAKE_BUILD_TYPE=RelWithDebInfo
         -DENABLE_ASSET_PIPELINES=OFF
-        -DVCPKG_TARGET_TRIPLET=x64-linux-release
+        -DVCPKG_TARGET_TRIPLET=${{ env.VCPKG_TRIPLET }}
         -DCMAKE_TOOLCHAIN_FILE=${{ steps.vcpkg.outputs.RUNVCPKG_VCPKG_ROOT_OUT }}/scripts/buildsystems/vcpkg.cmake
         -S ${{ github.workspace }}
     - name: Build
       run: cmake --build build --config Release
-    # - name: Upload generated assets
-    #   uses: actions/upload-artifact@v4
-    #   with:
-    #     name: assets
-    #     path: ${{ github.workspace }}/build/assets/
     - name: Package
       run: |
         mkdir release
@@ -52,22 +59,25 @@ jobs:
 
   build-windows:
     runs-on: windows-latest
+    env:
+      VCPKG_TRIPLET: x64-windows-static-release
+      COMPILER: msvc
     steps:
     - uses: actions/checkout@v4
-    # - name: Download generated assets
-    #   uses: actions/download-artifact@v4
-    #   with:
-    #     name: assets
-    #     path: ${{ github.workspace }}/assets/
     - name: Setup MSVC
       uses: ilammy/msvc-dev-cmd@v1
+    - name: Cache vcpkg
+      uses: actions/cache@v4
+      with:
+        path: ${{ github.workspace }}/build/vcpkg_installed
+        key: vcpkg-${{ env.VCPKG_TRIPLET }}-${{ env.VCPKG_COMMIT_ID }}-${{ env.COMPILER }}-${{ hashFiles('vcpkg.json') }}
     - name: Setup vcpkg
       id: vcpkg
       uses: lukka/run-vcpkg@v11
       with:
-        vcpkgGitCommitId: 'f6735d5aa1537081e8d425372ea7e585b0ad65e8'
+        vcpkgGitCommitId: ${{ env.VCPKG_COMMIT_ID }}
       env:
-        VCPKG_DEFAULT_TRIPLET: x64-windows-static-release
+        VCPKG_DEFAULT_TRIPLET: ${{ env.VCPKG_TRIPLET }}
     - name: Configure CMake
       run: >
         cmake -B build
@@ -76,7 +86,7 @@ jobs:
         -DCMAKE_BUILD_TYPE=RelWithDebInfo
         -DENABLE_ASSET_PIPELINES=OFF
         -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
-        -DVCPKG_TARGET_TRIPLET=x64-windows-static-release
+        -DVCPKG_TARGET_TRIPLET=${{ env.VCPKG_TRIPLET }}
         -DCMAKE_TOOLCHAIN_FILE=${{ steps.vcpkg.outputs.RUNVCPKG_VCPKG_ROOT_OUT }}/scripts/buildsystems/vcpkg.cmake
         -S ${{ github.workspace }}
     - name: Build
@@ -104,5 +114,7 @@ jobs:
     - name: Create Release
       uses: ncipollo/release-action@v1
       with:
+        artifacts: "Linux-x86_64.tar.gz/Linux-x86_64.tar.gz,Windows-x86_64.zip/Windows-x86_64.zip"
+        tag: v${{ github.event.inputs.version }}
         artifacts: "Linux-x86_64.tar.gz/Linux-x86_64.tar.gz,Windows-x86_64.zip/Windows-x86_64.zip"
         tag: v${{ github.event.inputs.version }}
