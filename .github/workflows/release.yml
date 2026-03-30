@@ -87,6 +87,7 @@ jobs:
         -DCMAKE_BUILD_TYPE=RelWithDebInfo
         -DENABLE_ASSET_PIPELINES=OFF
         -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+        -G Ninja
         -DVCPKG_TARGET_TRIPLET=${{ env.VCPKG_TRIPLET }}
         -DCMAKE_TOOLCHAIN_FILE=${{ steps.vcpkg.outputs.RUNVCPKG_VCPKG_ROOT_OUT }}/scripts/buildsystems/vcpkg.cmake
         -S ${{ github.workspace }}
