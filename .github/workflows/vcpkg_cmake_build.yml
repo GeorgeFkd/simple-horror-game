@@ -1,5 +1,4 @@
 name: Vcpkg and CMake Build
-
 on:
   workflow_call:
     inputs:
@@ -12,38 +11,50 @@ on:
       fail-fast: 
         required: true
         type: boolean
+
+env:
+  VCPKG_COMMIT_ID: 'f6735d5aa1537081e8d425372ea7e585b0ad65e8'
+
 jobs:
   build:
     runs-on: ${{matrix.os}}
     strategy:
       fail-fast: ${{ inputs.fail-fast }}
       matrix:
-        os: [ubuntu-24.04,windows-latest]
+        os: [ubuntu-24.04, windows-latest]
         include:
           - os: windows-latest
             c_compiler: cl
             cpp_compiler: cl
+            vcpkg_triplet: x64-windows-static-release
+            compiler: msvc
           - os: ubuntu-24.04
             c_compiler: clang
             cpp_compiler: clang++
+            vcpkg_triplet: x64-linux-release
+            compiler: clang
     steps:
       - uses: actions/checkout@v4
       - name: Install Linux build dependencies
         if: matrix.os == 'ubuntu-24.04'
         run: |
           sudo apt-get update
-          # llvm-19 and llvm-19-dev is only used for the asset pipeline
           sudo apt-get install -y --fix-missing llvm-19 llvm-19-dev libasound2-dev libpulse-dev libltdl-dev make ninja-build libgl1-mesa-dev libglu1-mesa-dev gcc libudev-dev libdbus-1-dev libx11-dev libxft-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxinerama-dev libibus-1.0-dev libxss-dev libwayland-dev libegl1-mesa-dev libxkbcommon-dev wayland-protocols autoconf autoconf-archive automake libtool
       - name: Setup MSVC
         if: matrix.os == 'windows-latest'
         uses: ilammy/msvc-dev-cmd@v1
+      - name: Cache vcpkg
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/build/vcpkg_installed
+          key: vcpkg-${{ matrix.vcpkg_triplet }}-${{ env.VCPKG_COMMIT_ID }}-${{ matrix.compiler }}-${{ hashFiles('vcpkg.json') }}
       - name: Setup vcpkg
         id: vcpkg
         uses: lukka/run-vcpkg@v11
         with:
-          vcpkgGitCommitId: 'f6735d5aa1537081e8d425372ea7e585b0ad65e8'
+          vcpkgGitCommitId: ${{ env.VCPKG_COMMIT_ID }}
         env:
-          VCPKG_DEFAULT_TRIPLET: ${{ matrix.os == 'windows-latest' && 'x64-windows-static' || 'x64-linux' }}
+          VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet }}
       - name: Set reusable strings
         id: strings
         shell: bash
@@ -55,13 +66,11 @@ jobs:
           -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
           -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
           -DCMAKE_BUILD_TYPE=${{ inputs.cmake_build_type }}
+          -DVCPKG_TARGET_TRIPLET=${{ matrix.vcpkg_triplet }}
           -DCMAKE_TOOLCHAIN_FILE=${{ steps.vcpkg.outputs.RUNVCPKG_VCPKG_ROOT_OUT }}/scripts/buildsystems/vcpkg.cmake
           ${{ inputs.enable_assets_pipeline && '-DENABLE_ASSET_PIPELINES=ON' || '' }}
           -S ${{ github.workspace }}
       - name: Build
         run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ inputs.cmake_build_type }}
-      
-        
-      
   
   
