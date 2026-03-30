@@ -96,7 +96,7 @@ jobs:
     - name: Package
       run: |
         mkdir release
-        cp build/Release/opengl_app.exe release/
+        cp build/opengl_app.exe release/
         cp -r ${{ github.workspace }}/assets release/
         Compress-Archive -Path release/* -DestinationPath Windows-x86_64.zip
     - name: Upload Windows artifact
