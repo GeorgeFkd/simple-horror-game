@@ -63,6 +63,7 @@ jobs:
       - name: Configure CMake
         run: >
           cmake -B ${{ steps.strings.outputs.build-output-dir }}
+          -G Ninja
           -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
           -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
           -DCMAKE_BUILD_TYPE=${{ inputs.cmake_build_type }}
@@ -71,6 +72,6 @@ jobs:
           ${{ inputs.enable_assets_pipeline && '-DENABLE_ASSET_PIPELINES=ON' || '' }}
           -S ${{ github.workspace }}
       - name: Build
-        run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ inputs.cmake_build_type }}
+        run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ inputs.cmake_build_type }} --parallel
   
   
