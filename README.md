@@ -26,4 +26,5 @@ Things practiced:
 - Architecture through abstractions and refactoring
 - Codegen using CMake for build-time parsing of model files(a failed experiment as a 20Meg cpp file cant get parsed seems to be the reason of failure)
 - Github actions(and using vcpkg for cross-platform builds)
+- Using clang tooling to implement asset tree shaking (not implemented in CI yet)
 
