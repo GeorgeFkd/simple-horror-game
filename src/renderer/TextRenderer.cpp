@@ -4,6 +4,10 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 void TextRenderer::load_font(const char* fontpath) {
+    if(!characters.empty()){
+        std::cout << "Refreshing fonts \n";
+        characters.clear();
+    }
     FT_Library ft;
     if (FT_Init_FreeType(&ft)) {
         std::cout << "ERROR::FREETYPE: Could not initialise FreeType Library\n";

@@ -39,13 +39,13 @@ void Camera::CameraObj::updateCameraVectors()
     up = glm::normalize(glm::cross(right, front));
 }
 
-void Camera::CameraObj::process_input(const SDL_Event &event){
+void Camera::CameraObj::process_input(SDL_Event *event){
     // SDL handles relative mouse motion for you when
     // using SDL_SetRelativeMouseMode(SDL_TRUE),
     // while GLFW does not — so in SDL, you don’t need to track
     // as it says in the OPENGL docs
     // lastX/lastY manually like you do in GLFW
-    switch (event.type)
+    switch (event->type)
     {
     case SDL_MOUSEMOTION:
         // also causes a LookAt flip once direction vector
@@ -53,8 +53,8 @@ void Camera::CameraObj::process_input(const SDL_Event &event){
         // The pitch needs to be constrained in such a way
         // that users won't be able to look higher than 89 degrees
         // (at 90 degrees we get the LookAt flip) and also not below -89 degrees.
-        yaw += event.motion.xrel * mouse_sensitivity;
-        pitch -= event.motion.yrel * mouse_sensitivity;
+        yaw += event->motion.xrel * mouse_sensitivity;
+        pitch -= event->motion.yrel * mouse_sensitivity;
         if (pitch > 89.0f)
             pitch = 89.0f;
         if (pitch < -89.0f)
@@ -62,9 +62,9 @@ void Camera::CameraObj::process_input(const SDL_Event &event){
         updateCameraVectors();
         break;
     case SDL_WINDOWEVENT:
-        if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED)
+        if (event->window.event == SDL_WINDOWEVENT_SIZE_CHANGED)
         {
-            aspect = float(event.window.data1) / float(event.window.data2);
+            aspect = float(event->window.data1) / float(event->window.data2);
         }
         break;
     default:

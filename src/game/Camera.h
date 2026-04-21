@@ -45,7 +45,7 @@ namespace Camera{
         }
 
         void update(float delta_time);
-        void process_input(const SDL_Event& event);
+        void process_input(SDL_Event* event);
         const std::array<glm::vec4,6> extract_frustum_planes() const;
         
         inline void set_window(int window_width,int window_height){

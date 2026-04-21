@@ -26,7 +26,7 @@ public:
 
     void initialise_shaders();
     void init(int screen_width,int screen_height);
-
+    void load_font(const std::string& filepath);
 private:
     std::vector<std::shared_ptr<Shader>> shaders;
     TextRenderer textRenderer;

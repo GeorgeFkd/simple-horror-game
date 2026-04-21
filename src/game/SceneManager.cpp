@@ -2,14 +2,69 @@
 #include "Camera.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_mixer.h>
+#include <SDL_events.h>
 #include <SDL_keyboard.h>
 #include <SDL_timer.h>
 #include <SDL_video.h>
 #include <algorithm>
 #include <chrono>
+#include <cstdint>
 #include <glm/gtx/vector_angle.hpp>
 #include <iostream>
 #include <random>
+
+class AudioPlayer {
+  public:
+    bool isMusicPlaying() {
+        return true;
+    }
+
+    // to generalise it closer to what SDL does it is basically channels that play stuff from a
+    // filesrc
+    AudioPlayer& withBackgroundMusic(std::string filepath) {
+        return *this;
+    }
+
+    AudioPlayer& withFootstepsSound(std::string filepath) {
+        return *this;
+    }
+
+    AudioPlayer& initialize() {
+        return *this;
+    }
+
+
+    std::string debugMsg() {
+        return "no dbg msg for now";
+    }
+
+    bool hasError() {
+        return false;
+    }
+
+    void setMusicVolume(uint8_t volume) {
+        return;
+    }
+
+    void startBackgroundMusic() {
+        return;
+    }
+
+    void stopBackgroundMusic() {
+        return;
+    }
+
+    void startFootstepsSound() {
+        return;
+    }
+
+    void stopFootstepsSound() {
+        return;
+    }
+
+  private:
+    std::string errMsg;
+};
 
 void Game::SceneManager::initialise_opengl_sdl() {
 
@@ -66,7 +121,7 @@ bool Game::SceneManager::has_user_won() {
 void Game::SceneManager::run_game_loop() {
 
     allocate_game_state_to_gpu();
-    
+
     std::cout << "Checking audio support \n";
     int numDecoders = Mix_GetNumChunkDecoders();
     for (int i = 0; i < numDecoders; i++) {
@@ -195,7 +250,6 @@ void Game::SceneManager::run_game_loop() {
         // TODO: add this when properly fixed
         //   perform_culling();
         PERF("render", render(view, proj););
-        PERF("interaction handlers", run_interaction_handlers(););
         PERF("SDL Swap Window", SDL_GL_SwapWindow(window););
     }
     Mix_FreeChunk(footsteps_sound);
@@ -224,8 +278,8 @@ void Game::SceneManager::move_model_Z(const std::string& name, float z) {
 }
 
 void Game::SceneManager::remove_model(const std::string& name) {
-    auto it = event_handlers.find(name);
-    if (it != event_handlers.end()) {
+    auto it = models_event_handlers.find(name);
+    if (it != models_event_handlers.end()) {
         std::cout << "Removing model: " << name << "\n";
         game_state->remove_model(name);
     }
@@ -234,58 +288,28 @@ void Game::SceneManager::remove_model(const std::string& name) {
 void Game::SceneManager::bind_handler_to_model(const std::string&                 name,
                                                std::function<bool(SceneManager*)> handler) {
 
-    event_handlers.insert({name, handler});
+    models_event_handlers.insert({name, handler});
 }
 
 void Game::SceneManager::run_handler_for(const std::string& m) {
-    auto it = event_handlers.find(m);
-    if (it != event_handlers.end()) {
+    auto it = models_event_handlers.find(m);
+    if (it != models_event_handlers.end()) {
         std::cout << "Running event handler for: " << m << "\n";
         bool keep = it->second(this);
         if (!keep) {
-            it = event_handlers.erase(it);
+            it = models_event_handlers.erase(it);
         } else {
             ++it;
         }
     }
 }
 
-void Game::SceneManager::run_interaction_handlers() {
-    constexpr float INTERACTION_DISTANCE = 8.0f;
-    const Uint8*    keys                 = SDL_GetKeyboardState(nullptr);
-    if (!game_state->closest_model.empty()) {
-        SDL_Event ev;
-        SDL_PollEvent(&ev);
-        if (game_state->distance_from_closest_model < INTERACTION_DISTANCE) {
-            if (ev.type == SDL_KEYDOWN && ev.key.repeat == 0 && keys[SDL_SCANCODE_I]) {
-                run_handler_for(game_state->closest_model);
-            }
-            bottom_text_hints = "Interact with " + game_state->closest_model + " (Press I)";
-        } else {
-            bottom_text_hints = "";
-        }
-    }
-}
 void Game::SceneManager::handle_sdl_events(bool& running) {
     SDL_Event ev;
     while (SDL_PollEvent(&ev)) {
-        if (ev.type == SDL_QUIT) {
-            terminate_game("Quitting Game...");
+        for (auto& evHandler : this->keyboardEventHandlers) {
+            evHandler(&ev);
         }
-
-        if (ev.type == SDL_WINDOWEVENT && ev.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
-            int w = ev.window.data1, h = ev.window.data2;
-            camera.set_window(w, h);
-            set_viewport(0, 0, w, h);
-        }
-
-        const auto keys = SDL_GetKeyboardState(nullptr);
-        if (ev.type == SDL_KEYDOWN && ev.key.repeat == 0 && keys[SDL_SCANCODE_M]) {
-            std::cout << "Position: " << camera.get_position().x << "," << camera.get_position().y
-                      << "," << camera.get_position().z << "\n";
-        }
-        // feed mouse/window events to the camera
-        camera.process_input(ev);
     }
 }
 
@@ -395,8 +419,62 @@ void Game::SceneManager::render(const glm::mat4& view, const glm::mat4& projecti
 
 Game::SceneManager::SceneManager(int width, int height, glm::vec3 camera_position)
     : screen_width(width), screen_height(height), camera(width, height, camera_position) {
-    event_handlers = {};
+    models_event_handlers = {};
     initialise_opengl_sdl();
+    initKeyboardHandlers();
+}
+
+void Game::SceneManager::initKeyboardHandlers() {
+    keyboardEventHandlers.emplace_back([&](SDL_Event* ev) {
+        if (ev->type == SDL_QUIT) {
+            terminate_game("Quitting Game");
+        }
+    });
+
+    keyboardEventHandlers.emplace_back([&](SDL_Event* ev){
+        const auto keys = SDL_GetKeyboardState(nullptr);
+        if (!game_state->closest_model.empty()) {
+            constexpr float INTERACTION_DISTANCE = 8.0f;
+            if (game_state->distance_from_closest_model < INTERACTION_DISTANCE) {
+                if (ev->type == SDL_KEYDOWN && ev->key.repeat == 0 && keys[SDL_SCANCODE_I]) {
+                    run_handler_for(game_state->closest_model);
+                }
+                bottom_text_hints = "Interact with " + game_state->closest_model + " (Press I)";
+            } else {
+                bottom_text_hints = "";
+            }
+        }
+    });
+
+    keyboardEventHandlers.emplace_back([&](SDL_Event* ev) {
+        if (ev->type == SDL_WINDOWEVENT && ev->window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
+            int w = ev->window.data1, h = ev->window.data2;
+            camera.set_window(w, h);
+            set_viewport(0, 0, w, h);
+        }
+    });
+
+    keyboardEventHandlers.emplace_back([&](SDL_Event* ev) {
+        const auto keys = SDL_GetKeyboardState(nullptr);
+        if (ev->type == SDL_KEYDOWN && ev->key.repeat == 0 && keys[SDL_SCANCODE_M]) {
+            std::cout << "Position: " << camera.get_position().x << "," << camera.get_position().y
+                      << "," << camera.get_position().z << "\n";
+        }
+    });
+
+    keyboardEventHandlers.emplace_back([&](SDL_Event* ev) {
+        camera.process_input(ev);
+    });
+
+    keyboardEventHandlers.emplace_back([&](SDL_Event* ev){
+        const auto keys = SDL_GetKeyboardState(nullptr);
+        if(ev->type == SDL_KEYDOWN && ev->key.repeat == 0 && keys[SDL_SCANCODE_R]){
+            std::cout << "Refreshing stuff. \n";
+            renderer.load_font("assets/fonts/scary.ttf");
+            renderer.initialise_shaders();
+
+        }
+    });
 }
 
 void Game::SceneManager::set_game_state(Game::GameState& g) {

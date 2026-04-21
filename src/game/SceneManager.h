@@ -56,6 +56,7 @@ class SceneManager {
     void terminate_game(const std::string& displayed_text);
 
   private:
+    void initKeyboardHandlers();
     void initialise_opengl_sdl();
     void allocate_game_state_to_gpu();
     void render(const glm::mat4& view, const glm::mat4& projection);
@@ -63,11 +64,11 @@ class SceneManager {
     void check_collisions(float dt);
     void perform_culling();
     void run_handler_for(const std::string& m);
-    void run_interaction_handlers();
     bool has_user_won();
 
     Game::GameState*                                                    game_state;
-    std::unordered_map<std::string, std::function<bool(SceneManager*)>> event_handlers;
+    std::vector<std::function<void(SDL_Event*)>> keyboardEventHandlers;
+    std::unordered_map<std::string, std::function<bool(SceneManager*)>> models_event_handlers;
     Renderer                                                            renderer;
     int                                                                 screen_width, screen_height;
     Camera::CameraObj                                                   camera;
@@ -89,4 +90,4 @@ class SceneManager {
     Uint64 start = 0;
     Uint64 end = 0;
 };
-}; // namespace Game
+}// namespace Game

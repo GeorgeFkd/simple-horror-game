@@ -4,21 +4,15 @@
 #include "Shader.h"
 #include <array>
 
+void Renderer::renderText(const std::string& text, float x, float y, float scale,
+                          const glm::vec3& color, const glm::mat4& projection) {
 
-void Renderer::renderText(
-                    const std::string& text,
-                    float x,
-                    float y,
-                    float scale,
-                    const glm::vec3& color,
-                    const glm::mat4& projection){
-    
-    textRenderer.render_text(get_shader_by_name("text"),  text, x, y, scale, color, projection);
+    textRenderer.render_text(get_shader_by_name("text"), text, x, y, scale, color, projection);
 }
 
 void Renderer::draw_light(Light* light, int index, Shader* shader) {
 
-    auto gpulight = allocated_lights.find(light->id);
+    auto   gpulight  = allocated_lights.find(light->id);
     GLuint depth_map = 0;
     if (gpulight != allocated_lights.end()) {
         depth_map = gpulight->second->depth_map;
@@ -33,8 +27,7 @@ void Renderer::draw_light(Light* light, int index, Shader* shader) {
     if (light->type == LightType::POINT) {
         std::string base = "shadowMapCube" + std::to_string(index);
         // shader->set_int(base + "shadowMapCube", index);
-        shader->set_texture(base, depth_map, GL_TEXTURE5 + index,
-                            GL_TEXTURE_CUBE_MAP);
+        shader->set_texture(base, depth_map, GL_TEXTURE5 + index, GL_TEXTURE_CUBE_MAP);
     } else {
         // spot or directional use a 2D depth map
         // shader->set_int(base + "shadowMap2D", index);
@@ -74,10 +67,18 @@ void Renderer::init(int screen_width, int screen_height) {
     set_viewport(0, 0, screen_width, screen_height);
     set_clear_color(0.0f, 0.0f, 0.0f, 1.0f);
     clear_buffers(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    auto font_path = "assets/fonts/scary.ttf";
-    textRenderer.load_font(font_path);
+    load_font("");
 }
 
+void Renderer::load_font(const std::string& filepath) {
+    const char* font_path;
+    if (filepath.empty()) {
+        font_path = "assets/fonts/scary.ttf";
+    } else {
+        font_path = filepath.c_str();
+    }
+    textRenderer.load_font(font_path);
+}
 void Renderer::upload_model(Models::Model* m) {
     auto model_data_entry = allocated_models.find(m->model_data->id);
     if (model_data_entry == allocated_models.end()) {
@@ -175,10 +176,10 @@ void Renderer::draw_light_depth(Light*                                          
 
 void Renderer::draw_model_depth(Models::Model* m, Shader* shader) {
     shader->set_mat4("uModel", m->model_instance.world_transform);
-    auto model_entry =allocated_models.find(m->model_data->id);
-    if(model_entry != allocated_models.end()){
+    auto model_entry = allocated_models.find(m->model_data->id);
+    if (model_entry != allocated_models.end()) {
         shader->bindVAO(model_entry->second->vao);
-    }else{
+    } else {
         std::cout << "No VAO found for: " << m->model_instance.label << "\n";
         assert(false);
     }
@@ -187,8 +188,6 @@ void Renderer::draw_model_depth(Models::Model* m, Shader* shader) {
         shader->drawElemTriangles(sm.index_count, offset_ptr);
     }
     shader->unbindVAO();
-
-
 }
 
 void Renderer::draw_lights_depth(const std::vector<std::unique_ptr<Light>>&         lights,
@@ -232,10 +231,10 @@ void Renderer::draw(Models::Model* m, const glm::mat4& view, const glm::mat4& pr
     shader->set_mat4("uProj", projection);
     shader->set_mat4("uModel", m->model_instance.world_transform);
 
-    auto model_entry =allocated_models.find(m->model_data->id);
-    if(model_entry != allocated_models.end()){
+    auto model_entry = allocated_models.find(m->model_data->id);
+    if (model_entry != allocated_models.end()) {
         shader->bindVAO(model_entry->second->vao);
-    }else {
+    } else {
         std::cout << "No VAO found to draw model: " << m->model_instance.label << "\n";
         assert(false);
     }
@@ -276,10 +275,13 @@ void Renderer::draw(Models::Model* m, const glm::mat4& view, const glm::mat4& pr
 }
 
 void Renderer::initialise_shaders() {
+    if (!shaders.empty()) {
+        shaders.clear();
+        std::cout << "Found existing shaders. Reloading them." << "\n";
+    }
     std::vector<std::string> shader_paths = {"assets/shaders/blinnphong.vert",
                                              "assets/shaders/blinnphong.frag"};
     std::vector<GLenum>      shader_types = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
-    // creating a Shader segfaults
     auto blinnphong = std::make_shared<Shader>(shader_paths, shader_types, "blinn-phong");
 
     shader_paths  = {"assets/shaders/depth_2d.vert", "assets/shaders/depth_2d.frag"};
