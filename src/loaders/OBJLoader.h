@@ -130,8 +130,6 @@ class OBJLoader {
     std::shared_ptr<ModelData> read_from_file(const std::string& filename);
     ModelData model_data;
 
-    void parseFace(const std::string& line);
-
     inline void print_glmvec3(glm::vec3 v) {
         std::cout << "Read GLM Vec 3 from .obj: " << v.x << "," << v.y << "," << v.z << "\n";
     }

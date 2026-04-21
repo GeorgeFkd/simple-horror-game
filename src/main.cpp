@@ -8,6 +8,13 @@
 #include <string>
 #include <vector>
 
+
+
+static Game::SceneManager* scene_mgr = nullptr;
+static void game_loop_wrapper() {
+    scene_mgr->run_game_loop();
+}
+
 int main(int argc, char* argv[]) {
 
     auto camera_position = glm::vec3(0.0f,5.0f,3.5f);
@@ -221,58 +228,6 @@ int main(int argc, char* argv[]) {
 
     game_state.add_light(std::move(flashlight), "flashlight");
 
-    std::vector<std::string> random_objects = {"assets/models/SimpleOldTownAssets/TableSmall1.obj",
-                                               "assets/models/SimpleOldTownAssets/PotNtural.obj",
-                                               "assets/models/SimpleOldTownAssets/workbench01.obj",
-                                               "assets/models/SimpleOldTownAssets/watering-can.obj",
-                                               "assets/models/axe.obj"};
-
-    auto scatter_fn = [&](float radius, const glm::vec3& center,
-                          const std::vector<std::string>& objects) {
-        std::random_device                    rd;
-        std::mt19937                          rng(rd());
-        std::uniform_real_distribution<float> dist(-radius, radius);
-        // Build the Group
-        Group group("scatter-objects", center);
-
-        // Shuffle paths
-        auto shuffled = objects;
-        std::shuffle(shuffled.begin(), shuffled.end(), rng);
-
-        for (int i = 0; i < (int)shuffled.size(); ++i) {
-            // random translation
-            glm::vec3 offset{dist(rng), 0.0f, dist(rng)};
-
-            group.model(shuffled[i], "scatter-" + std::to_string(i), offset);
-        }
-
-        return group;
-    };
-
-    // auto scattered_group_1 = scatter_fn(4.0f, {30.0f, 0.0f, -15.0f}, random_objects);
-    // for (auto& m : scattered_group_1.models()) {
-    //     game_state.add_model(std::move(m), m->name());
-    // }
-    //
-    // auto scattered_group_2 = scatter_fn(4.0f, {30.0f, 0.0f, -45.0f}, random_objects);
-    // for (auto& m : scattered_group_2.models()) {
-    //     game_state.add_model(std::move(m), m->name());
-    // }
-    //
-    // std::vector<std::string> random_objects_2 = {
-    //     "assets/models/old_office.obj", "assets/models/surgery_tools.obj",
-    //     "assets/models/SimpleOldTownAssets/workbench01.obj"};
-    //
-    // auto scattered_group_3 = scatter_fn(6.0f, {-10.0f, 0.0f, -45.0f}, random_objects_2);
-    // for (auto& m : scattered_group_3.models()) {
-    //     game_state.add_model(std::move(m), m->name());
-    // }
-    //
-    //
-    // auto scattered_group_4 = scatter_fn(4.0f, {-30.0f, 0.0f, 10.0f}, random_objects);
-    // for (auto& m : scattered_group_4.models()) {
-    //     game_state.add_model(std::move(m), m->name());
-    // }
     glm::vec3 overhead_point = glm::vec3(15.0f, -4.0f, -20.0f);
     pointlight.set_position(overhead_point);
     overhead_point_light_model.set_local_transform(
@@ -617,7 +572,12 @@ int main(int argc, char* argv[]) {
             return false;
         });
     }
-    scene_manager.run_game_loop();
+    scene_mgr = &scene_manager;
+    #ifdef __EMSCRIPTEN__
+        emscripten_set_main_loop(game_loop_wrapper,0,1);
+    #else 
+        while(scene_manager.gameIsRunning()) { scene_manager.run_game_loop(); }
+    #endif
 
     return 0;
 }

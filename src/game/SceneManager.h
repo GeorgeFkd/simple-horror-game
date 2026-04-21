@@ -4,6 +4,7 @@
 #include "renderer/Renderer.h"
 #include "renderer/TextRenderer.h"
 #include "scene_objects/Monster.h"
+#include <SDL2/SDL_mixer.h>
 #include <algorithm>
 #include <glm/glm.hpp>
 #include <glm/gtc/epsilon.hpp>
@@ -24,9 +25,6 @@ class SceneManager {
 
     // probs should be a move tho
     void set_game_state(Game::GameState& g);
-    // inline void set_game_state(Game::GameState& g) {
-    //     game_state = &g;
-    // }
 
     inline Game::GameState* get_game_state() {
         return game_state;
@@ -54,8 +52,12 @@ class SceneManager {
 
     void run_game_loop();
     void terminate_game(const std::string& displayed_text);
+    bool gameIsRunning();
 
   private:
+    void setupGame();
+    void setupAudio();
+    void setupNPCs();
     void initKeyboardHandlers();
     void initialise_opengl_sdl();
     void allocate_game_state_to_gpu();
@@ -67,7 +69,12 @@ class SceneManager {
     bool has_user_won();
 
     Game::GameState*                                                    game_state;
-    std::vector<std::function<void(SDL_Event*)>> keyboardEventHandlers;
+    std::vector<std::function<void(SDL_Event*)>>                        keyboardEventHandlers;
+    Uint64                                                              lastTicks;
+    Mix_Music*                                                          horror_music;
+    Mix_Chunk*                                                          footsteps_sound;
+    int                                                                 footsteps_sound_channel;
+    Light*                                                              flashlight;
     std::unordered_map<std::string, std::function<bool(SceneManager*)>> models_event_handlers;
     Renderer                                                            renderer;
     int                                                                 screen_width, screen_height;
@@ -86,8 +93,8 @@ class SceneManager {
     bool                                                                running = false;
     unsigned int seconds_to_wait_before_termination                             = 3;
     float        fps                                                            = -1;
-    //used in perf measuring
+    // used in perf measuring
     Uint64 start = 0;
-    Uint64 end = 0;
+    Uint64 end   = 0;
 };
-}// namespace Game
+} // namespace Game

@@ -98,7 +98,7 @@ Models::Model::Model(const std::vector<glm::vec3>& positions, const std::vector<
     sm.index_offset = 0;
     sm.index_count  = static_cast<GLuint>(model_data->indices.size());
     model_data->submeshes.push_back(sm);
-
+    //TODO: use model_data->initialize and test it
     auto [tan1, tan2] = prepare_bitangents(model_data.get());
     for (size_t i = 0; i < model_data->unique_vertices.size(); ++i) {
         orthogonalize_and_normalize_tb(model_data->unique_vertices[i], tan1, tan2, i);

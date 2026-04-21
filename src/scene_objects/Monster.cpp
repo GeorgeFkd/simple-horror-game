@@ -10,7 +10,9 @@ float Monster::generate_random_number() {
     return uniform_rand(el);
 }
 
-Monster::Monster() {}
+Monster::Monster() : el(rand_dev()),uniform_rand(0.0f,1.0f) {
+
+}
 
 Monster::~Monster() {}
 
@@ -21,6 +23,7 @@ Models::Model* Monster::monster_model() {
 bool Monster::no_scripts_left() {
     return scripts.empty();
 }
+
 
 Monster& Monster::add_scripted_movement(const glm::vec3& direction, float speed, float seconds) {
     is_scripted = true;

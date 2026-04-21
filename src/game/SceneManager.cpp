@@ -33,7 +33,6 @@ class AudioPlayer {
         return *this;
     }
 
-
     std::string debugMsg() {
         return "no dbg msg for now";
     }
@@ -69,19 +68,13 @@ class AudioPlayer {
 void Game::SceneManager::initialise_opengl_sdl() {
 
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) == -1) {
-        std::cerr << "Something went wrong when initialising SDL: " << SDL_GetError() << "\n";
+        std::cerr << "Something went wrong when initialising SDL Audio and Video: "
+                  << SDL_GetError() << "\n";
         return;
     }
 
-    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 4, 2048) < 0) {
-        std::cerr << "SDL_mixer could not initialize! SDL_mixer Error: " << Mix_GetError() << "\n";
-        return;
-    }
-
-    // SDL_Window*
     window = SDL_CreateWindow("Old room", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720,
                               SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
-    // SDL_GLContext
     glCtx = SDL_GL_CreateContext(window);
 
     // SDL_GL_SetSwapInterval(1);
@@ -94,6 +87,98 @@ void Game::SceneManager::initialise_opengl_sdl() {
     renderer.init(screen_width, screen_height);
     renderer.initialise_shaders();
     SDL_SetRelativeMouseMode(SDL_TRUE);
+}
+
+void Game::SceneManager::setupAudio() {
+    // this might be needed before opening the window
+    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 4, 2048) < 0) {
+        std::cerr << "SDL_mixer could not initialize! SDL_mixer Error: " << Mix_GetError() << "\n";
+        return;
+    }
+
+    std::cout << "Checking audio support \n";
+    int numDecoders = Mix_GetNumChunkDecoders();
+    for (int i = 0; i < numDecoders; i++) {
+        std::cout << "Chunk decoder: " << Mix_GetChunkDecoder(i) << "\n";
+    }
+
+    int numMusicDecoders = Mix_GetNumMusicDecoders();
+    for (int i = 0; i < numMusicDecoders; i++) {
+        std::cout << "Music decoder: " << Mix_GetMusicDecoder(i) << "\n";
+    }
+
+    horror_music = Mix_LoadMUS("assets/audio/scary.mp3");
+    if (!horror_music) {
+        std::cerr << "Failed to load background music: " << Mix_GetError() << "\n";
+        return;
+    }
+
+    footsteps_sound         = Mix_LoadWAV("assets/audio/footsteps.mp3");
+    footsteps_sound_channel = 2;
+    if (!footsteps_sound) {
+        std::cerr << "Failed to load music for footsteps: " << Mix_GetError() << "\n";
+        return;
+    }
+}
+
+void Game::SceneManager::setupGame() {
+    std::cout << "Setting up Audio. \n";
+    setupAudio();
+    flashlight = game_state->find_light("flashlight");
+    if (flashlight == nullptr) {
+        throw std::runtime_error("Could not find flashlight model...");
+    }
+    std::cout << "Setting up NPCs. \n";
+    setupNPCs();
+    std::cout << "Allocating game state to gpu. \n";
+    allocate_game_state_to_gpu();
+}
+
+void Game::SceneManager::setupNPCs(){
+    auto monster_initial_position = glm::vec3(5.0f, 0.0f, 5.0f);
+    last_monster_transform        = glm::translate(glm::mat4(1.0f), monster_initial_position);
+    auto monster_init             = Models::Model("assets/models/monster.obj", "monster");
+    game_state->add_model(std::move(monster_init), "monster");
+    auto monster_model = game_state->find_model("monster");
+    if (!monster_model) {
+        throw std::runtime_error("Could not find monster model before starting game...");
+    }
+    monster_model->set_local_transform(last_monster_transform);
+    monster_model->update_world_transform(glm::mat4(1.0f));
+    monster.set_model(monster_model);
+    monster.disappear_probability(0.65f)
+        .seconds_for_coinflip(15.0f)
+        .speed_within(4.0f, 10.0f)
+        .restrict_monster_within(-room_width, room_width, -room_depth, room_depth);
+
+    running   = true;
+    lastTicks = SDL_GetPerformanceCounter();
+
+    monster.on_monster_active([&](auto m) {
+        if (Mix_PlayingMusic() == 0) {
+            Mix_PlayMusic(horror_music, -1); // -1 = loop forever
+            Mix_VolumeMusic(MIX_MAX_VOLUME / 4);
+            Mix_PlayChannel(footsteps_sound_channel, footsteps_sound, -1);
+        }
+    });
+
+    monster.on_monster_not_active([&](auto m) {
+        if (Mix_PlayingMusic()) {
+            Mix_HaltMusic();
+            Mix_HaltChannel(footsteps_sound_channel);
+        }
+    });
+    monster.on_chase_start([]() {
+        if (Mix_PlayingMusic()) {
+            Mix_VolumeMusic(MIX_MAX_VOLUME);
+        }
+    });
+    monster.on_chase_stop([]() {
+        if (Mix_PlayingMusic()) {
+            Mix_VolumeMusic(MIX_MAX_VOLUME / 4);
+        }
+    });
+    monster.set_chasing_speed(4.0f);
 }
 
 #define PRINT_VEC4(v)                                                                              \
@@ -120,141 +205,58 @@ bool Game::SceneManager::has_user_won() {
 
 void Game::SceneManager::run_game_loop() {
 
-    allocate_game_state_to_gpu();
-
-    std::cout << "Checking audio support \n";
-    int numDecoders = Mix_GetNumChunkDecoders();
-    for (int i = 0; i < numDecoders; i++) {
-        std::cout << "Chunk decoder: " << Mix_GetChunkDecoder(i) << "\n";
+    if (has_user_won()) {
+        // runs one more iteration so it can display the text
+        terminate_game("You Won!");
     }
+    Uint64 now = SDL_GetPerformanceCounter();
+    float  dt  = float(now - lastTicks) / float(SDL_GetPerformanceFrequency());
+    assert(dt != 0);
+    fps       = 1 / dt;
+    lastTicks = now;
+    PERF("SDL Events polling", handle_sdl_events(running););
+    last_camera_position   = camera.get_position();
+    last_monster_transform = monster.monster_model()->get_local_transform();
+    PERF("Camera update", { camera.update(dt); });
+    // std::cout << "Last camera position and current: \n";
+    auto camera_dir = glm::normalize(camera.get_direction());
+    monster.update(dt, camera_dir, last_camera_position);
+    PERF("monster mixing sound", {
+        if (monster.monster_model()->is_active()) {
+            glm::vec3 cam_pos    = camera.get_position();
+            glm::mat4 mon_tf     = monster.monster_model()->get_local_transform();
+            glm::vec3 mon_pos    = glm::vec3(mon_tf[3]);
+            glm::vec3 to_monster = mon_pos - cam_pos;
+            glm::vec3 dir_xz     = glm::normalize(glm::vec3(to_monster.x, 0.0f, to_monster.z));
+            glm::vec3 forward    = camera.get_direction();
+            glm::vec3 forward_xz = glm::normalize(glm::vec3(forward.x, 0.0f, forward.z));
 
-    int numMusicDecoders = Mix_GetNumMusicDecoders();
-    for (int i = 0; i < numMusicDecoders; i++) {
-        std::cout << "Music decoder: " << Mix_GetMusicDecoder(i) << "\n";
-    }
+            float angle_rad = glm::orientedAngle(forward_xz, dir_xz, glm::vec3(0.0f, 1.0f, 0.0f));
+            float angle_deg = glm::degrees(angle_rad);
 
-    Mix_Music* horror_music = Mix_LoadMUS("assets/audio/scary.mp3");
-    if (!horror_music) {
-        std::cerr << "Failed to load background music: " << Mix_GetError() << "\n";
-        return;
-    }
+            float distance_f = glm::length(to_monster);
+            distance_f       = std::clamp(distance_f, 0.0f, 255.0f);
 
-    Mix_Chunk* footsteps_sound         = Mix_LoadWAV("assets/audio/footsteps.mp3");
-    int        footsteps_sound_channel = 2;
-    if (!footsteps_sound) {
-        std::cerr << "Failed to load music for footsteps: " << Mix_GetError() << "\n";
-        return;
-    }
-
-    auto monster_initial_position = glm::vec3(5.0f, 0.0f, 5.0f);
-    last_monster_transform        = glm::translate(glm::mat4(1.0f), monster_initial_position);
-    auto monster_init             = Models::Model("assets/models/monster.obj", "monster");
-    game_state->add_model(std::move(monster_init), "monster");
-    allocate_game_state_to_gpu();
-    auto monster_model = game_state->find_model("monster");
-    if (!monster_model) {
-        throw std::runtime_error("Could not find monster model before starting game...");
-    }
-    monster_model->set_local_transform(last_monster_transform);
-    monster_model->update_world_transform(glm::mat4(1.0f));
-    Monster monster(monster_model);
-    monster.disappear_probability(0.65f)
-        .seconds_for_coinflip(15.0f)
-        .speed_within(4.0f, 10.0f)
-        .restrict_monster_within(-room_width, room_width, -room_depth, room_depth);
-
-    running           = true;
-    Uint64 lastTicks  = SDL_GetPerformanceCounter();
-    auto   flashlight = game_state->find_light("flashlight");
-
-    if (!flashlight) {
-        throw std::runtime_error("Could not find flashlight model...");
-    }
-
-    monster.on_monster_active([&](auto m) {
-        if (Mix_PlayingMusic() == 0) {
-            Mix_PlayMusic(horror_music, -1); // -1 = loop forever
-            Mix_VolumeMusic(MIX_MAX_VOLUME / 4);
-            Mix_PlayChannel(footsteps_sound_channel, footsteps_sound, -1);
+            uint8_t distance_byte = static_cast<uint8_t>(distance_f + 0.5f);
+            // mb i mean distance byte here?
+            Mix_SetPosition(footsteps_sound_channel, angle_deg, distance_f);
         }
-    });
+    };);
 
-    monster.on_monster_not_active([footsteps_sound_channel](auto m) {
-        if (Mix_PlayingMusic()) {
-            Mix_HaltMusic();
-            Mix_HaltChannel(footsteps_sound_channel);
-        }
-    });
-    monster.on_chase_start([]() {
-        if (Mix_PlayingMusic()) {
-            Mix_VolumeMusic(MIX_MAX_VOLUME);
-        }
-    });
-    monster.on_chase_stop([]() {
-        if (Mix_PlayingMusic()) {
-            Mix_VolumeMusic(MIX_MAX_VOLUME / 4);
-        }
-    });
-    monster.set_chasing_speed(4.0f);
+    PERF("Collisions checking", check_collisions(dt));
 
-    while (running) {
-        if (has_user_won()) {
-            // runs one more iteration so it can display the text
-            terminate_game("You Won!");
-        }
-        Uint64 now = SDL_GetPerformanceCounter();
-        float  dt  = float(now - lastTicks) / float(SDL_GetPerformanceFrequency());
-        assert(dt != 0);
-        fps       = 1 / dt;
-        lastTicks = now;
-        PERF("SDL Events polling", handle_sdl_events(running););
-        last_camera_position   = camera.get_position();
-        last_monster_transform = monster.monster_model()->get_local_transform();
-        PERF("Camera update", { camera.update(dt); });
-        // std::cout << "Last camera position and current: \n";
-        auto camera_dir = glm::normalize(camera.get_direction());
-        monster.update(dt, camera_dir, last_camera_position);
-        PERF("monster mixing sound", {
-            if (monster.monster_model()->is_active()) {
-                glm::vec3 cam_pos    = camera.get_position();
-                glm::mat4 mon_tf     = monster.monster_model()->get_local_transform();
-                glm::vec3 mon_pos    = glm::vec3(mon_tf[3]);
-                glm::vec3 to_monster = mon_pos - cam_pos;
-                glm::vec3 dir_xz     = glm::normalize(glm::vec3(to_monster.x, 0.0f, to_monster.z));
-                glm::vec3 forward    = camera.get_direction();
-                glm::vec3 forward_xz = glm::normalize(glm::vec3(forward.x, 0.0f, forward.z));
+    float     right_offset = 0.4f;
+    glm::vec3 offset =
+        right_offset * camera.get_right(); // + forward_offset * camera.get_direction()
+    flashlight->set_position(camera.get_position() + offset);
+    flashlight->set_direction(camera.get_direction());
 
-                float angle_rad =
-                    glm::orientedAngle(forward_xz, dir_xz, glm::vec3(0.0f, 1.0f, 0.0f));
-                float angle_deg = glm::degrees(angle_rad);
-
-                float distance_f = glm::length(to_monster);
-                distance_f       = std::clamp(distance_f, 0.0f, 255.0f);
-
-                uint8_t distance_byte = static_cast<uint8_t>(distance_f + 0.5f);
-                // mb i mean distance byte here?
-                Mix_SetPosition(footsteps_sound_channel, angle_deg, distance_f);
-            }
-        };);
-
-        PERF("Collisions checking", check_collisions(dt));
-
-        float     right_offset = 0.4f;
-        glm::vec3 offset =
-            right_offset * camera.get_right(); // + forward_offset * camera.get_direction()
-        flashlight->set_position(camera.get_position() + offset);
-        flashlight->set_direction(camera.get_direction());
-
-        glm::mat4 view = camera.get_view_matrix();
-        glm::mat4 proj = camera.get_projection_matrix();
-        // TODO: add this when properly fixed
-        //   perform_culling();
-        PERF("render", render(view, proj););
-        PERF("SDL Swap Window", SDL_GL_SwapWindow(window););
-    }
-    Mix_FreeChunk(footsteps_sound);
-    Mix_FreeMusic(horror_music);
-    SDL_Delay(seconds_to_wait_before_termination * 1000);
+    glm::mat4 view = camera.get_view_matrix();
+    glm::mat4 proj = camera.get_projection_matrix();
+    //TODO: add this when properly fixed
+    //   perform_culling();
+    PERF("render", render(view, proj););
+    PERF("SDL Swap Window", SDL_GL_SwapWindow(window););
 }
 
 void Game::SceneManager::move_model(const std::string& name, const glm::vec3& direction) {
@@ -431,7 +433,7 @@ void Game::SceneManager::initKeyboardHandlers() {
         }
     });
 
-    keyboardEventHandlers.emplace_back([&](SDL_Event* ev){
+    keyboardEventHandlers.emplace_back([&](SDL_Event* ev) {
         const auto keys = SDL_GetKeyboardState(nullptr);
         if (!game_state->closest_model.empty()) {
             constexpr float INTERACTION_DISTANCE = 8.0f;
@@ -462,23 +464,26 @@ void Game::SceneManager::initKeyboardHandlers() {
         }
     });
 
-    keyboardEventHandlers.emplace_back([&](SDL_Event* ev) {
-        camera.process_input(ev);
-    });
+    keyboardEventHandlers.emplace_back([&](SDL_Event* ev) { camera.process_input(ev); });
 
-    keyboardEventHandlers.emplace_back([&](SDL_Event* ev){
+    keyboardEventHandlers.emplace_back([&](SDL_Event* ev) {
         const auto keys = SDL_GetKeyboardState(nullptr);
-        if(ev->type == SDL_KEYDOWN && ev->key.repeat == 0 && keys[SDL_SCANCODE_R]){
+        if (ev->type == SDL_KEYDOWN && ev->key.repeat == 0 && keys[SDL_SCANCODE_R]) {
             std::cout << "Refreshing stuff. \n";
             renderer.load_font("assets/fonts/scary.ttf");
             renderer.initialise_shaders();
-
         }
     });
 }
 
+bool Game::SceneManager::gameIsRunning() {
+    return running;
+}
+
 void Game::SceneManager::set_game_state(Game::GameState& g) {
     game_state = &g;
+    std::cout << "Game state set, setting up game. \n";
+    setupGame();
 }
 
 void Game::SceneManager::allocate_game_state_to_gpu() {
@@ -493,6 +498,9 @@ void Game::SceneManager::allocate_game_state_to_gpu() {
 }
 
 Game::SceneManager::~SceneManager() {
+    Mix_FreeChunk(footsteps_sound);
+    Mix_FreeMusic(horror_music);
+    SDL_Delay(seconds_to_wait_before_termination * 1000);
     SDL_GL_DeleteContext(glCtx);
     SDL_DestroyWindow(window);
     Mix_CloseAudio();
