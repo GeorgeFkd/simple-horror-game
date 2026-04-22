@@ -16,6 +16,27 @@
 #include <string>
 
 namespace Game {
+class AudioPlayer {
+  public:
+    ~AudioPlayer();
+    void         init();
+    void         debugAudio();
+    bool         hasError();
+    bool         isPlayingMusic();
+    AudioPlayer& withBackgroundMusic(std::string filepath);
+    AudioPlayer& withFootstepsSound(std::string filepath);
+    void         setMusicVolume(int volume);
+    void         startBackgroundMusic();
+    void         stopBackgroundMusic();
+    void         startFootstepsSound();
+    void         stopFootstepsSound();
+
+  private:
+    Mix_Music* horror_music            = nullptr;
+    Mix_Chunk* footsteps_sound         = nullptr;
+    int        footsteps_sound_channel = -1;
+};
+
 using namespace GlHelpers;
 class SceneManager {
   public:
@@ -71,6 +92,7 @@ class SceneManager {
     Game::GameState*                                                    game_state;
     std::vector<std::function<void(SDL_Event*)>>                        keyboardEventHandlers;
     Uint64                                                              lastTicks;
+    AudioPlayer                                                         audioPlayer;
     Mix_Music*                                                          horror_music;
     Mix_Chunk*                                                          footsteps_sound;
     int                                                                 footsteps_sound_channel;

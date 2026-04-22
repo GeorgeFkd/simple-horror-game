@@ -13,61 +13,77 @@
 #include <iostream>
 #include <random>
 
-class AudioPlayer {
-  public:
-    bool isMusicPlaying() {
-        return true;
+void Game::AudioPlayer::init() {
+    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 4, 2048) < 0) {
+        std::cerr << "SDL_mixer could not initialize! SDL_mixer Error: " << Mix_GetError() << "\n";
     }
+}
 
-    // to generalise it closer to what SDL does it is basically channels that play stuff from a
-    // filesrc
-    AudioPlayer& withBackgroundMusic(std::string filepath) {
-        return *this;
+Game::AudioPlayer::~AudioPlayer() {
+    Mix_FreeChunk(footsteps_sound);
+    Mix_FreeMusic(horror_music);
+}
+
+void Game::AudioPlayer::debugAudio() {
+    std::cout << "Checking audio support \n";
+    int numDecoders = Mix_GetNumChunkDecoders();
+    for (int i = 0; i < numDecoders; i++) {
+        std::cout << "Chunk decoder: " << Mix_GetChunkDecoder(i) << "\n";
     }
-
-    AudioPlayer& withFootstepsSound(std::string filepath) {
-        return *this;
+    int numMusicDecoders = Mix_GetNumMusicDecoders();
+    for (int i = 0; i < numMusicDecoders; i++) {
+        std::cout << "Music decoder: " << Mix_GetMusicDecoder(i) << "\n";
     }
+}
 
-    AudioPlayer& initialize() {
-        return *this;
+bool Game::AudioPlayer::hasError() {
+    return false;
+}
+
+bool Game::AudioPlayer::isPlayingMusic() {
+    return Mix_PlayingMusic() == 1;
+}
+
+Game::AudioPlayer& Game::AudioPlayer::withBackgroundMusic(std::string filepath) {
+    horror_music = Mix_LoadMUS(std::move(filepath).c_str());
+    if (!horror_music) {
+        std::cerr << "Failed to load background music: " << Mix_GetError() << "\n";
     }
+    return *this;
+}
 
-    std::string debugMsg() {
-        return "no dbg msg for now";
+Game::AudioPlayer& Game::AudioPlayer::withFootstepsSound(std::string filepath) {
+    footsteps_sound         = Mix_LoadWAV(std::move(filepath).c_str());
+    footsteps_sound_channel = 2;
+    if (!footsteps_sound) {
+        std::cerr << "Failed to load music for footsteps: " << Mix_GetError() << "\n";
     }
+    return *this;
+}
 
-    bool hasError() {
-        return false;
-    }
+void Game::AudioPlayer::setMusicVolume(int volume) {
+    Mix_VolumeMusic(volume);
+}
 
-    void setMusicVolume(uint8_t volume) {
-        return;
-    }
+void Game::AudioPlayer::startBackgroundMusic() {
+    Mix_PlayMusic(horror_music, -1);
+}
 
-    void startBackgroundMusic() {
-        return;
-    }
+void Game::AudioPlayer::stopBackgroundMusic() {
+    Mix_HaltMusic();
+}
 
-    void stopBackgroundMusic() {
-        return;
-    }
+void Game::AudioPlayer::startFootstepsSound() {
+    Mix_PlayChannel(footsteps_sound_channel, footsteps_sound, -1);
+}
 
-    void startFootstepsSound() {
-        return;
-    }
-
-    void stopFootstepsSound() {
-        return;
-    }
-
-  private:
-    std::string errMsg;
-};
+void Game::AudioPlayer::stopFootstepsSound() {
+    Mix_HaltChannel(footsteps_sound_channel);
+}
 
 void Game::SceneManager::initialise_opengl_sdl() {
 
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) == -1) {
+    if (SDL_Init(SDL_INIT_VIDEO) == -1) {
         std::cerr << "Something went wrong when initialising SDL Audio and Video: "
                   << SDL_GetError() << "\n";
         return;
@@ -75,9 +91,8 @@ void Game::SceneManager::initialise_opengl_sdl() {
 
     window = SDL_CreateWindow("Old room", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720,
                               SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
-    glCtx = SDL_GL_CreateContext(window);
+    glCtx  = SDL_GL_CreateContext(window);
 
-    // SDL_GL_SetSwapInterval(1);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
@@ -90,35 +105,10 @@ void Game::SceneManager::initialise_opengl_sdl() {
 }
 
 void Game::SceneManager::setupAudio() {
-    // this might be needed before opening the window
-    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 4, 2048) < 0) {
-        std::cerr << "SDL_mixer could not initialize! SDL_mixer Error: " << Mix_GetError() << "\n";
-        return;
-    }
-
-    std::cout << "Checking audio support \n";
-    int numDecoders = Mix_GetNumChunkDecoders();
-    for (int i = 0; i < numDecoders; i++) {
-        std::cout << "Chunk decoder: " << Mix_GetChunkDecoder(i) << "\n";
-    }
-
-    int numMusicDecoders = Mix_GetNumMusicDecoders();
-    for (int i = 0; i < numMusicDecoders; i++) {
-        std::cout << "Music decoder: " << Mix_GetMusicDecoder(i) << "\n";
-    }
-
-    horror_music = Mix_LoadMUS("assets/audio/scary.mp3");
-    if (!horror_music) {
-        std::cerr << "Failed to load background music: " << Mix_GetError() << "\n";
-        return;
-    }
-
-    footsteps_sound         = Mix_LoadWAV("assets/audio/footsteps.mp3");
-    footsteps_sound_channel = 2;
-    if (!footsteps_sound) {
-        std::cerr << "Failed to load music for footsteps: " << Mix_GetError() << "\n";
-        return;
-    }
+    audioPlayer.init();
+    audioPlayer.debugAudio();
+    audioPlayer.withBackgroundMusic("assets/audio/scary.mp3")
+        .withFootstepsSound("assets/audio/footsteps.mp3");
 }
 
 void Game::SceneManager::setupGame() {
@@ -134,7 +124,7 @@ void Game::SceneManager::setupGame() {
     allocate_game_state_to_gpu();
 }
 
-void Game::SceneManager::setupNPCs(){
+void Game::SceneManager::setupNPCs() {
     auto monster_initial_position = glm::vec3(5.0f, 0.0f, 5.0f);
     last_monster_transform        = glm::translate(glm::mat4(1.0f), monster_initial_position);
     auto monster_init             = Models::Model("assets/models/monster.obj", "monster");
@@ -155,27 +145,27 @@ void Game::SceneManager::setupNPCs(){
     lastTicks = SDL_GetPerformanceCounter();
 
     monster.on_monster_active([&](auto m) {
-        if (Mix_PlayingMusic() == 0) {
-            Mix_PlayMusic(horror_music, -1); // -1 = loop forever
-            Mix_VolumeMusic(MIX_MAX_VOLUME / 4);
-            Mix_PlayChannel(footsteps_sound_channel, footsteps_sound, -1);
+        if (!audioPlayer.isPlayingMusic()) {
+            audioPlayer.startBackgroundMusic();
+            audioPlayer.setMusicVolume(MIX_MAX_VOLUME / 4);
+            audioPlayer.startFootstepsSound();
         }
     });
 
     monster.on_monster_not_active([&](auto m) {
-        if (Mix_PlayingMusic()) {
-            Mix_HaltMusic();
-            Mix_HaltChannel(footsteps_sound_channel);
+        if (audioPlayer.isPlayingMusic()) {
+            audioPlayer.stopBackgroundMusic();
+            audioPlayer.stopFootstepsSound();
         }
     });
-    monster.on_chase_start([]() {
-        if (Mix_PlayingMusic()) {
-            Mix_VolumeMusic(MIX_MAX_VOLUME);
+    monster.on_chase_start([&]() {
+        if (audioPlayer.isPlayingMusic()) {
+            audioPlayer.setMusicVolume(MIX_MAX_VOLUME);
         }
     });
-    monster.on_chase_stop([]() {
-        if (Mix_PlayingMusic()) {
-            Mix_VolumeMusic(MIX_MAX_VOLUME / 4);
+    monster.on_chase_stop([&]() {
+        if (audioPlayer.isPlayingMusic()) {
+            audioPlayer.setMusicVolume(MIX_MAX_VOLUME / 4);
         }
     });
     monster.set_chasing_speed(4.0f);
@@ -253,8 +243,8 @@ void Game::SceneManager::run_game_loop() {
 
     glm::mat4 view = camera.get_view_matrix();
     glm::mat4 proj = camera.get_projection_matrix();
-    //TODO: add this when properly fixed
-    //   perform_culling();
+    // TODO: add this when properly fixed
+    //    perform_culling();
     PERF("render", render(view, proj););
     PERF("SDL Swap Window", SDL_GL_SwapWindow(window););
 }
@@ -498,8 +488,6 @@ void Game::SceneManager::allocate_game_state_to_gpu() {
 }
 
 Game::SceneManager::~SceneManager() {
-    Mix_FreeChunk(footsteps_sound);
-    Mix_FreeMusic(horror_music);
     SDL_Delay(seconds_to_wait_before_termination * 1000);
     SDL_GL_DeleteContext(glCtx);
     SDL_DestroyWindow(window);

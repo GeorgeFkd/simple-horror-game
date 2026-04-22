@@ -3,9 +3,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 
-Monster::Monster(Models::Model* monster_model)
-    : model_ref(monster_model), el(rand_dev()), uniform_rand(0.0f, 1.0f) {}
-
 float Monster::generate_random_number() {
     return uniform_rand(el);
 }

@@ -9,7 +9,6 @@
 
 class Monster {
   public:
-    Monster(Models::Model* monster_model);
     Monster();
     ~Monster();
     inline void set_model(Models::Model* monster_model){
