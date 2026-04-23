@@ -273,6 +273,12 @@ if(LINUX)
   target_link_libraries(opengl_app PRIVATE glm::glm game OpenGL::GLX)
 else()
   target_link_libraries(
+    audioplayer
+    PRIVATE
+      SDL2::SDL2
+      $<IF:$<TARGET_EXISTS:SDL2_mixer::SDL2_mixer>,SDL2_mixer::SDL2_mixer,SDL2_mixer::SDL2_mixer-static>
+  )
+  target_link_libraries(
     game
     PRIVATE $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
             $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
