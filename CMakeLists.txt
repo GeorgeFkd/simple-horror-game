@@ -139,7 +139,7 @@ target_link_libraries(opengl_renderer PRIVATE opengl_backend glm::glm
 
 add_library(audioplayer STATIC src/audio/AudioPlayer.cpp)
 target_include_directories(audioplayer PRIVATE ${SDL2_mixer_INCLUDE_DIRS})
-
+message(STATUS "SDL2_mixer includes are in: ${SDL2_mixer_INCLUDE_DIRS}")
 add_library(game STATIC src/game/Camera.cpp src/game/GameState.cpp
                         src/scene_objects/Monster.cpp src/game/SceneManager.cpp)
 
@@ -244,6 +244,7 @@ if(LINUX)
     target_link_libraries(
       audioplayer
       PRIVATE
+        SDL2::SDL2
         $<IF:$<TARGET_EXISTS:SDL2_mixer::SDL2_mixer>,SDL2_mixer::SDL2_mixer,SDL2_mixer::SDL2_mixer-static>
     )
     target_link_libraries(
@@ -281,8 +282,7 @@ else()
             model_loader
             text_handler
             audioplayer)
-  target_link_libraries(
-    opengl_app PRIVATE $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main> glm::glm game)
+  target_link_libraries(opengl_app PRIVATE glm::glm game)
 endif()
 
 if(ENABLE_ASSET_PIPELINES)
