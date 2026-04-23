@@ -394,6 +394,14 @@ void Game::SceneManager::initKeyboardHandlers() {
             renderer.initialise_shaders();
         }
     });
+
+    keyboardEventHandlers.emplace_back([&](SDL_Event* ev) {
+        const auto keys = SDL_GetKeyboardState(nullptr);
+        if(ev->type == SDL_KEYDOWN && ev->key.repeat == 0 && keys[SDL_SCANCODE_TAB]) {
+            std::cout << "Taking a screenshot.\n";
+            renderer.saveScreenshot("screenshot.png");
+        }
+    });
 }
 
 bool Game::SceneManager::gameIsRunning() {

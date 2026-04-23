@@ -2,7 +2,24 @@
 #include "GPULight.h"
 #include "GPUMesh.h"
 #include "Shader.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
 #include <array>
+
+
+void Renderer::saveScreenshot(const std::string& filepath) {
+    std::vector<unsigned char> pixels(screenWidth* screenHeight* 3);
+glReadPixels(0, 0, screenWidth, screenHeight, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
+
+// flip vertically
+for (int y = 0; y < screenHeight/ 2; y++) {
+    for (int x = 0; x < screenWidth* 3; x++) {
+        std::swap(pixels[y * screenWidth* 3 + x],
+                  pixels[(screenHeight- 1 - y) * screenWidth * 3 + x]);
+    }
+}
+    stbi_write_png(filepath.c_str(), screenWidth, screenHeight, 3, pixels.data(), screenWidth * 3);
+}
 
 void Renderer::renderText(const std::string& text, float x, float y, float scale,
                           const glm::vec3& color, const glm::mat4& projection) {
@@ -62,6 +79,8 @@ void Renderer::draw_light(Light* light, int index, Shader* shader) {
 }
 
 void Renderer::init(int screen_width, int screen_height) {
+    screenWidth = screen_width;
+    screenHeight = screen_height;
     initialize_glew();
     enable_gl_features({GL_DEPTH_TEST});
     set_viewport(0, 0, screen_width, screen_height);

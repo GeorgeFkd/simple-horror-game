@@ -10,7 +10,7 @@
 class Renderer {
 public:
     Renderer();
-    
+    void saveScreenshot(const std::string& filepath);
     void render(const glm::mat4& view, const glm::mat4& projection,const std::vector<std::unique_ptr<Light>>& lights,const std::vector<std::unique_ptr<Models::Model>>& models);
     void renderText(
                     const std::string& text,
@@ -28,6 +28,7 @@ public:
     void init(int screen_width,int screen_height);
     void load_font(const std::string& filepath);
 private:
+    int screenWidth,screenHeight;
     std::vector<std::shared_ptr<Shader>> shaders;
     TextRenderer textRenderer;
     std::unordered_map<EntityID,std::unique_ptr<GPULight>> allocated_lights;
