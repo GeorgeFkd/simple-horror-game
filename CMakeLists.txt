@@ -137,6 +137,9 @@ target_include_directories(
 target_link_libraries(opengl_renderer PRIVATE opengl_backend glm::glm
                                               scene_objects)
 
+add_library(audioplayer STATIC src/audio/AudioPlayer.cpp)
+target_include_directories(audioplayer PRIVATE ${SDL2_mixer_INCLUDE_DIRS})
+
 add_library(game STATIC src/game/Camera.cpp src/game/GameState.cpp
                         src/scene_objects/Monster.cpp src/game/SceneManager.cpp)
 
@@ -146,6 +149,7 @@ target_include_directories(
           ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures
           ${CMAKE_CURRENT_SOURCE_DIR}/src/game
           ${CMAKE_CURRENT_SOURCE_DIR}/src/scene_objects
+          ${CMAKE_CURRENT_SOURCE_DIR}/src/audio
           ${SDL2_INCLUDE_DIRS}
           ${SDL2_mixer_INCLUDE_DIRS})
 
@@ -226,9 +230,10 @@ endif()
 
 add_executable(opengl_app src/main.cpp)
 if(MSVC)
-    set_property(TARGET opengl_app PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+  set_property(
+    TARGET opengl_app PROPERTY MSVC_RUNTIME_LIBRARY
+                               "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
-
 
 target_include_directories(
   opengl_app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
@@ -238,25 +243,26 @@ if(LINUX)
   if(CMAKE_TOOLCHAIN_FILE MATCHES "vcpkg")
     message(STATUS "Linking SDL2_mixer and SDL with vcpkg style")
     target_link_libraries(
-      game
+      audioplayer
       PRIVATE
-        SDL2::SDL2
         $<IF:$<TARGET_EXISTS:SDL2_mixer::SDL2_mixer>,SDL2_mixer::SDL2_mixer,SDL2_mixer::SDL2_mixer-static>
-        glm::glm
-        opengl_renderer
-        scene_objects
-        model_loader
-        text_handler)
+    )
+    target_link_libraries(game PRIVATE SDL2::SDL2 glm::glm opengl_renderer
+                                       scene_objects model_loader text_handler audioplayer)
+
   else()
+    target_link_libraries(audioplayer PRIVATE ${SDL2_mixer_LIBRARIES})
+
     target_link_libraries(
       game
       PRIVATE ${SDL2_LIBRARIES}
-              ${SDL2_mixer_LIBRARIES}
+              # ${SDL2_mixer_LIBRARIES}
               glm::glm
               opengl_renderer
               scene_objects
               model_loader
-              text_handler)
+              text_handler
+              audioplayer)
   endif()
   target_link_libraries(opengl_app PRIVATE glm::glm game OpenGL::GLX)
 else()
@@ -279,32 +285,31 @@ if(ENABLE_ASSET_PIPELINES)
   add_dependencies(opengl_app run_copy_asset_files)
 else()
   function(copy_assets TARGET NAME SRC_DIR DST_DIR)
-  add_custom_target(
-    copy_${NAME} ALL
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${DST_DIR}"
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${SRC_DIR}" "${DST_DIR}"
-    COMMENT "Copying ${NAME} assets...")
+    add_custom_target(
+      copy_${NAME} ALL
+      COMMAND ${CMAKE_COMMAND} -E make_directory "${DST_DIR}"
+      COMMAND ${CMAKE_COMMAND} -E copy_directory "${SRC_DIR}" "${DST_DIR}"
+      COMMENT "Copying ${NAME} assets...")
 
-  add_dependencies(${TARGET} copy_${NAME})
-endfunction()
+    add_dependencies(${TARGET} copy_${NAME})
+  endfunction()
 
-copy_assets( opengl_renderer shaders
-"${CMAKE_CURRENT_SOURCE_DIR}/assets/shaders"
-"${CMAKE_CURRENT_BINARY_DIR}/assets/shaders")
+  copy_assets(
+    opengl_renderer shaders "${CMAKE_CURRENT_SOURCE_DIR}/assets/shaders"
+    "${CMAKE_CURRENT_BINARY_DIR}/assets/shaders")
 
-copy_assets(opengl_app models "${CMAKE_CURRENT_SOURCE_DIR}/assets/models"
-"${CMAKE_CURRENT_BINARY_DIR}/assets/models")
+  copy_assets(opengl_app models "${CMAKE_CURRENT_SOURCE_DIR}/assets/models"
+              "${CMAKE_CURRENT_BINARY_DIR}/assets/models")
 
-copy_assets(opengl_app textures "${CMAKE_CURRENT_SOURCE_DIR}/assets/textures"
-"${CMAKE_CURRENT_BINARY_DIR}/assets/textures")
+  copy_assets(opengl_app textures "${CMAKE_CURRENT_SOURCE_DIR}/assets/textures"
+              "${CMAKE_CURRENT_BINARY_DIR}/assets/textures")
 
-copy_assets(opengl_app audio "${CMAKE_CURRENT_SOURCE_DIR}/assets/audio"
-"${CMAKE_CURRENT_BINARY_DIR}/assets/audio")
+  copy_assets(opengl_app audio "${CMAKE_CURRENT_SOURCE_DIR}/assets/audio"
+              "${CMAKE_CURRENT_BINARY_DIR}/assets/audio")
 
-copy_assets(opengl_app fonts "${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts"
-"${CMAKE_CURRENT_BINARY_DIR}/assets/fonts")
+  copy_assets(opengl_app fonts "${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts"
+              "${CMAKE_CURRENT_BINARY_DIR}/assets/fonts")
 endif()
-
 
 if(BUILD_TESTS)
   message(STATUS "building tests using googletest library")
