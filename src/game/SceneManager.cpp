@@ -1,7 +1,6 @@
 #include "SceneManager.h"
 #include "Camera.h"
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_mixer.h>
 #include <SDL_events.h>
 #include <SDL_keyboard.h>
 #include <SDL_timer.h>

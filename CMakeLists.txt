@@ -150,8 +150,7 @@ target_include_directories(
           ${CMAKE_CURRENT_SOURCE_DIR}/src/game
           ${CMAKE_CURRENT_SOURCE_DIR}/src/scene_objects
           ${CMAKE_CURRENT_SOURCE_DIR}/src/audio
-          ${SDL2_INCLUDE_DIRS}
-          ${SDL2_mixer_INCLUDE_DIRS})
+          ${SDL2_INCLUDE_DIRS})
 
 if(ENABLE_ASSET_PIPELINES)
   message(STATUS "Asset pipelines are enabled")
@@ -240,15 +239,22 @@ target_include_directories(
                      ${CMAKE_CURRENT_SOURCE_DIR}/src/data-structures)
 
 if(LINUX)
-  if(CMAKE_TOOLCHAIN_FILE MATCHES "vcpkg")
+  if(USING_VCPKG)
     message(STATUS "Linking SDL2_mixer and SDL with vcpkg style")
     target_link_libraries(
       audioplayer
       PRIVATE
         $<IF:$<TARGET_EXISTS:SDL2_mixer::SDL2_mixer>,SDL2_mixer::SDL2_mixer,SDL2_mixer::SDL2_mixer-static>
     )
-    target_link_libraries(game PRIVATE SDL2::SDL2 glm::glm opengl_renderer
-                                       scene_objects model_loader text_handler audioplayer)
+    target_link_libraries(
+      game
+      PRIVATE SDL2::SDL2
+              glm::glm
+              opengl_renderer
+              scene_objects
+              model_loader
+              text_handler
+              audioplayer)
 
   else()
     target_link_libraries(audioplayer PRIVATE ${SDL2_mixer_LIBRARIES})
@@ -256,7 +262,6 @@ if(LINUX)
     target_link_libraries(
       game
       PRIVATE ${SDL2_LIBRARIES}
-              # ${SDL2_mixer_LIBRARIES}
               glm::glm
               opengl_renderer
               scene_objects
@@ -268,15 +273,14 @@ if(LINUX)
 else()
   target_link_libraries(
     game
-    PRIVATE
-      $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
-      $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
-      $<IF:$<TARGET_EXISTS:SDL2_mixer::SDL2_mixer>,SDL2_mixer::SDL2_mixer,SDL2_mixer::SDL2_mixer-static>
-      glm::glm
-      opengl_renderer
-      scene_objects
-      model_loader
-      text_handler)
+    PRIVATE $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
+            $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
+            glm::glm
+            opengl_renderer
+            scene_objects
+            model_loader
+            text_handler
+            audioplayer)
   target_link_libraries(
     opengl_app PRIVATE $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main> glm::glm game)
 endif()

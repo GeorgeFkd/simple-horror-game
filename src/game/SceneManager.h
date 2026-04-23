@@ -4,7 +4,6 @@
 #include "renderer/Renderer.h"
 #include "renderer/TextRenderer.h"
 #include "scene_objects/Monster.h"
-#include <SDL2/SDL_mixer.h>
 #include <algorithm>
 #include <glm/glm.hpp>
 #include <glm/gtc/epsilon.hpp>
