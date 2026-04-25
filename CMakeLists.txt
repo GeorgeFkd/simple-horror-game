@@ -140,8 +140,10 @@ target_link_libraries(opengl_renderer PRIVATE opengl_backend glm::glm
 add_library(audioplayer STATIC src/audio/AudioPlayer.cpp)
 target_include_directories(audioplayer PRIVATE ${SDL2_mixer_INCLUDE_DIRS})
 message(STATUS "SDL2_mixer includes are in: ${SDL2_mixer_INCLUDE_DIRS}")
-add_library(game STATIC src/game/Camera.cpp src/game/GameState.cpp
-                        src/scene_objects/Monster.cpp src/game/SceneManager.cpp)
+add_library(
+  game STATIC
+  src/game/Camera.cpp src/game/GameState.cpp src/scene_objects/Monster.cpp
+  src/game/SceneManager.cpp src/game/EventLoop.cpp)
 
 target_include_directories(
   game

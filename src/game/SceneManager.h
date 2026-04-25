@@ -1,9 +1,12 @@
 #pragma once
 #include "Camera.h"
 #include "GameState.h"
+#include "audio/AudioPlayer.h"
 #include "renderer/Renderer.h"
 #include "renderer/TextRenderer.h"
 #include "scene_objects/Monster.h"
+#include "EventLoop.h"
+
 #include <algorithm>
 #include <glm/glm.hpp>
 #include <glm/gtc/epsilon.hpp>
@@ -13,7 +16,6 @@
 #include <optional>
 #include <sstream>
 #include <string>
-#include "audio/AudioPlayer.h"
 namespace Game {
 using namespace GlHelpers;
 class SceneManager {
@@ -61,14 +63,13 @@ class SceneManager {
     void initialise_opengl_sdl();
     void allocate_game_state_to_gpu();
     void render(const glm::mat4& view, const glm::mat4& projection);
-    void handle_sdl_events(bool& running);
     void check_collisions(float dt);
     void perform_culling();
     void run_handler_for(const std::string& m);
     bool has_user_won();
 
     Game::GameState*                                                    game_state;
-    std::vector<std::function<void(SDL_Event*)>>                        keyboardEventHandlers;
+    EventLoop                                                           eventLoop;
     Uint64                                                              lastTicks;
     AudioPlayer                                                         audioPlayer;
     Mix_Music*                                                          horror_music;

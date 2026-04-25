@@ -1,29 +1,26 @@
 #include "Camera.h"
 #include <array>
-void Camera::CameraObj::update(float delta_time)
-{
+void Camera::CameraObj::update(float delta_time,bool forward,bool backward,bool leftMoved,bool rightMoved,bool up,bool down) {
     float velocity = camera_speed * delta_time;
 
     glm::vec3 flat_front = glm::normalize(glm::vec3(front.x, 0.0f, front.z));
     glm::vec3 flat_right = glm::normalize(glm::vec3(right.x, 0.0f, right.z));
 
-    const Uint8 *keys = SDL_GetKeyboardState(nullptr);
-    if (keys[SDL_SCANCODE_W])
+    if (forward)
         position += flat_front * velocity;
-    if (keys[SDL_SCANCODE_S])
+    if (backward)
         position -= flat_front * velocity;
-    if (keys[SDL_SCANCODE_A])
+    if (leftMoved)
         position -= flat_right * velocity;
-    if (keys[SDL_SCANCODE_D])
+    if (rightMoved)
         position += flat_right * velocity;
-    if (keys[SDL_SCANCODE_Q])
+    if (up)
         position += world_up * velocity;
-    if (keys[SDL_SCANCODE_E])
+    if (down)
         position -= world_up * velocity;
 }
 
-void Camera::CameraObj::updateCameraVectors()
-{
+void Camera::CameraObj::updateCameraVectors() {
     // calculate new front vector
     glm::vec3 f;
     // contribution on x axis * how much we are rotated on the y
@@ -31,64 +28,45 @@ void Camera::CameraObj::updateCameraVectors()
     // contribution on y axis
     f.y = sin(glm::radians(pitch));
     // contribution on z axis * how much we are rotated on the y
-    f.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+    f.z   = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
     front = glm::normalize(f);
 
     // re‐compute right and up
     right = glm::normalize(glm::cross(front, world_up));
-    up = glm::normalize(glm::cross(right, front));
+    up    = glm::normalize(glm::cross(right, front));
 }
 
-void Camera::CameraObj::process_input(SDL_Event *event){
-    // SDL handles relative mouse motion for you when
-    // using SDL_SetRelativeMouseMode(SDL_TRUE),
-    // while GLFW does not — so in SDL, you don’t need to track
-    // as it says in the OPENGL docs
-    // lastX/lastY manually like you do in GLFW
-    switch (event->type)
-    {
-    case SDL_MOUSEMOTION:
-        // also causes a LookAt flip once direction vector
-        // is parallel to the world up direction).
-        // The pitch needs to be constrained in such a way
-        // that users won't be able to look higher than 89 degrees
-        // (at 90 degrees we get the LookAt flip) and also not below -89 degrees.
-        yaw += event->motion.xrel * mouse_sensitivity;
-        pitch -= event->motion.yrel * mouse_sensitivity;
-        if (pitch > 89.0f)
-            pitch = 89.0f;
-        if (pitch < -89.0f)
-            pitch = -89.0f;
-        updateCameraVectors();
-        break;
-    case SDL_WINDOWEVENT:
-        if (event->window.event == SDL_WINDOWEVENT_SIZE_CHANGED)
-        {
-            aspect = float(event->window.data1) / float(event->window.data2);
-        }
-        break;
-    default:
-        break;
-    }
+void Camera::CameraObj::resizeWindow(float width,float height){
+    assert(height != 0);
+    aspect = width / height;
+    updateCameraVectors();
 }
 
+void Camera::CameraObj::move(int xrel, int yrel) {
+    yaw += xrel * mouse_sensitivity;
+    pitch -= yrel * mouse_sensitivity;
+    if (pitch > 89.0f)
+        pitch = 89.0f;
+    if (pitch < -89.0f)
+        pitch = -89.0f;
+    updateCameraVectors();
+}
 
+const std::array<glm::vec4, 6> Camera::CameraObj::extract_frustum_planes() const {
 
-const std::array<glm::vec4,6> Camera::CameraObj::extract_frustum_planes() const{
-
-    const glm::mat4 M = get_projection_matrix() * get_view_matrix();
-    std::array<glm::vec4,6> P;
+    const glm::mat4          M = get_projection_matrix() * get_view_matrix();
+    std::array<glm::vec4, 6> P;
 
     glm::mat4 T = glm::transpose(M);
-    P[0] = T[3] + T[0];  // left
-    P[1] = T[3] - T[0];  // right
-    P[2] = T[3] + T[1];  // bottom
-    P[3] = T[3] - T[1];  // top
-    P[4] = T[3] + T[2];  // near
-    P[5] = T[3] - T[2];  // far
+    P[0]        = T[3] + T[0]; // left
+    P[1]        = T[3] - T[0]; // right
+    P[2]        = T[3] + T[1]; // bottom
+    P[3]        = T[3] - T[1]; // top
+    P[4]        = T[3] + T[2]; // near
+    P[5]        = T[3] - T[2]; // far
 
     // Normalize
-    for (auto& p: P) {
+    for (auto& p : P) {
         float len = glm::length(glm::vec3(p));
         p /= len;
     }

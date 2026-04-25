@@ -132,13 +132,17 @@ void Game::SceneManager::run_game_loop() {
     Uint64 now = SDL_GetPerformanceCounter();
     float  dt  = float(now - lastTicks) / float(SDL_GetPerformanceFrequency());
     assert(dt != 0);
-    fps       = 1 / dt;
-    lastTicks = now;
-    PERF("SDL Events polling", handle_sdl_events(running););
-    last_camera_position   = camera.get_position();
+    fps                  = 1 / dt;
+    lastTicks            = now;
+    last_camera_position = camera.get_position();
+    PERF("SDL Events polling", eventLoop.pollEvents(dt););
     last_monster_transform = monster.monster_model()->get_local_transform();
-    PERF("Camera update", { camera.update(dt); });
-    // std::cout << "Last camera position and current: \n";
+    const auto keys        = SDL_GetKeyboardState(nullptr);
+    bool       forward = keys[SDL_SCANCODE_W], backward = keys[SDL_SCANCODE_S],
+         left = keys[SDL_SCANCODE_A], right = keys[SDL_SCANCODE_D], up = keys[SDL_SCANCODE_Q],
+         down = keys[SDL_SCANCODE_E];
+    camera.update(dt, forward, backward, left, right, up, down);
+    // PERF("Camera update", { camera.update(dt); });
     auto camera_dir = glm::normalize(camera.get_direction());
     monster.update(dt, camera_dir, last_camera_position);
     PERF("monster mixing sound", {
@@ -158,8 +162,7 @@ void Game::SceneManager::run_game_loop() {
             distance_f       = std::clamp(distance_f, 0.0f, 255.0f);
 
             uint8_t distance_byte = static_cast<uint8_t>(distance_f + 0.5f);
-            // mb i mean distance byte here?
-            Mix_SetPosition(footsteps_sound_channel, angle_deg, distance_f);
+            // TODO: fix spatial audio
         }
     };);
 
@@ -222,15 +225,6 @@ void Game::SceneManager::run_handler_for(const std::string& m) {
             it = models_event_handlers.erase(it);
         } else {
             ++it;
-        }
-    }
-}
-
-void Game::SceneManager::handle_sdl_events(bool& running) {
-    SDL_Event ev;
-    while (SDL_PollEvent(&ev)) {
-        for (auto& evHandler : this->keyboardEventHandlers) {
-            evHandler(&ev);
         }
     }
 }
@@ -312,9 +306,6 @@ void Game::SceneManager::check_collisions(float dt) {
             break;
         }
     }
-    // Uint64 end = SDL_GetPerformanceCounter();
-    // float elapsedMS = (end - start) / (float)SDL_GetPerformanceFrequency() * 1000.0f;
-    // std::cout << "Checking collisions took" << elapsedMS << "ms.\n";
 }
 
 void Game::SceneManager::render(const glm::mat4& view, const glm::mat4& projection) {
@@ -347,13 +338,18 @@ Game::SceneManager::SceneManager(int width, int height, glm::vec3 camera_positio
 }
 
 void Game::SceneManager::initKeyboardHandlers() {
-    keyboardEventHandlers.emplace_back([&](SDL_Event* ev) {
+    eventLoop.addEventHandler([&](SDL_Event* ev, float dt) {
         if (ev->type == SDL_QUIT) {
             terminate_game("Quitting Game");
         }
     });
+    eventLoop.addEventHandler([&](SDL_Event* ev, float dt) {
+        if (ev->type == SDL_MOUSEMOTION) {
+            camera.move(ev->motion.xrel, ev->motion.yrel);
+        }
+    });
 
-    keyboardEventHandlers.emplace_back([&](SDL_Event* ev) {
+    eventLoop.addEventHandler([&](SDL_Event* ev, float dt) {
         const auto keys = SDL_GetKeyboardState(nullptr);
         if (!game_state->closest_model.empty()) {
             constexpr float INTERACTION_DISTANCE = 8.0f;
@@ -368,15 +364,15 @@ void Game::SceneManager::initKeyboardHandlers() {
         }
     });
 
-    keyboardEventHandlers.emplace_back([&](SDL_Event* ev) {
+    eventLoop.addEventHandler([&](SDL_Event* ev, float dt) {
         if (ev->type == SDL_WINDOWEVENT && ev->window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
             int w = ev->window.data1, h = ev->window.data2;
-            camera.set_window(w, h);
+            camera.resizeWindow(w, h);
             set_viewport(0, 0, w, h);
         }
     });
 
-    keyboardEventHandlers.emplace_back([&](SDL_Event* ev) {
+    eventLoop.addEventHandler([&](SDL_Event* ev, float dt) {
         const auto keys = SDL_GetKeyboardState(nullptr);
         if (ev->type == SDL_KEYDOWN && ev->key.repeat == 0 && keys[SDL_SCANCODE_M]) {
             std::cout << "Position: " << camera.get_position().x << "," << camera.get_position().y
@@ -384,9 +380,7 @@ void Game::SceneManager::initKeyboardHandlers() {
         }
     });
 
-    keyboardEventHandlers.emplace_back([&](SDL_Event* ev) { camera.process_input(ev); });
-
-    keyboardEventHandlers.emplace_back([&](SDL_Event* ev) {
+    eventLoop.addEventHandler([&](SDL_Event* ev, float dt) {
         const auto keys = SDL_GetKeyboardState(nullptr);
         if (ev->type == SDL_KEYDOWN && ev->key.repeat == 0 && keys[SDL_SCANCODE_R]) {
             std::cout << "Refreshing stuff. \n";
@@ -395,9 +389,9 @@ void Game::SceneManager::initKeyboardHandlers() {
         }
     });
 
-    keyboardEventHandlers.emplace_back([&](SDL_Event* ev) {
+    eventLoop.addEventHandler([&](SDL_Event* ev, float dt) {
         const auto keys = SDL_GetKeyboardState(nullptr);
-        if(ev->type == SDL_KEYDOWN && ev->key.repeat == 0 && keys[SDL_SCANCODE_TAB]) {
+        if (ev->type == SDL_KEYDOWN && ev->key.repeat == 0 && keys[SDL_SCANCODE_TAB]) {
             std::cout << "Taking a screenshot.\n";
             renderer.saveScreenshot("screenshot.png");
         }
