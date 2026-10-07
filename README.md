@@ -1,5 +1,7 @@
 # simple-horror-game
 
+It can be played inside the browser at [game.georgefkd.com](https://game.georgefkd.com).
+
 This is a simple horror game implemented in OpenGL inspired by the classic Slenderman game. 
 It was created as an assignment project for the graphics course at the [CS Master's of Athens University of Economics](https://grad.cs.aueb.gr) and business with [FotiosBistas](https://github.com/fotiosbistas) who implemented most of the core graphics algorithms and the related shaders, while I made the game logic, added sound,an NPC, text rendering and event handling. 
 
