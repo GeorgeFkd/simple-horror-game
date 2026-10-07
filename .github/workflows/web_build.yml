@@ -54,3 +54,44 @@ jobs:
             build-web/opengl_app.wasm
             build-web/opengl_app.data
           retention-days: 7
+
+  # Publishes the build to GitHub Pages (custom domain game.georgefkd.com, set in the repo's
+  # Pages settings). Only pushes to master deploy, pull requests just build.
+  deploy-pages:
+    needs: build-web
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    # Never cancel a deploy halfway, a newer push queues behind it instead
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Download web build
+        uses: actions/download-artifact@v4
+        with:
+          name: web-build
+          path: build-web
+
+      # Served at the root of the subdomain, so the page becomes index.html. The .js loader
+      # fetches the .wasm and .data by their original names relative to the page.
+      - name: Assemble site
+        run: |
+          mkdir site
+          cp build-web/opengl_app.html site/index.html
+          cp build-web/opengl_app.js build-web/opengl_app.wasm build-web/opengl_app.data site/
+          ls -la site
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
