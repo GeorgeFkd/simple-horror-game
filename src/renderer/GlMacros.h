@@ -3,10 +3,16 @@
 #include <GL/glew.h>
 #include <iostream>
 #define ASSERT(x) assert(x)
+#if defined(__EMSCRIPTEN__) && defined(NDEBUG)
+// In the browser glGetError() is a synchronous round-trip to the WebGL process, calling it around
+// every GL call costs a lot of FPS. Release web builds skip the error checks entirely.
+#define GLCall(x) x
+#else
 #define GLCall(x)                                                                                  \
     GLClearError();                                                                                \
     x;                                                                                             \
     ASSERT(GLLogCall(#x, __FILE__, __LINE__))
+#endif
 
 namespace GlHelpers {
 

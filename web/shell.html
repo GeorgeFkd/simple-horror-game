@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Simple Horror Game</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #000; color: #bbb;
+                 font-family: sans-serif; }
+    body { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    #canvas { display: block; width: 1280px; height: 720px; max-width: 100vw;
+              max-height: calc(100vh - 3em); object-fit: contain; background: #000; outline: none; }
+    #status { height: 2em; line-height: 2em; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="1280" height="720" tabindex="-1"
+          oncontextmenu="event.preventDefault()"></canvas>
+  <div id="status">Downloading...</div>
+  <script>
+    // Opt-in (?log=1): forward stdout/stderr to POST /log on the serving host, used for
+    // measuring FPS from a script. Off by default so normal hosting never sends requests.
+    const forwardLogs = new URLSearchParams(location.search).has('log');
+    const statusEl = document.getElementById('status');
+    const canvas = document.getElementById('canvas');
+    function forward(text) {
+      if (forwardLogs) fetch('/log', { method: 'POST', body: text }).catch(() => {});
+    }
+    var Module = {
+      canvas: canvas,
+      print: (text) => { console.log(text); forward(text); },
+      printErr: (text) => { console.warn(text); forward('[err] ' + text); },
+      setStatus: (text) => {
+        statusEl.textContent = text ||
+          'Click the game to capture the mouse. WASD to move, Q/E up/down, I to interact.';
+      },
+      onAbort: (what) => { statusEl.textContent = 'Crashed: ' + what; forward('[abort] ' + what); },
+    };
+    canvas.addEventListener('click', () => canvas.focus());
+    window.addEventListener('error', (e) => forward('[window error] ' + e.message));
+    if (forwardLogs) {
+      const gl = document.createElement('canvas').getContext('webgl2');
+      const info = gl && gl.getExtension('WEBGL_debug_renderer_info');
+      forward('[webgl renderer] ' + (info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL)
+                                          : gl ? gl.getParameter(gl.RENDERER) : 'no webgl2'));
+    }
+    document.addEventListener('visibilitychange',
+                              () => forward('[page visibility] ' + document.visibilityState));
+  </script>
+  {{{ SCRIPT }}}
+</body>
+</html>

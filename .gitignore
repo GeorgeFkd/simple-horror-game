@@ -12,3 +12,4 @@ _deps
 .cache
 CMakeUserPresets.json
 build/
+build-web/

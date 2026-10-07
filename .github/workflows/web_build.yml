@@ -1,0 +1,56 @@
+name: Web (Emscripten) Build
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  # emsdk version the web build was developed and tested with
+  EMSDK_VERSION: '6.0.10'
+
+jobs:
+  build-web:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Ninja
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+      # Caches the emsdk install and its sysroot, which holds the compiled ports
+      # (SDL2, SDL2_mixer, FreeType), so they are not rebuilt on every run.
+      - name: Setup Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: ${{ env.EMSDK_VERSION }}
+          actions-cache-folder: 'emsdk-cache'
+
+      # The web preset finds the toolchain through $EMSDK; derive it from emcc's location
+      # ($EMSDK/upstream/emscripten/emcc) in case the setup action does not export it.
+      - name: Configure
+        run: |
+          export EMSDK="${EMSDK:-$(cd "$(dirname "$(which emcc)")/../.." && pwd)}"
+          echo "Using EMSDK=$EMSDK"
+          cmake --preset web
+
+      - name: Build
+        run: cmake --build build-web
+
+      - name: Check build outputs
+        run: |
+          for f in opengl_app.html opengl_app.js opengl_app.wasm opengl_app.data; do
+            test -s "build-web/$f" || { echo "missing or empty: build-web/$f"; exit 1; }
+          done
+          ls -la build-web/opengl_app.*
+
+      - name: Upload web build
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-build
+          path: |
+            build-web/opengl_app.html
+            build-web/opengl_app.js
+            build-web/opengl_app.wasm
+            build-web/opengl_app.data
+          retention-days: 7

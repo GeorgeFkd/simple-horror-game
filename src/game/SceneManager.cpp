@@ -19,6 +19,12 @@ void Game::SceneManager::initialise_opengl_sdl() {
         return;
     }
 
+#ifdef __EMSCRIPTEN__
+    // Must be set before the context is created, requests a WebGL2 (OpenGL ES 3.0) context.
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+#endif
     window = SDL_CreateWindow("Old room", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720,
                               SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
     glCtx  = SDL_GL_CreateContext(window);
@@ -114,6 +120,14 @@ bool Game::SceneManager::has_user_won() {
     return game_state->pages_collected >= game_state->pages_collected_to_win;
 }
 
+#ifdef __EMSCRIPTEN__
+// Printing several lines per frame goes through console.log in the browser and costs a lot of FPS,
+// the web build only reports an averaged FPS periodically (see run_game_loop).
+#define PERF(label, block)                                                                         \
+    do {                                                                                           \
+        block;                                                                                     \
+    } while (0)
+#else
 #define PERF(label, block)                                                                         \
     do {                                                                                           \
         Uint64 _start = SDL_GetPerformanceCounter();                                               \
@@ -122,6 +136,7 @@ bool Game::SceneManager::has_user_won() {
         float  elapsedMS = (_end - _start) / (float)SDL_GetPerformanceFrequency() * 1000.0f;       \
         std::cout << label << " TIME: " << elapsedMS << "ms. \n";                                  \
     } while (0)
+#endif
 
 void Game::SceneManager::run_game_loop() {
 
@@ -134,6 +149,19 @@ void Game::SceneManager::run_game_loop() {
     assert(dt != 0);
     fps                  = 1 / dt;
     lastTicks            = now;
+#ifdef __EMSCRIPTEN__
+    {
+        static float fps_report_elapsed = 0.0f;
+        static int   fps_report_frames  = 0;
+        fps_report_elapsed += dt;
+        fps_report_frames += 1;
+        if (fps_report_elapsed >= 2.0f) {
+            std::cout << "FPS: " << fps_report_frames / fps_report_elapsed << "\n";
+            fps_report_elapsed = 0.0f;
+            fps_report_frames  = 0;
+        }
+    }
+#endif
     last_camera_position = camera.get_position();
     PERF("SDL Events polling", eventLoop.pollEvents(dt););
     last_monster_transform = monster.monster_model()->get_local_transform();

@@ -219,7 +219,7 @@ void attach_depth_texture(GLuint fbo, GLuint texture, bool cubemap) {
     GLCall(glBindFramebuffer(GL_FRAMEBUFFER, fbo));
 
     if (cubemap) {
-        GLCall(glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, texture, 0));
+        attach_texture_to_framebuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, texture, 0);
     } else {
         GLCall(
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, texture, 0));
@@ -227,7 +227,13 @@ void attach_depth_texture(GLuint fbo, GLuint texture, bool cubemap) {
 }
 
 void attach_texture_to_framebuffer(GLenum target, GLenum attachment, GLuint texture, GLint level) {
+#ifdef __EMSCRIPTEN__
+    // glFramebufferTexture (layered attachment) does not exist in WebGL2, callers attach single
+    // faces/layers through attach_texture2d_to_framebuffer instead.
+    std::cerr << "attach_texture_to_framebuffer is not supported on WebGL2\n";
+#else
     GLCall(glFramebufferTexture(target, attachment, texture, level));
+#endif
 }
 
 void validate_framebuffer() {
@@ -238,7 +244,13 @@ void validate_framebuffer() {
 }
 
 void disable_color_buffers() {
+#ifdef __EMSCRIPTEN__
+    // WebGL2 only has the plural form
+    GLenum none = GL_NONE;
+    GLCall(glDrawBuffers(1, &none));
+#else
     GLCall(glDrawBuffer(GL_NONE));
+#endif
     GLCall(glReadBuffer(GL_NONE));
 }
 
@@ -370,7 +382,25 @@ std::string Shader::load_file(const std::string& path) {
 
     std::stringstream buffer;
     buffer << file.rdbuf();
+#ifdef __EMSCRIPTEN__
+    // The desktop shaders are GLSL 330 core, WebGL2 wants GLSL ES 300. They are close enough that
+    // swapping the version line (which must be the very first line in ES) and adding default
+    // precisions is all that is needed.
+    std::string       source          = buffer.str();
+    const std::string desktop_version = "#version 330 core";
+    auto              pos             = source.find(desktop_version);
+    if (pos != std::string::npos) {
+        source = "#version 300 es\n"
+                 "precision highp float;\n"
+                 "precision highp int;\n"
+                 "precision highp sampler2D;\n"
+                 "precision highp samplerCube;\n" +
+                 source.substr(pos + desktop_version.size());
+    }
+    return source;
+#else
     return buffer.str();
+#endif
 }
 
 GLint Shader::get_uniform_location(const std::string& name) {

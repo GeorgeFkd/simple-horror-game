@@ -1,6 +1,7 @@
 // TextRenderer.cpp
 #include "TextRenderer.h"
 #include "Shader.h"
+#include "GlPlatform.h"
 #include <ft2build.h>
 #include FT_FREETYPE_H
 void TextRenderer::load_font(const char* fontpath) {
@@ -42,7 +43,7 @@ void TextRenderer::load_font(const char* fontpath) {
         // Set the texture image
         set_texture_image_2d(GL_TEXTURE_2D,
                              0,                           // level
-                             GL_RED,                      // internal format
+                             SINGLE_CHANNEL_INTERNAL_FORMAT, // internal format
                              face->glyph->bitmap.width,   // width
                              face->glyph->bitmap.rows,    // height
                              0,                           // border
@@ -75,7 +76,7 @@ void TextRenderer::load_font(const char* fontpath) {
         bind_texture(GL_TEXTURE_2D, texture); // glBindTexture
 
         // New helper needed for glTexImage2D with unsigned formats
-        set_texture_image_2d(GL_TEXTURE_2D, 0, GL_RED, face->glyph->bitmap.width,
+        set_texture_image_2d(GL_TEXTURE_2D, 0, SINGLE_CHANNEL_INTERNAL_FORMAT, face->glyph->bitmap.width,
                              face->glyph->bitmap.rows, 0, GL_RED, GL_UNSIGNED_BYTE,
                              face->glyph->bitmap.buffer);
 

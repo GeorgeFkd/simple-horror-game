@@ -101,7 +101,7 @@ out vec4  FragColor;
 //——————————————————————————————————————————————————————————————————————————
 
 // Poisson Disk
-vec2 poissonDisk[16] = vec2[](
+const vec2 poissonDisk[16] = vec2[](
 vec2(-0.94201624, -0.39906216),
 vec2(0.94558609, -0.76890725),
 vec2(-0.094184101, -0.92938870),
@@ -133,7 +133,7 @@ float getVisibility(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir, sampler2
 //
     // declare a bias to deal with shadow acne
     float cosTheta = clamp(dot(normal, lightDir), 0.0, 1.0);
-    float bias = clamp(0.0005 * tan(acos(cosTheta)), 0, 0.01);
+    float bias = clamp(0.0005 * tan(acos(cosTheta)), 0.0, 0.01);
     projCoords.z -= bias;
     float visibility = 1.0;
     float spreadParam = 500.0;
@@ -208,7 +208,7 @@ float getVisibilityPointLight(
 
     shadow /= float(samples);
 
-    return 1 - shadow;
+    return 1.0 - shadow;
 }
 
 //float getVisibility(vec4 fragPosLightSpace, sampler2D shadowMap)
@@ -286,7 +286,7 @@ vec3 fetchNormal(){
         return normalize(Normal);
     }
 
-    vec2 tex = 1.0 / textureSize(bumpMap, 0);
+    vec2 tex = 1.0 / vec2(textureSize(bumpMap, 0));
 
     float tl = texture(bumpMap, TexCoord + tex * vec2(-1,  1)).r;
     float  l = texture(bumpMap, TexCoord + tex * vec2(-1,  0)).r;

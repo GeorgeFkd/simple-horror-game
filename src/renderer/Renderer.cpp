@@ -2,6 +2,7 @@
 #include "GPULight.h"
 #include "GPUMesh.h"
 #include "Shader.h"
+#include "GlPlatform.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 #include <array>
@@ -132,7 +133,8 @@ void Renderer::draw_light_depth(Light*                                          
         auto depth2D = get_shader_by_name("depth_2d");
         shader       = depth2D;
     }
-    set_viewport(0, 0, light->shadow_width, light->shadow_height);
+    auto extent = shadow_map_extent(light->shadow_width, light->shadow_height);
+    set_viewport(0, 0, extent.width, extent.height);
     auto gpulight = allocated_lights.find(light->id);
     if (gpulight != allocated_lights.end()) {
         bind_framebuffer(GL_FRAMEBUFFER, gpulight->second->depth_map_fbo);
@@ -156,7 +158,17 @@ void Renderer::draw_light_depth(Light*                                          
             // update this face's matrix
             shader->set_vec3("lightPos", light->position);
             shader->set_float("farPlane", light->far_plane);
-            shader->set_mat4("shadowMatrices[" + std::to_string(face) + "]", proj * views[face]);
+            if (SUPPORTS_GEOMETRY_SHADERS) {
+                shader->set_mat4("shadowMatrices[" + std::to_string(face) + "]",
+                                 proj * views[face]);
+            } else {
+                // no geometry shader to route triangles to gl_Layer, render into one face
+                attach_texture2d_to_framebuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+                                                GL_TEXTURE_CUBE_MAP_POSITIVE_X + face,
+                                                gpulight->second->depth_map, 0);
+                gl_clear();
+                shader->set_mat4("shadowMatrix", proj * views[face]);
+            }
             glm::mat4 VP     = proj * views[face];
             auto      planes = light->extract_frustum_planes(VP);
 
@@ -307,9 +319,15 @@ void Renderer::initialise_shaders() {
     shader_types  = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
     auto depth_2d = std::make_shared<Shader>(shader_paths, shader_types, "depth_2d");
 
+#ifdef __EMSCRIPTEN__
+    // WebGL2 has no geometry shaders, this variant renders a single cube face per draw
+    shader_paths = {"assets/shaders/web/depth_cube.vert", "assets/shaders/web/depth_cube.frag"};
+    shader_types = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
+#else
     shader_paths    = {"assets/shaders/depth_cube.vert", "assets/shaders/depth_cube.geom",
                        "assets/shaders/depth_cube.frag"};
     shader_types    = {GL_VERTEX_SHADER, GL_GEOMETRY_SHADER, GL_FRAGMENT_SHADER};
+#endif
     auto depth_cube = std::make_shared<Shader>(shader_paths, shader_types, "depth_cube");
 
     shader_paths    = {"assets/shaders/text.vert", "assets/shaders/text.frag"};
@@ -330,7 +348,10 @@ void Renderer::render(const glm::mat4& view, const glm::mat4& projection,
     float screen_width  = 1280.0f;
     float screen_height = 720.0f;
     set_viewport(0, 0, screen_width, screen_height);
+#ifndef __EMSCRIPTEN__
+    // WebGL2 has no GL_MULTISAMPLE toggle, antialiasing is a property of the canvas context
     enable_gl_features({GL_MULTISAMPLE});
+#endif
     // removing this doesnt change anything for some reason;
     clear_buffers(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     draw_lights(lights);
@@ -350,5 +371,7 @@ void Renderer::render(const glm::mat4& view, const glm::mat4& projection,
         draw(model.get(), view, projection);
     }
 
+#ifndef __EMSCRIPTEN__
     disable_gl_capability(GL_MULTISAMPLE);
+#endif
 }

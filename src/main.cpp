@@ -5,14 +5,25 @@
 #include <glm/fwd.hpp>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <iostream>
 #include <string>
 #include <vector>
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 
 
 
 static Game::SceneManager* scene_mgr = nullptr;
 static void game_loop_wrapper() {
     scene_mgr->run_game_loop();
+#ifdef __EMSCRIPTEN__
+    // the browser drives the loop, stop it once the game is over (the last frame stays visible)
+    if (!scene_mgr->gameIsRunning()) {
+        std::cout << "Game over, stopping the main loop.\n";
+        emscripten_cancel_main_loop();
+    }
+#endif
 }
 
 int main(int argc, char* argv[]) {
